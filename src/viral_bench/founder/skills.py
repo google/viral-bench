@@ -47,7 +47,7 @@ __all__ = [
 
 _NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
-# Skill bodies (markdown, without frontmatter). Keyed by skill name; the name
+# Skill bodies (markdown, without frontmatter). Keyed by skill name. the name
 # must match the directory that will contain the SKILL.md (opencode requirement).
 _SKILL_BODIES: dict[str, tuple[str, str]] = {
     "runtime-architecture": (

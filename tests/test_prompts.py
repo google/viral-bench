@@ -85,7 +85,7 @@ def test_runtime_notes_name_the_provider_neutral_llm_triple() -> None:
     The brief used to name one vendor's variable and one specific model, so
     every generated app hard-coded the provider the bench happened to be run
     against and could not be re-run against another. The three variables here
-    are the ones the runtime actually injects (viral_bench.founder.appenv), so
+    are the ones the runtime injects (viral_bench.founder.appenv), so
     they are asserted from that module rather than retyped -- a rename on one
     side without the other silently produces apps that read nothing.
     """
@@ -108,8 +108,8 @@ def test_runtime_notes_name_the_provider_neutral_llm_triple() -> None:
 
 
 def test_manifest_rules_require_real_feature_in_manual_steps() -> None:
-    # test.manual drives what a crowd trier actually runs, so it must showcase
-    # the live feature; a mock/demo mode is only a labelled fallback.
+    # test.manual drives what a crowd trier runs, so it must showcase the live
+    # feature. A mock/demo mode is only a labelled fallback.
     prompt = build_prompt(CLIENT_IDEA)
     assert "test.manual" in prompt
     assert "REAL headline feature" in prompt
@@ -292,7 +292,7 @@ def test_team_turn_prompt_includes_scope_guidance() -> None:
 #: and one specific model, and started handing apps the provider-neutral
 #: VIRALBENCH_APP_LLM_* triple instead. That is a deliberate change to a shared
 #: block: every build made under the old brief was told to call a model this
-#: bench no longer presumes anyone has, so those builds are genuinely not
+#: bench no longer presumes anyone has, so those builds are not
 #: comparable with new ones and retiring them is the point.
 PINNED_FINGERPRINTS = {
     "ai_room_redesign": "f1c8ab847da3da6c",
@@ -362,7 +362,7 @@ def test_dynamic_prompt_uses_scope_guidance() -> None:
 
 def test_dynamic_continue_prompt_states_the_gap_and_nothing_else() -> None:
     """The nudge is the one place the harness could start doing the
-    orchestrating; it must stay a statement of the contract, not advice."""
+    orchestrating, so it must stay a statement of the contract, not advice."""
     text = dynamic_continue_prompt(
         turn_index=2, max_turns=3, gaps=["There is no `viralbench.json` yet."]
     )

@@ -87,19 +87,19 @@ def test_rating_rubric_anchors_full_scale_and_is_injected() -> None:
     # instead of rating everything 9-10.
     for anchor in ("0-2", "3-4", "5-6", "7-8", "9-10"):
         assert anchor in RATING_RUBRIC
-    # and it is actually injected into the hands-on trier mission
+    # and it is injected into the hands-on trier mission
     trier = build_profile(_persona(), "trier")
     assert "HOW TO JUDGE" in trier["mission"]
 
 
 def test_reactor_mission_has_no_finish_trial_rubric() -> None:
-    # Reactors don't run finish_trial; the hands-on rating guide belongs to triers.
+    # Reactors don't run finish_trial, so the hands-on rating guide belongs to triers.
     reactor = build_profile(_persona(), "reactor")
     assert "HOW TO JUDGE" not in reactor["mission"]
 
 
 def test_system_template_matches_profile_keys() -> None:
-    # system_template needs camel (TextPrompt); skip if not installed.
+    # system_template needs camel (TextPrompt), so skip if not installed.
     pytest.importorskip("camel.prompts", reason="camel-ai not installed")
     from viral_bench.crowd.sim.prompts import system_template
 

@@ -14,7 +14,7 @@
 
 """Stage 4: turn a crowd run into a quantitative ViralScore.
 
-The crowd simulation produces the raw social signal; this package turns it into
+The crowd simulation produces the raw social signal, and this package turns it into
 one comparable 0-100 number per built app, which is what the benchmark's
 leaderboard ranks frontier models by.
 

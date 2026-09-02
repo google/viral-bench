@@ -21,7 +21,7 @@ simulation engine. Discovering those one failure at a time, forty minutes into a
 build, is a miserable way to start.
 
 So there are two commands. ``init`` asks which provider you want and writes it
-down; ``doctor`` checks everything a run will need and tells you what is missing
+down. ``doctor`` checks everything a run will need and tells you what is missing
 and how to fix it, before you spend anything.
 """
 

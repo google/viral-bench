@@ -18,7 +18,7 @@ The problem this solves is the "blind AI" one the design doc calls out: a `curl`
 that returns 200 is *not* a test -- it fetches a single-page app's HTML but never
 runs the JavaScript, so the DOM a real user sees is invisible and an LLM defaults
 to rubber-stamping. To judge whether an app is any good, a crowd agent has to
-actually *use* it.
+*use* it.
 
 This subpackage provides that, per app type, behind one small surface:
 
@@ -39,7 +39,7 @@ This subpackage provides that, per app type, behind one small surface:
 * :mod:`~viral_bench.crowd.interaction.trace` -- the structured
   :class:`~viral_bench.crowd.interaction.trace.InteractionTrace` every trial
   emits: the evidence the scoring stage turns into a reaction, and the audit
-  trail proving the agent really ran the app.
+  trail proving the agent ran the app.
 """
 
 from __future__ import annotations
@@ -84,6 +84,6 @@ __all__ = [
     "peek_manifest",
     "AppInteractionToolkit",
     "try_app",
-    # code inspection (cheap, read-only; for reactor agents)
+    # code inspection (cheap, read-only, for reactor agents)
     "CodeInspectionToolkit",
 ]

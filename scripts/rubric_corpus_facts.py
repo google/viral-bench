@@ -16,7 +16,7 @@
 """Measure the build cohort once, so check authors do not each re-measure it.
 
 Why this exists. Authoring a ``check:`` block is a bet about what the corpus
-actually looks like -- "is the scene in a canvas or in SVG?", "what do builds
+looks like -- "is the scene in a canvas or in SVG?", "what do builds
 name their export file?", "does anything set an accessible name?". Get it wrong
 and the check grades the rendering technology rather than the feature.
 
@@ -29,7 +29,7 @@ number existed only as a sentence inside one worker's report.
 
 Measuring once fixes all three: it is fast, the numbers are identical across
 ideas, and they land in a file that can be read, diffed and re-derived. Re-run it
-after any harness change that alters what a primitive can see; the source caps in
+after any harness change that alters what a primitive can see. The source caps in
 particular used to truncate every file at 20 KB, which silently changed the answer
 to every "does this pattern appear anywhere" question.
 
@@ -109,7 +109,7 @@ PROBES: list[Probe] = [
     Probe("genai_client", r"google-genai|@google/genai|generativelanguage"),
 ]
 
-#: Extensions builds actually give their downloads, which is what a ``download``
+#: Extensions builds give their downloads, which is what a ``download``
 #: check must pin. ``ctx.downloads[-1]`` is scoped per item now, but an item with
 #: two exports still needs the right one.
 DOWNLOAD_NAME = re.compile(r"""\.download\s*=\s*[`'"]([^`'"]{1,80})""")
@@ -250,7 +250,7 @@ def sheet(data: dict, idea_id: str) -> str:
         if hit["n"] == 0:
             continue
         note = data["probe_notes"].get(name, "")
-        label = f"{name} — {note}" if note else name
+        label = f"{name}: {note}" if note else name
         lines.append(f"| {label} | {hit['n']}/{n} | {hit['pct']}% |")
     if idea["download_extensions"]:
         exts = ", ".join(f"`{k}` ({v})" for k, v in idea["download_extensions"].items())

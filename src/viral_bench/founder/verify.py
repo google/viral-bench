@@ -19,19 +19,19 @@ plain, framework-independent functions so they can be tested now and wrapped as
 ``SocialAgent(tools=[...])`` later:
 
 * :func:`verify_code` -- the validity gate. Clone the app into a fresh, isolated
-  copy, install deps, run its smoke test, and confirm it actually starts, all in
+  copy, install deps, run its smoke test, and confirm it starts, all in
   an ephemeral container that is torn down afterwards. Returns
   ``{builds, runs, does_what_it_claims}`` so the crowd can filter or down-weight
   broken apps before amplifying them.
-* :func:`try_app` -- the delight probe. Have an agent actually *use* a *running*
+* :func:`try_app` -- the delight probe. Have an agent *use* a *running*
   app the way a human would -- click/type through a single-page app in a real
   browser, run a CLI with real inputs, or hold a multi-turn bot conversation --
   and return what it observed, which informs its LIKE / REPOST / DO_NOTHING
   choice. This delegates to :mod:`viral_bench.crowd.interaction` (the one
-  canonical "use the app" path); the older blind HTTP GET -- which never ran a
+  canonical "use the app" path). The older blind HTTP GET -- which never ran a
   single-page app's JavaScript and so could not see the rendered UI -- is gone.
 
-Both default to running in a container (the crowd path is container-forced); pass
+Both default to running in a container (the crowd path is container-forced). Pass
 ``container=False`` for host-mode local testing.
 """
 
@@ -59,8 +59,8 @@ def _http_probe(
     """Fetch ``url``, retrying transient connection errors until a deadline.
 
     Returns ``(responded, status, body)``. A rootless port-forwarder accepts the
-    TCP connection before the in-container server is actually serving, so the
-    first request can be reset; we retry connection-level failures. An HTTP error
+    TCP connection before the in-container server is serving, so the
+    first request can be reset, and connection-level failures are retried. An HTTP error
     status (4xx/5xx) still counts as "responded" -- the server is up. Callers
     that need to know whether the app WORKS must inspect the returned status:
     ``verify_code`` treats a 5xx on the entry URL as not running.
@@ -73,7 +73,7 @@ def _http_probe(
 
     Measured on the stored corpus: 9 runs recorded ``runs=False`` for an app the
     crowd then used successfully, and the clearest case reported
-    ``smoke=ok; url=...`` with 8 of 8 trials reaching the app -- i.e. the smoke
+    ``smoke=ok, url=...`` with 8 of 8 trials reaching the app -- i.e. the smoke
     command, which executes *inside* the container against the app's own port,
     proved the server was serving while the host-side probe had already given up.
     That single false negative moved the build's score from 55.2 to 13.2, a
@@ -100,8 +100,8 @@ def _http_probe(
                 return False, None, f"error after {deadline_s:.0f}s: {last}"
             time.sleep(wait)
             # Back off gently: a forwarder that is not ready in 300ms is often
-            # not ready in 600ms either, and hammering it adds load to the very
-            # contention that caused the delay.
+            # not ready in 600ms either, and hammering it adds load to the
+            # contention that caused the delay in the first place.
             wait = min(wait * 1.5, 2.0)
 
 
@@ -111,7 +111,7 @@ class VerifyResult:
 
     build_id: str
     builds: bool  # dependencies installed cleanly (or nothing to install)
-    runs: bool  # the app actually started / responded
+    runs: bool  # the app started / responded
     does_what_it_claims: bool  # heuristic gate: runs AND smoke passed
     detail: str = ""
 
@@ -149,7 +149,7 @@ def verify_code(
     Everything runs in a fresh materialized copy and (by default) an ephemeral
     container that is removed on return -- so verifying a hostile app cannot
     affect the host or any other build. ``env_map`` maps container var names to
-    host var names (resolved from the env / repo ``.env``; defaults to
+    host var names (resolved from the env / repo ``.env``, defaulting to
     :data:`~viral_bench.founder.appenv.DEFAULT_ENV_MAP`), so an app that needs a
     key like ``GEMINI_API_KEY`` at run time can be validated end-to-end.
     """
@@ -179,7 +179,7 @@ def verify_code(
         # construction -- the app did not exist yet. Measured over the stored
         # corpus, network-dependent smoke commands passed 0 times out of 45 while
         # local ones passed 372/450, and the apps were not the problem. Starting
-        # first makes "check the app actually answers" a legal health check.
+        # first makes "check the app answers" a legal health check.
         app = None
         try:
             if manifest.run.port is not None:
@@ -193,8 +193,8 @@ def verify_code(
         detail.append(f"smoke={'ok' if smoke_ok else 'fail'}")
 
         if manifest.run.port is not None:
-            # Actually fetch it (with warmup retries) so "runs" means it
-            # genuinely serves, not merely that the TCP port is open.
+            # Fetch it (with warmup retries) so "runs" means the app serves,
+            # not merely that the TCP port is open.
             responded, status, _body = (
                 _http_probe(app.url)
                 if app is not None and app.url
@@ -243,22 +243,22 @@ def try_app(
     script: list[dict] | None = None,
     max_steps: int = 24,
 ) -> TryResult:
-    """Have an agent actually *use* a running app and report what it saw.
+    """Have an agent *use* a running app and report what it saw.
 
     This is the sync convenience wrapper over the async
     :func:`viral_bench.crowd.interaction.try_app`: it drives the app like a human
     per app type (real browser for a single-page app, terminal for a CLI, the
     chat loop for a bot). A web app's shared instance comes from ``host`` (one app,
-    many agents); the returned :class:`TryResult` carries the full interaction
+    many agents). The returned :class:`TryResult` carries the full interaction
     transcript as its observation.
 
     The crowd loop, which is already async, should call
     :func:`viral_bench.crowd.interaction.try_app` directly rather than this
     wrapper. ``script`` optionally pins the exact actions to run (see that
-    function); otherwise a type-appropriate default interaction is used.
+    function). Otherwise a type-appropriate default interaction is used.
     """
     # Imported here (not at module top) so the founder package does not hard-depend
-    # on the crowd interaction stack -- and its optional browser -- just to import
+    # on the crowd interaction stack -- and its optional browser -- merely to import
     # verify. The crowd layer itself degrades gracefully when no browser is present.
     from viral_bench.crowd.interaction import try_app as _crowd_try_app
 
@@ -306,7 +306,7 @@ def probe_endpoint(
         return TryResult(build_id, app.app_type, ok, body, app.url)
 
     session = host.session(build_id)
-    assert session is not None  # host.get(...) just created it
+    assert session is not None  # host.get(...) created it above
     probe = session.manifest.test.smoke or "true"
     proc = session.runtime.exec(probe, cwd=session.manifest.run.cwd, timeout=timeout)
     observation = (proc.stdout or proc.stderr or "")[:_MAX_OBSERVATION]

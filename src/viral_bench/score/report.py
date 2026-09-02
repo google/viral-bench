@@ -32,7 +32,7 @@ SCORE_FILENAME = "score.json"
 
 
 def write_score(result: ViralScoreResult, crowd_dir: str | Path | None = None) -> Path:
-    """Persist ``score.json`` into the crowd run directory; return its path."""
+    """Persist ``score.json`` into the crowd run directory and return its path."""
     target = Path(crowd_dir or result.crowd_dir) / SCORE_FILENAME
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(result.as_dict(), indent=2), encoding="utf-8")

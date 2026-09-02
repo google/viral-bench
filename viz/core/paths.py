@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Where the artifacts are, and the rule that we only ever read them.
+"""Where the artifacts are, and the rule that they are only ever read.
 
 The viewer lives in the benchmark repo but reads its ``builds/`` tree as data,
 never importing any of the benchmark's code. Two reasons that matters:
 
-**We must not write there.** The builds tree belongs to an active development
+**Nothing may be written there.** The builds tree belongs to an active development
 checkout, and a sweep may be writing into it right now. Everything this tool
 produces -- parsed caches, rescued screenshots, throwaway app run dirs -- goes
 under ``viz/cache/``, and :func:`assert_writable` is the one gate that enforces it.
@@ -186,7 +186,7 @@ def rubric_grades_for_build(builds_root: Path, build_id: str) -> list[Path]:
 def read_json(path: Path, default=None):
     """Read a JSON file, returning *default* on any failure.
 
-    Artifacts are written by long-running jobs that get killed; a truncated or
+    Artifacts are written by long-running jobs that get killed, so a truncated or
     absent file is normal and must never take the viewer down with it.
     """
     try:
@@ -201,8 +201,8 @@ def read_json(path: Path, default=None):
 # --------------------------------------------------------------------------
 
 
-#: How a build.json's raw fields map to the arm names people actually say out
-#: loud. The tuple is ``(structure, collab)``; ``n_agents`` is not part of the key
+#: How a build.json's raw fields map to the arm names people say out
+#: loud. The tuple is ``(structure, collab)``, and ``n_agents`` is not part of the key
 #: because dynamic records ``n_agents: 1`` even though the whole point is that the
 #: agent count is an outcome rather than a setting.
 _MODE_LABELS = {
@@ -349,7 +349,8 @@ def _crowd_counts(builds_root: Path) -> dict[str, int]:
     """Count crowd runs per build id in one pass over the directory names.
 
     ``builds/crowd`` alone holds ~2,000 entries and ``builds/ablation`` another
-    ~1,200. Globbing per build would be 500 x 3,000 stats; splitting the names once
+    ~1,200. Globbing per build would be 500 x 3,000 stats, whereas splitting the
+    names once
     is a single listdir per set.
     """
     counts: dict[str, int] = {}
@@ -379,7 +380,7 @@ def index_builds(builds_root: Path) -> list[BuildSummary]:
 
     Only ``build.json`` is opened -- roughly 550 small files, a few hundred
     milliseconds cold and cached by the OS thereafter. Transcripts are parsed
-    lazily, when a build is actually opened.
+    lazily, when a build is opened.
     """
     work = builds_root / "work"
     if not work.is_dir():

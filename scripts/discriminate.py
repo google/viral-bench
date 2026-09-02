@@ -76,7 +76,7 @@ def _runs_for(spec: str) -> list[str]:
 
 
 def _load_ratings(runs: dict[str, list[str]]) -> tuple[dict[str, AutoRating], int]:
-    """Read every persisted ``autorating.json``; report how many were found.
+    """Read every persisted ``autorating.json`` and report how many were found.
 
     Rating is an expensive LLM call already paid for at score time, so it is
     read back rather than repeated. The count is returned because scoring an
@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         n_runs = len({d for ds in runs.values() for d in ds} | set(pool))
     weights = ScoreWeights.from_profile(args.profile)
     scored = score_runs_by_model(runs, weights, ratings)
-    # Separation needs two models; the redundancy panel is about the score's
+    # Separation needs two models. The redundancy panel is about the score's
     # own structure and needs none, so a --runs-only invocation is valid.
     if runs and len(scored) < 2:
         print(

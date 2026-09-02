@@ -205,7 +205,7 @@ class AppInteractionToolkit:
         self._client: AppClient | None = None
         self._trace = InteractionTrace(build_id=build_id, app_type=self.app_type)
         self._finished = False
-        #: Whether we have already asked this agent to actually use the app.
+        #: Whether this agent has already been asked to use the app.
         self._nudged = False
 
     # -- lifecycle ----------------------------------------------------------
@@ -425,14 +425,14 @@ class AppInteractionToolkit:
         if not hasattr(client, "screenshot"):
             return f"This app is a {self.app_type}; screenshots do not apply."
         obs = await client.screenshot(note)
-        # The rendered string carries a marker naming the PNG; the model
+        # The rendered string carries a marker naming the PNG, and the model
         # transport turns that into a real image part. Tools must return str, so
-        # the image cannot simply be returned here.
+        # the image cannot be returned here.
         return mark_image(obs.render(), obs.screenshot)
 
     # -- universal ----------------------------------------------------------
 
-    #: Actions that count as genuinely operating the app, as opposed to reading
+    #: Actions that count as operating the app, as opposed to reading
     #: it. `look`, `reload` and `screenshot` are observation, not use.
     _INTERACTIONS = ("click", "type", "press", "upload", "select")
 
@@ -527,7 +527,7 @@ class AppInteractionToolkit:
         # A trier is the only agent who CAN find out whether the app works, so
         # the refusal is worth one round-trip. It is deliberately not a hard
         # block: an app that will not load cannot be operated, and "I tried and
-        # it was broken" is a real verdict we must still be able to record. The
+        # it was broken" is a real verdict that must stay recordable. The
         # second call always goes through.
         # A locked trial has no verdict to give: this agent decided not to try
         # the app, and a rating from someone who did not use it is exactly the
@@ -538,7 +538,7 @@ class AppInteractionToolkit:
         # Never opened the app at all -- not "opened it and it was broken", but
         # went straight from being handed the tools to filing a verdict. 32 of
         # 352 trials in the stored corpus did this, all of them on two builds
-        # whose app genuinely would not start, and they wrote confident craft
+        # whose app would not start, and they wrote confident craft
         # ratings reconstructed from reading the source ("the SQLite persistence
         # works robustly"). The old nudge could not catch them: it was gated on
         # the app being *reachable*, which is exactly what a trial that never
@@ -635,7 +635,7 @@ class AppInteractionToolkit:
         # every invocation exited 1 -- reconstructed from reading the source and
         # narrated as first-hand use. The verdict is still recorded (the crowd
         # is not censored), but it is marked, excluded from craft downstream, and
-        # the agent is told plainly what it actually observed.
+        # the agent is told plainly what it observed.
         unreachable = self._trace.app_reachable is False
         self._trace.record(
             "finish",
@@ -831,7 +831,7 @@ async def try_app(
 
 
 # The upload tool advertises the sample files in its own docstring, which is
-# what the agent actually reads. Filled in here so the catalogue can never
+# what the agent reads. Filled in here so the catalogue can never
 # drift from fixtures.FIXTURE_DESCRIPTIONS.
 AppInteractionToolkit.upload_file.__doc__ = (
     AppInteractionToolkit.upload_file.__doc__ or ""

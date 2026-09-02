@@ -162,7 +162,7 @@ def test_a_timed_out_turn_is_not_recorded_as_a_build_failure(builds_dir) -> None
 
     Both used to land as ``harness_failed``, which made a slow-but-working model
     indistinguishable from one that could not ship an app -- a fabricated
-    capability difference (docs/crowd_bugs.md T0.1). ``harness_timeout`` is a
+    capability difference. ``harness_timeout`` is a
     distinct status, and scripts/build_fleet.py auto-retries it for that reason.
     """
 

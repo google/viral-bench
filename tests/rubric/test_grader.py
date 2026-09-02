@@ -215,7 +215,7 @@ def test_unknown_is_recorded_as_unresolved_not_as_a_fail():
 
 
 def test_evidence_given_as_prose_still_binds():
-    """Models cite ids in a sentence as often as in a list; accept both."""
+    """Models cite ids in a sentence as often as in a list, so accept both."""
     target = item("S1", 10, 1)
     client = ScriptedClient(
         [
@@ -291,8 +291,8 @@ def test_the_step_budget_stops_a_model_that_never_reports():
     """Budget exhaustion is an instrument fault, so it is unresolved, not FAIL.
 
     Both earn zero. The difference is that unresolved is counted where it can be
-    seen; recording it as FAIL would let a grader that keeps running out of steps
-    produce low scores that read as real findings about the app.
+    seen, whereas recording it as FAIL would let a grader that keeps running out
+    of steps produce low scores that read as real findings about the app.
     """
     target = item("S1", 10, 1)
     client = ScriptedClient([Reply([Call("look", {})]) for _ in range(50)])

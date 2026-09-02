@@ -16,7 +16,7 @@
 
 The forensics script is how the loop reads 150 runs end to end, so its
 arithmetic has to be pinned down: a report that quietly miscounts "agents who
-actually operated the app" would send the whole iteration after the wrong thing.
+operated the app" would send the whole iteration after the wrong thing.
 """
 
 from __future__ import annotations
@@ -172,10 +172,10 @@ def _write_run(
 
 
 def test_a_trial_that_only_reads_the_page_does_not_count_as_using_the_app(tmp_path):
-    """`look` and `screenshot` are observation; the distinction is the point.
+    """`look` and `screenshot` are observation, and the distinction is the point.
 
     36% of triers once filed a verdict without a single successful click, and
-    they rated apps a full point higher than triers who actually operated one.
+    they rated apps a full point higher than triers who operated one.
     A report that counted `look` as use would have hidden that entirely.
     """
     forensics = _forensics()

@@ -22,7 +22,7 @@ time by hand wastes most of a day in gaps, and running them concurrently makes
 every arm contend for the same API quota, which is the one resource that decides
 throughput here. So they queue.
 
-Each entry names ONE variable and its value; everything else is the shipped
+Each entry names ONE variable and its value, and everything else is the shipped
 default. The variant name becomes the run's architecture tag
 (``<version>+<variant>``), which is what keeps an arm out of the main corpus.
 

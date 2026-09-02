@@ -111,10 +111,10 @@ def test_web_trial_type_and_press(web_build) -> None:
 def test_full_stack_app_is_opened_the_same_way(full_stack_build) -> None:
     """Both scopes are web apps, so both get the same client and the same verbs.
 
-    ``open_trial`` used to branch on app type; now the scope is only a label, so
+    ``open_trial`` used to branch on app type. Now the scope is only a label, so
     a ``full-stack-app`` must be driven by exactly the same browser client as a
     ``client-app``. Asserted with a real click so this is parity of behaviour,
-    not just of class name.
+    not merely of class name.
     """
 
     async def inner():

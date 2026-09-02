@@ -25,7 +25,7 @@ drop a small, machine-readable manifest at the app root describing:
   smoke command).
 
 This manifest is the contract the :mod:`viral_bench.founder.runner` (and, later,
-the OASIS crowd's ``verify_code`` / ``try_app`` tools) consume to actually
+the OASIS crowd's ``verify_code`` / ``try_app`` tools) consume in order to
 exercise the app. Keeping it tiny and validated means a malformed build fails
 loudly instead of silently producing something no one can run.
 """
@@ -59,8 +59,8 @@ class RunSpec:
     Attributes:
         command: Shell command that starts the app, run from ``cwd``.
         cwd: Directory to run ``command`` in, relative to the app root.
-        port: TCP port the app listens on (web apps); ``None`` otherwise.
-        url: URL to open once running (web apps); ``None`` otherwise.
+        port: TCP port the app listens on (web apps), ``None`` otherwise.
+        url: URL to open once running (web apps), ``None`` otherwise.
     """
 
     command: str
@@ -197,7 +197,7 @@ def load_manifest(path: str | Path) -> Manifest:
 def example_manifest_json(app_type: str = "client-app") -> str:
     """Return a filled-in example manifest, used in the founder's build prompt.
 
-    The example is intentionally concrete (not just a schema) so the model has a
+    The example is intentionally concrete (not merely a schema) so the model has a
     clear target to imitate for the given ``app_type``.
 
     Treat this as load-bearing, not illustrative. Measured over 126 shipped

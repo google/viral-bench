@@ -25,7 +25,7 @@ Three properties matter more than speed:
 * **Identical config.** Every build runs the same command --
   ``found <idea> --model <M> --agents 4 --collab local`` with the shipped
   defaults. The config is recorded in ``builds/fleet.json`` and re-checked
-  against each ``build.json``; a build that ran under anything else is not in
+  against each ``build.json``. A build that ran under anything else is not in
   the fleet.
 * **Isolation.** Builds run concurrently inside private network namespaces (see
   ``scripts/netns_run.sh``), because a team build serves the app it is writing
@@ -112,9 +112,9 @@ STRUCTURES: dict[str, dict[str, object]] = {
     # four agents over three rounds is several times one agent's work. Measured
     # while the default was still in force: nearly every build failure in this
     # arm landed at EXACTLY 5400.0s, and it fell almost entirely on the slowest
-    # founder rather than being spread across the models. That is our wall clock
-    # being recorded as a model that cannot ship, which is the fabricated
-    # capability difference of docs/crowd_bugs.md T0.1. Sized like the dynamic
+    # founder rather than being spread across the models. That is the harness wall
+    # clock being recorded as a model that cannot ship, which is the fabricated
+    # capability difference. Sized like the dynamic
     # arm's: generous enough not to bind, bounded enough that a wedged cell does
     # not hold a slot forever.
     #
@@ -122,10 +122,10 @@ STRUCTURES: dict[str, dict[str, object]] = {
     # overwhelming majority of builds ran exactly ONE round, and they are genuine
     # early ships rather than truncated builds -- they carry shipped_early and
     # qa_verified true, and mean rounds run was barely above 1. So the arm billed
-    # as "4 specialists x 3 rounds" was really 4 specialists x 4 turns, and a
+    # as "4 specialists x 3 rounds" was 4 specialists x 4 turns, and a
     # team-vs-solo comparison drawn from it could not speak to whether iteration
-    # helps -- the mechanism under test barely ran. A floor of 2 forces the second
-    # round; the cap stays 3 so a team that wants a third can still take it.
+    # helps: the mechanism under test barely ran. A floor of 2 forces the second
+    # round, and the cap stays 3 so a team that wants a third can still take it.
     #
     # Note this necessarily invalidates any team corpus built under the old floor:
     # config_matches() compares min_rounds, so those builds no longer match this
@@ -143,7 +143,7 @@ STRUCTURES: dict[str, dict[str, object]] = {
     # One founder agent that picks its own team: it decides whether to delegate,
     # to whom, how many at a time, and may define its own subagents. The other
     # two arms both encode one human's answer to "how should a founding team be
-    # organised?"; this one asks the model instead, so it measures orchestration
+    # organised?". This one asks the model instead, so it measures orchestration
     # as well as coding.
     "dynamic": {
         "agents": "dynamic",
@@ -152,14 +152,14 @@ STRUCTURES: dict[str, dict[str, object]] = {
         "structure": "dynamic",
         "browser_tools": True,
         # This arm needs its own wall clock, well past the 90-minute fleet
-        # default. A team turn is ONE model turn; a dynamic turn can contain the
+        # default. A team turn is ONE model turn, while a dynamic turn can contain the
         # whole team's work, and a model that fans out runs its subagents inside
         # the single process being timed. Measured on Claude Opus 5, which
         # designed itself a five-subagent team on an *easy* idea: a single
         # orchestrator turn ran ~95 minutes. At the fleet default that build is
-        # SIGKILLed at 90 and recorded harness_timeout -- our limit biting the
+        # SIGKILLed at 90 and recorded harness_timeout: the harness limit biting the
         # model that orchestrated hardest, which is the fabricated capability
-        # difference of docs/crowd_bugs.md T0.1 in its purest form.
+        # difference in its purest form.
         #
         # Raised 4h -> 6h when the brief started telling the founder how to earn
         # a second turn (prompts.py `_delegation_brief`), since that is the only
@@ -220,7 +220,7 @@ class Cell:
     idea_id: str
     model: str
     #: Which independent build of this (idea, model) pair. Replicate 1 is the
-    #: original fleet; 2+ re-build the SAME brief under the SAME config, which is
+    #: original fleet, and 2+ re-build the SAME brief under the SAME config, which is
     #: how build-to-build variance gets measured. Founder models are sampled at
     #: temperature, so a re-run is a genuine second draw, not a cache hit.
     replicate: int = 1
@@ -296,14 +296,14 @@ def _short_model(model: str) -> str:
     Two deliberate details, both of which decide whether a resume rebuilds work
     that is already done:
 
-    * Applied to BOTH sides of the comparison below, not just the build record.
+    * Applied to BOTH sides of the comparison below, not only the build record.
       A cell may legitimately be named either way -- ``--models
       gemini-2.0-flash`` or the fully-qualified
       ``google-vertex-anthropic/gemini-2.0-flash`` -- and comparing a
       stripped record against a qualified cell would never match.
-    * Strips any prefix, not just providers we currently know. This fleet already
-      contains builds recorded under the legacy ``google/`` prefix (11 of them,
-      from before the move to ``google-vertex``). Being strict about known
+    * Strips any prefix, not only the providers currently known. This fleet
+      already contains builds recorded under the legacy ``google/`` prefix, from
+      before the move to ``google-vertex``. Being strict about known
       providers would leave those unmatched and silently rebuild them, which
       costs real money and reruns a cell that already has a result. No Vertex
       model id contains a slash, so splitting on the last one is safe.
@@ -356,9 +356,9 @@ def brief_matches(record: dict, idea_id: str) -> bool:
 #: opencode dies with an internal error and the build is recorded
 #: ``harness_failed`` -- a status deliberately NOT auto-retried, on the reasoning
 #: that it is "a real (if rare) model outcome". For a lost database lock it is
-#: nothing of the kind: it is a coin flip on our side being written down as the
+#: nothing of the kind: it is a coin flip on the harness side written down as the
 #: model's inability to build an app, which is precisely the fabricated
-#: capability difference docs/crowd_bugs.md T0.1 warns about. Observed live:
+#: capability difference a harness bug can fabricate. Observed live:
 #: db_schema_designer/solo died in 44s with "Failed to execute statement".
 _INFRA_FAILURE_SIGNS = (
     "failed to execute statement",
@@ -375,7 +375,8 @@ _INFRA_FAILURE_SIGNS = (
 #: A third category, and it needs to be, because the two existing ones both give
 #: the wrong answer for it.
 #:
-#: It is not ``harness_infra``. That status means "ours, so retry it", and
+#: It is not ``harness_infra``. That status means "a harness fault, so retry
+#: it", and
 #: retrying a refusal hands the affected model extra draws that no other cell
 #: gets -- the same control violation that keeps ``manifest_missing`` off the
 #: auto-retry list.
@@ -420,7 +421,7 @@ def _is_refusal(stdout: str, stderr: str) -> str:
 
 
 def run_cell(cell: Cell, *, timeout_s: float) -> dict:
-    """Run one founder build in its own network namespace; return its entry."""
+    """Run one founder build in its own network namespace and return its entry."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = (
         LOG_DIR
@@ -443,8 +444,8 @@ def run_cell(cell: Cell, *, timeout_s: float) -> dict:
     ]
     if cfg["structure"] == "dynamic":
         argv += ["--turns", str(cfg["turns"])]
-    # --rounds/--min-rounds only apply to the multi-agent team; passing them for
-    # a solo build would be rejected by the CLI.
+    # --rounds/--min-rounds only apply to the multi-agent team, and passing them
+    # for a solo build would be rejected by the CLI.
     elif int(cfg["agents"]) > 1:
         argv += ["--rounds", str(cfg["rounds"]), "--min-rounds", str(cfg["min_rounds"])]
     env = dict(os.environ)
@@ -452,11 +453,11 @@ def run_cell(cell: Cell, *, timeout_s: float) -> dict:
     # Give this build its OWN opencode state directory.
     #
     # opencode keeps every session it has ever run in one SQLite database under
-    # $XDG_DATA_HOME/opencode. On this machine that file had grown to 41 GB, and
+    # $XDG_DATA_HOME/opencode. That file grows without bound, and
     # concurrent builds contend on it: the loser dies with "Failed to execute
     # statement" and the cell is recorded as a build failure. Measured live at
-    # concurrency 8, that was 3 of the first 14 cells (21%) -- a coin flip on our
-    # side being written down as the model's inability to build an app.
+    # concurrency 8, that was 3 of the first 14 cells (21%): a coin flip on the
+    # harness side written down as the model's inability to build an app.
     #
     # Isolating the directory removes the contention rather than retrying it, and
     # keeps the shared database from growing without bound. Nothing else lives
@@ -469,8 +470,8 @@ def run_cell(cell: Cell, *, timeout_s: float) -> dict:
     # A structure may need a different wall-clock cap than the fleet default.
     # The dynamic arm does: one of its turns can contain a whole fan-out of
     # subagent runs, so a cap sized for a team turn would SIGKILL working builds
-    # and record them as harness_timeout -- our limit biting, dressed up as the
-    # model being unable to build an app.
+    # and record them as harness_timeout: the harness limit biting, dressed up as
+    # the model being unable to build an app.
     cell_timeout = float(cfg.get("timeout_s") or timeout_s)
     _stagger_start()
     started = time.time()
@@ -501,7 +502,7 @@ def run_cell(cell: Cell, *, timeout_s: float) -> dict:
 
     status = (record or {}).get("status", "no_record")
     if status == "ok":
-        # Only discard a successful cell's opencode state; a failed one still
+        # Only discard a successful cell's opencode state. A failed one still
         # holds the session transcript that explains why.
         shutil.rmtree(cell_state, ignore_errors=True)
     infra = ""
@@ -541,7 +542,7 @@ def run_cell(cell: Cell, *, timeout_s: float) -> dict:
 def cell_attempted(fleet: dict, cell: Cell) -> bool:
     """True if this cell has already been attempted at all (ok or not).
 
-    Attempts are counted, not just successes, because retrying is a control
+    Attempts are counted, not only successes, because retrying is a control
     violation waiting to happen: quietly re-running only the cells one model
     failed gives that model N attempts against the other's one, and the fleet
     stops being a fair comparison. A retry must be asked for by name (--retry)
@@ -582,11 +583,11 @@ def pending_cells(
     is in ``retry`` -- which the caller must name explicitly. ``driver_error``,
     ``no_record`` and ``harness_timeout`` are always retryable: those are OUR
     failures, not the model's, and leaving them in place would report a harness
-    bug as a model capability (docs/crowd_bugs.md T0.1).
+    bug as a model capability.
 
-    ``harness_timeout`` qualifies on exactly that rule -- it means our wall-clock
-    backstop killed a turn that was still working, so the cell holds no evidence
-    about the model at all. It used to be indistinguishable from
+    ``harness_timeout`` qualifies on exactly that rule: it means the harness
+    wall-clock backstop killed a turn that was still working, so the cell holds
+    no evidence about the model at all. It used to be indistinguishable from
     ``harness_failed``, which is a real (if rare) model outcome and so is
     deliberately NOT auto-retried.
 
@@ -596,10 +597,10 @@ def pending_cells(
     model-attributable status such as ``manifest_missing``, because every cell
     gets exactly one new draw and none is singled out. Unbounded, that stops
     being true the moment the driver is restarted -- a cell whose fresh draw
-    already landed and re-failed is simply offered again, so the models that fail
+    already landed and re-failed is offered again, so the models that fail
     this way collect extra draws while the models that succeed collect none, and
     the arm silently becomes best-of-N for the weakest founders. Pass the instant
-    the rebuild started; the always-ours statuses are deliberately not bounded by
+    the rebuild started. The always-harness statuses are deliberately not bounded by
     it, since those hold no evidence about any model at all.
     """
     always_retry = {"driver_error", "no_record", "harness_timeout", "harness_infra"}
@@ -711,7 +712,7 @@ def report(
     )
     # "never attempted" was the old label and it was never quite true -- a cell
     # whose build succeeded under a since-changed founder config is queued here
-    # too, and it was very much attempted. Under --retry it became actively
+    # too, and it was certainly attempted. Under --retry it became actively
     # misleading. "to build" is what the number has always meant.
     suffix = f", incl. --retry {','.join(sorted(retry))}" if retry else ""
     if retry and retry_before:
@@ -727,7 +728,7 @@ def report(
 
 
 def reclassify_infra(dry_run: bool = False) -> list[tuple[str, str]]:
-    """Relabel stored cells whose failure we NOW recognise as ours.
+    """Relabel stored cells whose failure is NOW recognised as a harness fault.
 
     A cell's status is decided once, when it is built. Add a signature to
     ``_INFRA_FAILURE_SIGNS`` afterwards and every cell already condemned under the
@@ -735,15 +736,15 @@ def reclassify_infra(dry_run: bool = False) -> list[tuple[str, str]]:
     auto-retried -- so the fix silently never reaches the builds it was written
     for. This applies the CURRENT classifier to what is already on disk.
 
-    Only ever relaxes a verdict in our own direction (harness_failed / no_record
-    -> harness_infra), never the reverse, so it cannot launder a genuine model
-    failure into a free retry.
+    Only ever relaxes a verdict in the harness's own direction (harness_failed /
+    no_record -> harness_infra), never the reverse, so it cannot launder a
+    genuine model failure into a free retry.
     """
     changed: list[tuple[str, str]] = []
     with open(FLEET_LOCK_PATH, "w", encoding="utf-8") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         fleet = load_fleet()
-        # harness_infra is included as a SOURCE state, not just a target: a
+        # harness_infra is included as a SOURCE state, not only a target: a
         # refusal was briefly classified that way before it got its own status,
         # and leaving those behind would auto-retry the exact cells that must not
         # be retried.
@@ -915,7 +916,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     fleet = load_fleet()
     fleet["models"] = {"A": MODEL_A, "B": MODEL_B}
-    # Record every structure this index has ever built under, not just the
+    # Record every structure this index has ever built under, not only the
     # current run's, so fleet.json documents the whole comparison.
     known = dict(fleet.get("structures") or {})
     known.update({name: dict(STRUCTURES[name]) for name in structures})
@@ -973,8 +974,8 @@ def main(argv: list[str] | None = None) -> int:
 
         Deliberately does NOT take ``lock``: it is called from inside the
         completion handler's critical section, and ``threading.Lock`` is not
-        reentrant, so re-acquiring here would deadlock the pool on its very
-        first finished cell.
+        reentrant, so re-acquiring here would deadlock the pool on its first
+        finished cell.
         """
         mine = {
             key: fleet["entries"][key]

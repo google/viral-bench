@@ -19,8 +19,8 @@
 1. create a fresh host workspace directory,
 2. run the founder harness (opencode + Gemini) to design and build the app,
 3. validate the ``viralbench.json`` manifest the agent produced,
-4. *ship* the app into a single shared git store (one orphan branch per build --
-   so we never create a new repo per build), and
+4. *ship* the app into a single shared git store (one orphan branch per build,
+   so no new repo is created per build), and
 5. write a ``build.json`` record for later inspection / the runner.
 
 The ship step is deliberately "one store, many branches": ``builds/store`` is a
@@ -111,7 +111,7 @@ def generate_build_id(idea_id: str) -> str:
 
 @dataclass
 class BuildRecord:
-    """Everything we know about one build (persisted as ``build.json``)."""
+    """Everything known about one build (persisted as ``build.json``)."""
 
     build_id: str
     idea_id: str
@@ -124,7 +124,7 @@ class BuildRecord:
     harness_ok: bool
     # Collaboration structure metadata. Defaults describe the solo baseline and
     # keep older build.json files loadable (unknown/retired keys are ignored on
-    # load; see _record_from_dict).
+    # load, see _record_from_dict).
     structure: str = "solo"  # "solo" | "team" | "dynamic"
     # Agents the CONFIGURATION fixes: 1 for solo and for dynamic (which runs one
     # orchestrator process). In dynamic mode the interesting count -- how many
@@ -135,21 +135,21 @@ class BuildRecord:
     n_agents: int = 1
     max_rounds: int = 1  # team round cap (1 for solo)
     min_rounds: int = 1  # min rounds before QA may ship (1 for solo)
-    rounds_run: int = 1  # rounds actually executed
+    rounds_run: int = 1  # rounds executed
     shipped_early: bool = False  # team stopped because QA signalled ship
-    # Whether QA actually exercised the running app (browser/CLI/bot) on its final
-    # turn -- not just read the code. None for solo / when unknown. A shipped build
+    # Whether QA exercised the running app (browser/CLI/bot) on its final
+    # turn -- not merely read the code. None for solo / when unknown. A shipped build
     # with qa_verified False shipped without real runtime verification.
     qa_verified: bool | None = None
     max_turns: int = 2  # upper bound on model turns for this configuration
     min_turns: int = 2  # lower bound on model turns for this configuration
-    turns_spent: int = 0  # model turns actually run
+    turns_spent: int = 0  # model turns run
     roles: list[str] = field(default_factory=list)
-    # Collaboration toolset; see viral_bench.founder.collab.
+    # Collaboration toolset. See viral_bench.founder.collab.
     collab: str = "local"
     collab_meta: dict | None = None
     # -- dynamic mode only ---------------------------------------------------
-    # How many subagents the founder actually spawned. Zero is a legitimate and
+    # How many subagents the founder spawned. Zero is a legitimate and
     # interesting outcome (the model chose to work alone), which is why it is a
     # plain default rather than a sentinel: a dynamic build with 0 spawns is a
     # result, not a missing measurement.
@@ -160,7 +160,7 @@ class BuildRecord:
     # for the solo/team modes, which have no such choice to record.
     orchestration: dict | None = None
     # Hash of the DESIGN + BUILD prompts this build was given -- the idea spec,
-    # scope guidance, runtime notes and example manifest as the model actually
+    # scope guidance, runtime notes and example manifest as the model
     # saw them. Two builds are comparable only if this matches. Without it the
     # fleet reused builds from before the web-dev pivot, whose brief said "prefer
     # plain static files" and "no backend required", as current results.
@@ -176,7 +176,7 @@ class BuildRecord:
     error: str | None = None  # top-line failure reason (harness or manifest)
     shipped_ref: str | None = None
     store_path: str | None = None
-    #: Which named sweep this build belongs to, e.g. ``"r4"``. A LABEL, not a
+    #: Which named sweep this build belongs to. A LABEL, not a
     #: selection axis, and deliberately not ``replicate``.
     #:
     #: ``replicate`` answers "which independent build of this cell is this", and
@@ -226,9 +226,9 @@ def _record_trajectory(result: HarnessResult, workspace: BuildWorkspace) -> dict
 
     A first-class part of the build record rather than something left implicit
     in the transcript, because "the reasoning was captured" is a claim that has
-    to be auditable per build. An empty trace has two very different causes --
-    the model genuinely did not think (Claude's ``adaptive`` mode skips easy
-    turns) or our capture regressed -- and only a count written down at build
+    to be auditable per build. An empty trace has two quite different causes --
+    the model did not think at all (Claude's ``adaptive`` mode skips easy
+    turns) or capture regressed -- and only a count written down at build
     time tells them apart afterwards.
 
     Every figure is recorded twice, from two independent sources, because
@@ -244,7 +244,7 @@ def _record_trajectory(result: HarnessResult, workspace: BuildWorkspace) -> dict
         Read from the dumped session store, which has the subagents. Computed
         ONCE for the whole build and deduped by part id, because each turn
         re-dumps its entire subtree: summing per-turn dump counts double-counts,
-        and did (137 recorded against 114 records actually on disk).
+        and did (137 recorded against 114 records on disk).
 
     Keeping ``_root`` is not redundancy. ``dump_session_trace`` is best-effort
     and yields nothing on any failure, so a dump that broke and a model that did
@@ -252,7 +252,7 @@ def _record_trajectory(result: HarnessResult, workspace: BuildWorkspace) -> dict
     independent witness that tells those apart -- the exact ambiguity this whole
     field exists to resolve.
 
-    The two agree on a build with no subagents; a gap between them IS the
+    The two agree on a build with no subagents, and a gap between them IS the
     subagents' share of the thinking.
     """
     dumped = reasoning_from_dumps(workspace.transcript_dir / "sessions")
@@ -265,7 +265,7 @@ def _record_trajectory(result: HarnessResult, workspace: BuildWorkspace) -> dict
         "reasoning_redacted_all": dumped["redacted"],
         "turns": len(result.phases),
         # Both deduped across the per-turn dumps. `records` is every distinct
-        # line on disk; `events` is the parts alone, i.e. what the exported
+        # line on disk, while `events` is the parts alone, i.e. what the exported
         # trajectory stream will hold. They are different numbers and conflating
         # them is how the double-count went unnoticed the first time.
         "session_records": dumped["records"],
@@ -362,7 +362,7 @@ def _cleanup_agent_artifacts(app_dir: Path, collab: str = "local") -> None:
         if target.is_dir():
             shutil.rmtree(target, ignore_errors=True)
     # Bytecode caches can appear at any depth if the app was executed during the
-    # build; they are regenerated on run and must never ship.
+    # build, and they are regenerated on run and must never ship.
     for pycache in app_dir.rglob("__pycache__"):
         if pycache.is_dir():
             shutil.rmtree(pycache, ignore_errors=True)
@@ -409,7 +409,7 @@ def run_build(
             and every subagent it spawns. Auto-disabled gracefully if the host
             lacks the browser prerequisites, and always ignored for solo.
         harness: override the founder harness (used by tests). When given, it is
-            responsible for its own structure/toolset; ``agents``/``collab``/
+            responsible for its own structure/toolset. ``agents``/``collab``/
             ``rounds`` still determine the recorded metadata.
         ship: whether to ship a healthy build into the git store.
     """
@@ -462,14 +462,14 @@ def run_build(
 
     # If the harness itself failed (timeout / preflight / crash), report the
     # real reason -- do NOT run manifest validation, whose "not found" message
-    # would just be a misleading downstream symptom.
+    # would be a misleading downstream symptom.
     manifest: Manifest | None = None
     if not result.ok:
         failing = next((p for p in result.phases if not p.ok), None)
-        # A turn we SIGKILLed on the wall clock is OUR limit biting, not the
+        # A turn SIGKILLed on the wall clock is the harness's limit biting, not the
         # model failing to build the app. Recording both as `harness_failed`
         # made a slow-but-working model indistinguishable from a broken one --
-        # a fabricated capability difference (docs/crowd_bugs.md T0.1). Status
+        # a fabricated capability difference. Status
         # says which, so a fleet can be audited for timeouts before its numbers
         # are believed.
         timed_out = failing is not None and failing.timed_out
@@ -495,7 +495,7 @@ def run_build(
                 record.manifest_error = str(exc)
                 record.error = str(exc)
 
-    # Strip agent scratch from EVERY build, not just the ones that ship.
+    # Strip agent scratch from EVERY build, not only the ones that ship.
     #
     # The crowd now simulates every build, including ones with no valid manifest
     # -- and its code-inspection tool reads whatever is in the app directory. If

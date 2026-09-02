@@ -19,14 +19,14 @@ sampling temperature, tool **permissions**, and (via MCP) extra tools -- selecte
 per run with ``opencode run --agent <name>`` (see
 https://opencode.ai/docs/agents/). This module turns the founder
 :class:`~viral_bench.founder.roles.Role` specs into that config so each
-specialist runs as a genuinely different, "levelled-up" agent rather than a
+specialist runs as a distinct, "levelled-up" agent rather than a
 generic build agent:
 
 * each role becomes an ``agent`` entry keyed by ``role.key`` (the value passed to
   ``--agent``),
 * its ``permission`` map encodes differentiated tool access (e.g. web research on
   for the Architect/Designer, off for the Implementer/QA),
-* its ``permission.skill`` map gates on-demand skills to just that role, and
+* its ``permission.skill`` map gates on-demand skills to that role alone, and
 * when browser tooling is enabled, the roles that want it get a real browser MCP
   (so the Designer/QA can render and click the running app), disabled for
   everyone else.
@@ -51,7 +51,7 @@ __all__ = [
     "skills_for_roles",
 ]
 
-#: Name of the optional browser MCP server; its tools are exposed as ``browser_*``.
+#: Name of the optional browser MCP server. Its tools are exposed as ``browser_*``.
 BROWSER_MCP_NAME = "browser"
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -68,9 +68,9 @@ VENDORED_MCP_ENTRY = (
     / "cli.js"
 )
 
-#: System Chrome/Chromium binaries the MCP's ``chrome`` channel can drive. We use
-#: the system browser channel rather than Playwright's bundled Chromium so we do
-#: not have to match Playwright's exact browser revision at run time.
+#: System Chrome/Chromium binaries the MCP's ``chrome`` channel can drive. The
+#: system browser channel is used rather than Playwright's bundled Chromium, so
+#: Playwright's exact browser revision need not be matched at run time.
 _CHROME_BINARIES: tuple[str, ...] = (
     "google-chrome",
     "google-chrome-stable",
@@ -98,12 +98,12 @@ def _browser_available() -> bool:
 
 
 def browser_prereqs_ok(command: tuple[str, ...] = DEFAULT_BROWSER_COMMAND) -> bool:
-    """True if the browser MCP in ``command`` can actually launch on this host.
+    """True if the browser MCP in ``command`` can launch on this host.
 
     Checks the launcher (``node``) is available, any referenced ``.js`` entry
     exists (the vendored MCP), and a Chromium/Chrome is present. Used by the
     harness to auto-disable the browser gracefully when it cannot run, so a build
-    never fails just because the optional browser tooling is missing.
+    never fails merely because the optional browser tooling is missing.
     """
     launcher = command[0] if command else ""
     if not launcher or (shutil.which(launcher) is None and not Path(launcher).exists()):
@@ -114,8 +114,8 @@ def browser_prereqs_ok(command: tuple[str, ...] = DEFAULT_BROWSER_COMMAND) -> bo
     return _browser_available()
 
 
-# Baseline tool access every specialist gets; roles override (e.g. deny web).
-# ``--auto`` auto-approves anything not denied, but we spell the baseline out so
+# Baseline tool access every specialist gets, which roles override (e.g. deny web).
+# ``--auto`` auto-approves anything not denied, but the baseline is spelled out so
 # behaviour is explicit and stable regardless of the --auto default.
 _BASE_PERMISSION: dict[str, object] = {
     "read": "allow",
@@ -189,8 +189,8 @@ def build_dynamic_config(
     """Config for the dynamic founder: stock opencode, delegation switched on.
 
     Deliberately defines **no agents at all**. The dynamic mode runs the default
-    ``build`` agent with no ``--agent`` flag, because every custom agent we define
-    is another decision taken away from the model -- and the model can define its
+    ``build`` agent with no ``--agent`` flag, because every custom agent defined
+    here is another decision taken away from the model -- and the model can define its
     own agents at run time anyway (see
     :data:`~viral_bench.founder.structures.AGENTS_DIRNAME`). What it configures is
     only the two things that would otherwise silently limit delegation:
@@ -202,13 +202,13 @@ def build_dynamic_config(
       which opencode gates behind ``external_directory: ask`` -- raises a prompt
       with nobody to answer it, and the whole build sits there until the
       wall-clock backstop kills it and records ``harness_timeout``. In a mode
-      built on delegation that is not an edge case; it is the common path. So the
+      built on delegation that is not an edge case, but the common path. So the
       map opens with ``"*": "allow"`` (later, more specific rules still win) and
       names ``external_directory`` and ``task`` outright. Anything less pre-approves
-      only the prompts we happened to think of.
+      only the prompts that happened to be thought of in advance.
     * the browser MCP, enabled **globally** rather than per-role. The team mode
       disables browser tools globally and re-enables them for the two roles that
-      asked for one; here nobody knows in advance which agent will want to look at
+      asked for one. Here nobody knows in advance which agent will want to look at
       the app, so every agent -- the founder and any subagent it spawns -- gets
       the browser. Without that, a dynamic build would be measured against team
       builds whose QA could see the rendered page while it could not.
@@ -286,7 +286,7 @@ def build_agents_config(
                 "enabled": True,
             }
         }
-        # Disable browser tools globally; each agent re-enables if it wants them.
+        # Disable browser tools globally. Each agent re-enables if it wants them.
         fragment["tools"] = {_browser_tools_key(): False}
 
     return fragment

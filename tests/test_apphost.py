@@ -34,11 +34,11 @@ def _free_port() -> int:
 
 
 def _manifest(port: int) -> dict:
-    """A trivial web app that just stays up and serves.
+    """A trivial web app that stays up and serves.
 
     This used to be a port-less ``bot`` ("sleep 120") because the pool's
     start/reuse/restart/teardown logic does not care what the app does. It has
-    to genuinely serve now: every app is a web app, and ``LocalRuntime.start``
+    to serve for real now: every app is a web app, and ``LocalRuntime.start``
     will not hand out a URL until the declared port answers HTTP.
     """
     return {
@@ -141,8 +141,8 @@ def test_a_failing_start_is_retried_a_bounded_number_of_times(monkeypatch) -> No
     agent trial called ``get``, every call re-materialized the app (~188,600
     files for a node build), and the run was finally culled at the 3600s wall
     clock having written no ``run_summary.json`` at all -- so the cell looked
-    untried and was re-offered on the next pass. Measured on r3: 15 to 34
-    attempts per failing build.
+    untried and was re-offered on the next pass. Measured on a full sweep: 15 to
+    34 attempts per failing build.
     """
     from viral_bench.founder.apphost import MAX_START_ATTEMPTS, AppStartFailed
 
@@ -178,8 +178,8 @@ def test_a_failed_start_retires_its_clone(monkeypatch) -> None:
     """The clone made for a failed attempt must not be left behind.
 
     A build that cannot start is exactly the one that generates the most clones,
-    and they are the largest thing on disk: 1,674 leaked trees accumulated on the
-    r3 sweep and crowd throughput fell from 102 runs/hour to about 2.
+    and they are the largest thing on disk: leaked trees piled up in the thousands
+    over one sweep and crowd throughput fell from ~100 runs/hour to roughly 2.
     """
     closed: list[str] = []
 

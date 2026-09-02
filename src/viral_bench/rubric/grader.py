@@ -73,7 +73,7 @@ class GraderError(RuntimeError):
 
 @dataclass
 class ToolRecord:
-    """One logged tool call: what was asked, and what actually came back."""
+    """One logged tool call: what was asked, and what came back."""
 
     id: str
     name: str
@@ -492,10 +492,10 @@ class GraderTools:
           }
           return JSON.stringify(out, Object.keys(out).sort());
         }"""
-        # A fourth view: what is actually drawn on the canvases. For the 125 of
-        # 127 whiteboard builds that render their scene to a <canvas>, the DOM
-        # says nothing at all -- text, style and form state are identical before
-        # and after a stroke. Downsampled to a 32x32 grid so the fingerprint is
+        # A fourth view: what is drawn on the canvases. For the 125 of 127
+        # whiteboard builds that render their scene to a <canvas>, the DOM says
+        # nothing at all -- text, style and form state are identical before and
+        # after a stroke. Downsampled to a 32x32 grid so the fingerprint is
         # stable against antialiasing, and reported with an ink ratio so "the
         # canvas has content" is separable from "the canvas changed".
         canvas_js = """() => {
@@ -714,7 +714,7 @@ async def grade_item(
         # Out of budget with no verdict. Recorded unresolved rather than FAIL:
         # the grader gave up, which is not evidence the app lacks the feature,
         # and burying that in the score would make a flaky grader look like a
-        # finding. It still earns nothing -- it is just counted where it can be
+        # finding. It still earns nothing -- it is only counted where it can be
         # seen.
         note = f"no verdict within {max_steps} steps"
 
@@ -783,8 +783,8 @@ async def _settle(
         )
     if not valid:
         # The anti-fabrication rule. A pass claimed without a call the harness
-        # recorded is not a pass; a claimed fail is still a fail, so this only
-        # ever costs points that were never evidenced.
+        # recorded is not a pass, while a claimed fail is still a fail, so this
+        # only ever costs points that were never evidenced.
         detail = "verdict cites no recorded tool call"
         if unknown:
             detail += f" (cited {', '.join(unknown[:4])}, none from this item)"
@@ -834,9 +834,9 @@ def _gradeable(rubric: Rubric) -> list[RubricItem]:
 
 
 def merge_passes(passes: Sequence[dict[str, ItemOutcome]]) -> dict[str, ItemVerdict]:
-    """Fold N passes into one verdict per item; an item passes on a majority.
+    """Fold N passes into one verdict per item, with a majority deciding it.
 
-    The per-pass answers are kept, not just the majority, because the
+    The per-pass answers are kept, not only the majority, because the
     disagreement rate *is* the instrument's noise floor -- and a RubricScore gap
     smaller than that floor is not a finding.
     """

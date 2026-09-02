@@ -39,7 +39,7 @@ What the founder needs from a model
 -----------------------------------
 Tool calling, and enough context to hold a growing codebase. The founder stage
 runs through the `opencode <https://opencode.ai>`_ CLI, so in practice any model
-opencode can drive will work; see :mod:`viral_bench.providers.opencode` for how a
+opencode can drive will work. See :mod:`viral_bench.providers.opencode` for how a
 provider is passed through, including providers opencode has no built-in for.
 """
 
@@ -96,10 +96,10 @@ def transport_for(model: str) -> str:
 
 
 def normalize_model_id(model: str) -> str:
-    """Return the bare model id, dropping a ``provider/`` prefix we recognise.
+    """Return the bare model id, dropping a recognised ``provider/`` prefix.
 
     Never raises: an unrecognised prefix is left in place. That makes it right
-    for the live path (where the provider has just been resolved) and WRONG for
+    for the live path (where the provider has already been resolved) and WRONG for
     comparing historical build records, which carry retired prefixes -- see
     ``scripts/build_fleet.py:_short_model``, which strips unconditionally for
     exactly that reason.

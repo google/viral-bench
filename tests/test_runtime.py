@@ -91,7 +91,7 @@ def test_exec_returns_stdout(tmp_path) -> None:
 
 def test_start_stop_no_port(tmp_path) -> None:
     # A port-less manifest is a malformed web app (verify.py scores it
-    # runs=False now), but the runtime itself still just starts the process and
+    # runs=False now), but the runtime itself still starts the process and
     # skips the readiness probe -- there is nothing to probe.
     rt = LocalRuntime(tmp_path)
     manifest = Manifest(
@@ -124,7 +124,7 @@ def test_start_web_app_serves(tmp_path) -> None:
     assert not app.is_running()
 
 
-# --- Container env-var injection (argv construction; no real container) -------
+# --- Container env-var injection (argv construction, no real container) ------
 
 
 def test_container_forwards_allowlisted_env_when_set(tmp_path, monkeypatch) -> None:
@@ -152,7 +152,7 @@ def test_container_injects_explicit_env(tmp_path) -> None:
 
 
 def test_container_runtime_defaults_are_neutral(tmp_path) -> None:
-    """The low-level runtime stays generic; the crowd entry points opt in."""
+    """The low-level runtime stays generic, and the crowd entry points opt in."""
     rt = ContainerRuntime(tmp_path)
     assert rt.env_allowlist == ()
     assert rt.env == {}
@@ -163,7 +163,7 @@ def test_container_runtime_defaults_are_neutral(tmp_path) -> None:
 # Regression cover for the bug that let crowd triers review connection-reset
 # pages as if they were the product: a TCP connect is not readiness evidence,
 # because a rootless port forwarder (and a plain listening socket) accepts long
-# before anything is actually serving HTTP.
+# before anything is serving HTTP.
 
 
 def test_wait_for_http_rejects_a_tcp_only_listener() -> None:

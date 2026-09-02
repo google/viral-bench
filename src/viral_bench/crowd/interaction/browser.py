@@ -25,12 +25,12 @@ press keys, screenshot) while capturing console/page/network errors.
 Two deliberate choices mirror the founder side so the whole repo drives apps the
 same way:
 
-* **system Chrome, not a bundled download.** We launch with
+* **system Chrome, not a bundled download.** The launch uses
   ``channel="chrome"`` against the host's Chrome/Chromium (falling back to
   Playwright's bundled Chromium only if that fails), so there is no per-machine
   browser-revision download to manage -- exactly the founder MCP's posture.
 * **graceful absence.** :func:`browser_available` lets callers detect up front
-  whether a real browser can run; when it cannot, the trial degrades to a static
+  whether a real browser can run. When it cannot, the trial degrades to a static
   HTTP observation (see :mod:`~viral_bench.crowd.interaction.session`) instead of
   failing the simulation.
 
@@ -63,7 +63,7 @@ _CHROME_BINARIES: tuple[str, ...] = (
     "microsoft-edge",
 )
 
-# Interactive elements we surface in the structured digest so an agent can refer
+# Interactive elements surfaced in the structured digest so an agent can refer
 # to controls the way a person would ("the Roll button", "the name field").
 _INTERACTIVE_JS = r"""
 () => {
@@ -112,8 +112,8 @@ def browser_available() -> bool:
     """True if a real browser can be driven on this host.
 
     Requires the ``playwright`` package *and* a system Chrome/Chromium for the
-    ``chrome`` channel. This is the reliable, no-download path; callers use it to
-    decide between a real browser trial and the static-HTTP fallback.
+    ``chrome`` channel. This is the reliable, no-download path, and callers use
+    it to decide between a real browser trial and the static-HTTP fallback.
     """
     return playwright_installed() and system_chrome() is not None
 
@@ -155,7 +155,7 @@ class BrowserConfig:
     )
     viewport_width: int = 1280
     viewport_height: int = 800
-    # Where screenshots are written; ``builds/screenshots`` is used when unset.
+    # Where screenshots are written. ``builds/screenshots`` is used when unset.
     screenshot_dir: Path | None = None
 
 
@@ -190,12 +190,12 @@ class BrowserError(RuntimeError):
 
 
 class BrowserEngine:
-    """Owns one Playwright browser process; hands out isolated pages.
+    """Owns one Playwright browser process and hands out isolated pages.
 
     A crowd shares a single engine (one browser) across many agents, giving each
     trial its own :class:`PageHandle` (a fresh browser *context*, so cookies and
-    storage never leak between agents). Cheap to fan out; the expensive browser
-    process is started once.
+    storage never leak between agents). Cheap to fan out, because the expensive
+    browser process is started once.
     """
 
     def __init__(self, config: BrowserConfig | None = None) -> None:
@@ -233,7 +233,7 @@ class BrowserEngine:
         """Open a fresh, isolated page (its own context).
 
         ``permissions`` is granted for the page's own origin. The crowd passes
-        nothing; the rubric grader asks for clipboard access, because reading the
+        nothing. The rubric grader asks for clipboard access, because reading the
         clipboard is the only way to tell a real copy-to-clipboard from a button
         that merely shows a "Copied!" toast.
         """
@@ -248,7 +248,7 @@ class BrowserEngine:
             try:
                 await context.grant_permissions(permissions)
             except Exception:  # noqa: BLE001 - an unsupported permission must not
-                pass  # sink the whole page; the check that needs it will fail loudly
+                pass  # sink the whole page. The check that needs it fails loudly
         context.set_default_timeout(cfg.action_timeout_ms)
         context.set_default_navigation_timeout(cfg.nav_timeout_ms)
         # A missing favicon is a near-universal, benign 404 that would otherwise
@@ -316,7 +316,7 @@ def _looks_like_css(target: str) -> bool:
     Deliberately strict. The old test was `starts with # . [ or contains >`,
     which classified ordinary accessibility labels -- "Next >", ".env settings"
     -- as CSS and sent them to a parser that rejected them. A parse error tells
-    the agent nothing about the page; "not found" at least tells it to look.
+    the agent nothing about the page, but "not found" at least tells it to look.
     """
     t = target.strip()
     if not t or '"' in t or "'" in t:
@@ -327,11 +327,11 @@ def _looks_like_css(target: str) -> bool:
 
 
 class PageHandle:
-    """One isolated page an agent drives; the low-level browser verbs.
+    """One isolated page an agent drives: the low-level browser verbs.
 
     Higher layers (``WebAppClient``) add trace recording and the
-    :class:`~viral_bench.crowd.interaction.clients.Observation` shaping; this
-    class just talks to Playwright and returns plain data.
+    :class:`~viral_bench.crowd.interaction.clients.Observation` shaping. This
+    class talks to Playwright and returns plain data.
     """
 
     def __init__(self, context, page, config: BrowserConfig) -> None:
@@ -483,7 +483,7 @@ class PageHandle:
         """Read the clipboard, the only way to tell a real copy from a toast.
 
         Requires the ``clipboard-read`` permission, which the grader's context
-        grants; a crowd context does not, and gets an empty string.
+        grants. A crowd context does not, and gets an empty string.
         """
         try:
             return (
@@ -547,8 +547,8 @@ class PageHandle:
         Tries, in order: an explicit Playwright engine prefix (``role=``/``text=``
         /``css=``/``xpath=``), a raw CSS selector, then human strategies (by role
         name, visible text, placeholder, label). Returns the first locator that
-        matches at least one element; falls back to a text locator so the eventual
-        action raises an informative "not found" rather than us guessing.
+        matches at least one element, and falls back to a text locator so the
+        eventual action raises an informative "not found" rather than a guess.
         """
         page = self.page
         t = target.strip()
@@ -583,8 +583,8 @@ class PageHandle:
         #
         # Two passes rather than one filtered pass: a first-choice strategy that
         # matched only hidden elements should lose to a later strategy that
-        # matched a visible one, but if NOTHING is visible we still want the
-        # original behaviour (act on the hidden node and let the action report a
+        # matched a visible one, but if NOTHING is visible the original
+        # behaviour still applies (act on the hidden node and let the action report a
         # real, informative failure).
         fallback = None
         for loc in candidates:
@@ -612,22 +612,22 @@ class PageHandle:
         """Click a control, the way a person would.
 
         Falls back once when the direct click is blocked by something a human
-        would simply not be blocked by. Two cases, both measured on real builds:
+        would not be blocked by. Two cases, both measured on real builds:
 
         * **Intercepted.** A styled ``<label>`` sits over the real checkbox or
           radio, so Playwright refuses -- another element would receive the
-          click. A person clicks the label and the control toggles, so we retry
-          the label, then dispatch the event directly.
+          click. A person clicks the label and the control toggles, so the retry
+          targets the label, then dispatches the event directly.
         * **Covered by a transient.** A toast or overlay is mid-animation.
 
         The retry is deliberately narrow: it only runs after a normal click has
-        already failed, so a genuinely unclickable control still reports a
-        failure rather than being forced. On the build used to validate this,
-        these two cases were 13 of 32 remaining click failures.
+        already failed, so an unclickable control still reports a failure rather
+        than being forced. On the build used to validate this, these two cases
+        were 13 of 32 remaining click failures.
         """
         loc = await self._locator(target)
         # The FIRST attempt gets a short budget, not the full one. A click that
-        # is going to succeed does so in milliseconds; the full timeout is only
+        # is going to succeed does so in milliseconds. The full timeout is only
         # ever spent by a click that is blocked, and blocked is exactly the case
         # the fallbacks below handle. Spending it twice turned a recoverable
         # click into a 20-second stall.
@@ -638,7 +638,7 @@ class PageHandle:
         except Exception as exc:  # noqa: BLE001
             first_error = exc
 
-        # A person clicks the visible label; the browser routes it to the input.
+        # A person clicks the visible label and the browser routes it to the input.
         try:
             handle = await loc.element_handle(timeout=1000)
             if handle is not None:
@@ -765,10 +765,10 @@ class PageHandle:
 
         Without this an agent cannot get past the first step of any app whose
         premise is "upload a photo / PDF / screenshot" -- it can see the control
-        and has no way to satisfy it. ``target`` may be ``None``, in which case we
-        find the first file input on the page, because file inputs are frequently
-        visually hidden behind a styled label and have no accessible name for the
-        agent to aim at.
+        and has no way to satisfy it. ``target`` may be ``None``, in which case
+        the first file input on the page is used, because file inputs are
+        frequently visually hidden behind a styled label and have no accessible
+        name for the agent to aim at.
         """
         # Always drive the real <input type=file>, never the thing the agent
         # named. Upload UIs are a styled label, button or drop-zone in front of
@@ -776,11 +776,11 @@ class PageHandle:
         # element either finds no input at all or blocks the full actionability
         # timeout waiting for a deliberately hidden one to become visible. That
         # is why uploading failed 70% of the time (7 of 10 attempts) across the
-        # solo fleet, on the very apps whose whole premise is uploading a file.
+        # solo fleet, on the apps whose whole premise is uploading a file.
         #
-        # `target` still narrows the search when a page has several uploads: we
-        # look for an input inside or near the named element first, then fall
-        # back to the page's first file input.
+        # `target` still narrows the search when a page has several uploads: an
+        # input inside or near the named element is preferred, falling back to
+        # the page's first file input.
         inputs = self.page.locator("input[type=file]")
         loc = inputs.first
         if target:
@@ -822,9 +822,10 @@ class PageHandle:
         if directory is None:
             # NOT the system temp dir. `/tmp` is a tmpfs on the sweep box, so
             # every screenshot taken there is held in RAM until reboot, and
-            # nothing prunes them: 55,947 files / 6.0 GB had accumulated by the
-            # r4 build phase, on a machine whose sweep has been killed seven
-            # times by memory. `config/crowd.yaml` ships `screenshot_dir: null`,
+            # nothing prunes them: 55,947 files / 6.0 GB had accumulated part
+            # way through one build phase, on a machine whose sweep had already
+            # been killed seven times by memory pressure.
+            # `config/crowd.yaml` ships `screenshot_dir: null`,
             # so this fallback is not an edge case -- it is the path every
             # screenshot takes. builds/ is gitignored, on real disk, and is
             # already where every other run artifact goes.

@@ -14,9 +14,9 @@
 
 """Measure how well the ViralScore separates founder models.
 
-This is the benchmark's actual purpose. Reliability says the score is stable;
-*discrimination* says it can tell one founder model from another, which is the
-signal the Gemini team would act on. A perfectly stable score that gives every
+This is the benchmark's actual purpose. Reliability says the score is stable.
+*Discrimination* says it can tell one founder model from another, which is the
+signal a model team would act on. A perfectly stable score that gives every
 model 60 is useless.
 
 The headline statistic is **Cohen's d**, the gap between two models' mean scores
@@ -30,7 +30,7 @@ the noise?" -- rather than "is the gap non-zero", which any large enough sample
 will eventually say yes to.
 
 **On finding a scoring configuration that separates.** Weights are adjustable so
-you can find the factors that genuinely separate models, and re-scoring stored
+you can find the factors that separate models, and re-scoring stored
 runs is free. :func:`sweep_profiles` re-scores the whole corpus under every
 profile in ``config/score.yaml`` at once and ranks them by effect size, so the
 question "which scoring configuration makes these two models look most
@@ -186,11 +186,11 @@ def component_separation(
     runs: dict[str, list[str | Path]],
     ratings: dict[str, object] | None = None,
 ) -> dict[str, dict]:
-    """Per-component effect size: which factors actually separate models?
+    """Per-component effect size: which factors separate models?
 
     This is the dashboard for the search. A component with a large |d| carries
-    signal about model quality and deserves weight; one near zero is dead weight
-    in the composite no matter how intuitive it sounds.
+    signal about model quality and deserves weight, while one near zero is dead
+    weight in the composite no matter how intuitive it sounds.
 
     Pass ``ratings`` to include the autorater's dimensions. Without them only
     the deterministic components appear, which would hide whether a change to
@@ -309,13 +309,13 @@ def _composite(
 
 @dataclass
 class Redundancy:
-    """How much independent information the components actually carry.
+    """How much independent information the components carry.
 
     A composite of N components is only worth N components if removing one
     changes the answer. When every term alone reproduces the ranking, the score
     is one latent factor measured N times, and tuning the weights between them
     cannot move anything -- which makes a weight sweep look like it is
-    converging when it is really just reporting noise.
+    converging when it is only reporting noise.
     """
 
     n_runs: int
@@ -508,7 +508,7 @@ def sweep_profiles(
         row["max_abs_cohens_d"] = round(abs(best), 2) if best is not None else None
         rows.append(row)
 
-    # Best separator first; profiles that produced no number sink to the bottom
+    # Best separator first. Profiles that produced no number sink to the bottom
     # rather than being dropped, so a broken profile stays visible.
     rows.sort(
         key=lambda r: (r["max_abs_cohens_d"] is None, -(r["max_abs_cohens_d"] or 0))

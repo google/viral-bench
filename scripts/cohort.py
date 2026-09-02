@@ -25,7 +25,7 @@ so no replicate number describes it.
 So a cohort is a label, applied to build records and carried into the crowd runs
 made over them:
 
-* ``build.json`` gains ``"cohort": "r4"``.
+* ``build.json`` gains ``"cohort": "<name>"``.
 * ``run_summary.json`` gains the same, copied automatically at run time -- the
   same contract ``crowd_arch_version`` and ``crowd_transport`` already have.
   Record what produced a number, at the time, because it cannot be recovered
@@ -34,7 +34,7 @@ made over them:
   builds?" without anyone re-deriving it.
 
 A cohort is NOT a selection axis. Sweeps still select with
-``--fleet-structure`` / ``--fleet-replicate``, which already work; adding a
+``--fleet-structure`` / ``--fleet-replicate``, which already work. Adding a
 parallel way to choose builds would mean two answers to the same question. This
 only ever *names* what those flags already select.
 
@@ -123,8 +123,9 @@ def stamp(build_id: str, name: str) -> bool:
 def write_manifest(name: str, members: dict[str, str], criteria: list[dict]) -> None:
     """Persist the member list. Merges, because a cohort is filled in stages.
 
-    r4 tags solo and dynamic today and team whenever it finishes rebuilding, so
-    a manifest that overwrote would lose whichever half was written first.
+    A cohort may tag solo and dynamic in one pass and team whenever it finishes
+    rebuilding, so a manifest that overwrote would lose whichever half was
+    written first.
     """
     existing = load_manifest(name)
     merged = {**(existing.get("members") or {}), **members}

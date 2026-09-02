@@ -67,7 +67,7 @@ _AUTH_TEXT = re.compile(
 def from_status(status: int, detail: str = "") -> ModelError:
     """Build the right error for an HTTP status code.
 
-    This is the path every adapter should take when it has a real status code;
+    This is the path every adapter should take when it has a real status code.
     :func:`classify` is only for exceptions that never carried one.
     """
     message = f"HTTP {status}: {detail}".rstrip(": ")
@@ -95,7 +95,7 @@ def classify(exc: BaseException) -> ModelError:
         return TransientError(f"timed out: {exc}")
 
     # Several SDKs expose the status on the exception even when they do not
-    # subclass anything we know; use it if it is there.
+    # subclass any known type, so use it if it is there.
     status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     if isinstance(status, int) and 100 <= status < 600:
         return from_status(status, str(exc))
@@ -111,11 +111,11 @@ def classify(exc: BaseException) -> ModelError:
 def backoff_seconds(attempt: int, error: BaseException | None = None) -> float:
     """Seconds to wait before attempt ``attempt`` (0-based), with jitter.
 
-    Rate limits get the full exponential curve because the server is telling us
-    to slow down; everything else gets a gentler linear ramp, because the usual
-    cause is one bad connection rather than sustained pressure. Jitter matters:
-    a sweep runs many workers, and without it they retry in lockstep and
-    reproduce the burst that caused the limit.
+    Rate limits get the full exponential curve because the server is asking the
+    client to slow down. Everything else gets a gentler linear ramp, because the
+    usual cause is one bad connection rather than sustained pressure. Jitter
+    matters: a sweep runs many workers, and without it they retry in lockstep
+    and reproduce the burst that caused the limit.
     """
     import random  # noqa: PLC0415 - only needed on the failure path
 

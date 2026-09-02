@@ -70,10 +70,10 @@ def test_a_refusal_and_an_infra_failure_are_told_apart() -> None:
     "Output blocked by content filtering policy" -- on a TYPING SPEED TEST, from a
     model that built the other 24 ideas fine.
 
-    It is not harness_infra ("ours, so retry it"): retrying hands that model extra
-    draws no other cell gets. It is not manifest_missing either, which is a MODEL
-    result correctly scored at the floor. So it is its own terminal, unscored
-    status.
+    It is not harness_infra ("a harness fault, so retry it"): retrying hands that
+    model extra draws no other cell gets. It is not manifest_missing either,
+    which is a MODEL result correctly scored at the floor. So it is its own
+    terminal, unscored status.
     """
     import sys
     from pathlib import Path
@@ -89,7 +89,7 @@ def test_a_refusal_and_an_infra_failure_are_told_apart() -> None:
     assert bf._is_infra_failure("", locked)
     assert not bf._is_refusal("", locked)
 
-    # A model that simply did not write a manifest is neither.
+    # A model that did not write a manifest at all is neither.
     no_manifest = "viralbench.json not found at app root"
     assert not bf._is_infra_failure("", no_manifest)
     assert not bf._is_refusal("", no_manifest)

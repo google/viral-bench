@@ -22,7 +22,7 @@ between those pieces, not inside any one of them.
 Four properties, in the order they broke historically:
 
 1. **setup -> run share one database.** A migration runs in an ephemeral ``--rm``
-   container; the server runs in a different, long-lived one. Before ``/data`` was
+   container, while the server runs in a different, long-lived one. Before ``/data`` was
    mounted, the schema the migration created vanished with the setup container and
    the app started against an empty file.
 2. **State survives an app restart.** ``AppSession.close`` deletes the run dir, and
@@ -30,7 +30,7 @@ Four properties, in the order they broke historically:
    instance dies. A database kept under the app dir is wiped by that, silently,
    in the middle of a run.
 3. **One agent's write is visible to another agent.** The crowd shares a single
-   instance per build precisely so this holds; it is the entire reason a
+   instance per build precisely so this holds, and it is the entire reason a
    full-stack idea is worth benchmarking.
 4. **State does NOT leak between crowd runs.** Accumulating across runs would make
    two runs of the same build incomparable.
@@ -70,7 +70,7 @@ def check(name: str, ok: bool, detail: str = "") -> bool:
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Keep the 303 itself instead of following it.
 
-    The session cookie is set ON the redirect response; urllib's default handler
+    The session cookie is set ON the redirect response, and urllib's default handler
     follows it transparently and hands back the final GET, whose headers carry no
     Set-Cookie. Without this the login flow looks broken when it is not.
     """
@@ -94,7 +94,7 @@ def post(url: str, fields: dict, cookie: str | None = None) -> tuple[int, str, s
             set_cookie = resp.headers.get("Set-Cookie") or ""
             status = resp.status
     except urllib.error.HTTPError as exc:
-        # A 3xx surfaces here because we refuse to follow it -- that is success.
+        # A 3xx surfaces here because the opener refuses to follow it, which is success.
         status = exc.code
         body = exc.read().decode()
         set_cookie = exc.headers.get("Set-Cookie") or ""
@@ -173,7 +173,7 @@ def main() -> int:
             "memo from alice" in after,
             "a DB under the app dir would have been wiped here",
         )
-        # A genuinely new container, not the old one still running: the host port
+        # A new container, not the old one still running: the host port
         # is assigned dynamically per container, so it must differ.
         check(
             "the instance really was replaced, not reused",

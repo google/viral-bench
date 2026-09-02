@@ -14,7 +14,7 @@
 
 """Serve one built app locally, on a port you choose, with browser caching off.
 
-Two problems make "just run the app and open it" the wrong thing to hand a human
+Two problems make "run the app and open it" the wrong thing to hand a human
 tester, and this module exists to solve both.
 
 **Caching across builds.** Every build is a different app, but they are served
@@ -84,9 +84,9 @@ _HOP_BY_HOP = frozenset(
 )
 
 # Dropped from the REQUEST. Without the conditional headers the app can never
-# answer 304, which is what stops the browser reusing another build's body; the
-# encoding header is dropped so we relay identity bytes and never have to reason
-# about gzip framing.
+# answer 304, which is what stops the browser reusing another build's body. The
+# encoding header is dropped so only identity bytes are relayed and gzip framing
+# never has to be reasoned about.
 _DROP_REQUEST = _HOP_BY_HOP | {
     "accept-encoding",
     "if-match",
@@ -127,7 +127,7 @@ def rebind(manifest: Manifest, port: int) -> Manifest:
     Rewrites the declared port wherever it appears in the run command, the URL
     and the smoke command, matching on digit boundaries so ``8000`` in
     ``--port 8000`` moves but ``8000`` inside an unrelated number does not. Apps
-    that instead read ``$PORT`` are handled by the caller exporting it; between
+    that instead read ``$PORT`` are handled by the caller exporting it. Between
     the two, every stack in the corpus lands on the right port.
 
     A manifest with no declared port (nothing to serve) is returned unchanged.
@@ -165,7 +165,7 @@ class _Handler(BaseHTTPRequestHandler):
     timeout_s = 300.0
 
     def log_message(self, fmt: str, *args) -> None:  # noqa: A002 - stdlib signature
-        # The app's own log is the interesting one; this would just double it.
+        # The app's own log is the interesting one, and this would double it.
         pass
 
     def _relay(self) -> None:
@@ -215,8 +215,8 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         # No length upstream => a streaming response (an LLM call, SSE). Relaying
-        # it verbatim and closing at the end frames it correctly without us having
-        # to re-chunk, and keeps tokens flowing to the browser as they arrive.
+        # it verbatim and closing at the end frames it correctly with no
+        # re-chunking, and keeps tokens flowing to the browser as they arrive.
         self.send_header("Connection", "close")
         self.close_connection = True
         self.end_headers()
@@ -231,12 +231,12 @@ class _Handler(BaseHTTPRequestHandler):
                 self.wfile.write(chunk)
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
-                # Browser navigated away mid-response; nothing to salvage.
+                # Browser navigated away mid-response, so nothing to salvage.
                 self.close_connection = True
                 return
 
     def _rewrite_location(self, value: str) -> str:
-        """Point redirects at the port the browser is actually talking to."""
+        """Point redirects at the port the browser is talking to."""
         for host in ("localhost", "127.0.0.1", "0.0.0.0"):
             value = value.replace(
                 f"http://{host}:{self.upstream_port}",

@@ -262,7 +262,7 @@ def test_proxy_reports_a_dead_app_as_502(proxied):
 
 
 def test_proxy_serves_concurrent_requests(proxied):
-    """A browser opens several connections at once; one must not block the rest."""
+    """A browser opens several connections at once, and one must not block the rest."""
     proxy, _ = proxied
     results: list[bytes] = []
     lock = threading.Lock()

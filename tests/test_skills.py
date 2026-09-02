@@ -55,7 +55,7 @@ def test_unknown_skill_raises() -> None:
 
 
 def test_live_app_testing_skill_shipped_and_runtime_focused() -> None:
-    """The QA skill must push actually running and driving the app.
+    """The QA skill must push running and driving the app for real.
 
     This previously asserted the skill mentioned ``single-page-app``, ``cli`` and
     ``bot``. Those app types no longer exist, and the assertion was pinning the
@@ -67,7 +67,7 @@ def test_live_app_testing_skill_shipped_and_runtime_focused() -> None:
     for token in ("browser", "curl", "console"):
         assert token in body, f"live-app-testing skill missing {token!r}"
     # The server-side checks a client-only skill would have no reason to mention,
-    # and which are where full-stack builds actually fail review.
+    # and which are where full-stack builds fail review.
     for token in ("full-stack-app", "restart", "/data", "two different users"):
         assert token in body, f"live-app-testing skill missing {token!r}"
     # And it must no longer instruct agents to test app types that are gone.

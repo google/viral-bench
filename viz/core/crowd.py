@@ -26,14 +26,14 @@ playback possible.
 
 *The app-trial side* -- ``traces/agent_<N>.json``, one per agent that got hands on
 the app: every click, every keystroke, the page state that came back, and the
-screenshots. This is the record of an agent actually using the thing.
+screenshots. This is the record of an agent using the thing.
 
 Two details cost real time to discover and are worth stating plainly. ``info`` in
 ``actions.jsonl`` is **double-encoded JSON** -- a JSON string inside a JSON object.
 And absolute paths recorded inside these files (``out_dir``, ``db_path``,
 ``trace_paths``) come from whichever machine produced the run, frequently a
-``/tmp`` sweep directory that no longer exists; everything must be resolved
-relative to the directory actually being read.
+``/tmp`` sweep directory that no longer exists, so everything must be resolved
+relative to the directory being read.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ from pathlib import Path
 
 from .paths import read_json
 
-#: Post ids referenced by a feed are cheap; the rendered feed bodies are not. A
+#: Post ids referenced by a feed are cheap. The rendered feed bodies are not. A
 #: 30-agent run records ~90 ``refresh`` actions, each carrying up to 20 fully
 #: rendered posts with their comment threads. Keeping ids in the main payload and
 #: fetching bodies on demand is the difference between a 300 KB and a 12 MB response.
@@ -211,7 +211,7 @@ def _load_social(run_dir: Path) -> dict:
             "shares": _int(p.get("num_shares")),
             "reports": _int(p.get("num_reports")),
             "comments": by_post.get(_int(p.get("post_id")), []),
-            # A repost carries no text of its own; a quote does. Distinguishing
+            # A repost carries no text of its own, while a quote does. Distinguishing
             # them matters -- one is amplification, the other is commentary.
             "kind": (
                 "repost"
@@ -385,7 +385,7 @@ def _founder_build(run_dir: Path, build_id: str) -> dict:
     }.get(arm, arm)
 
     trajectory = record.get("trajectory") or {}
-    # `_all` counts the subagents; the bare key is what builds recorded before the
+    # `_all` counts the subagents, and the bare key is what builds recorded before the
     # counts were split by source.
     reasoning = (
         trajectory.get("reasoning_chars_all") or trajectory.get("reasoning_chars") or 0
@@ -504,7 +504,7 @@ def load_trial(run_dir: Path, agent_id: int) -> dict | None:
     """One agent's hands-on trial of the app: every step, in order, with screenshots.
 
     Unlike the social clock, these steps carry real wall-clock timestamps
-    (``ts``, ``duration_s``), so a replay can run at the pace the agent actually
+    (``ts``, ``duration_s``), so a replay can run at the pace the agent
     worked at.
     """
     path = run_dir / "traces" / f"agent_{agent_id}.json"

@@ -143,7 +143,7 @@ def _resonance(sig: RunSignals, summary: dict, comp: dict) -> None:
 
 
 def _survived(sig: RunSignals, summary: dict, comp: dict) -> None:
-    """Did the crowd's work actually persist -- behaviour, not opinion."""
+    """Did the crowd's work persist -- behaviour, not opinion."""
     triers = (summary.get("verdicts") or {}).get("triers") or {}
     comp["reception"] = triers.get("work_survived_rate")
 
@@ -179,7 +179,7 @@ def _trier_rows(summary: dict) -> list[dict]:
 
 
 def _facet_only(name: str):
-    """craft = one facet alone. Which facet is craft actually made of?"""
+    """craft = one facet alone. Which facet is craft made of?"""
 
     def override(sig: RunSignals, summary: dict, comp: dict) -> None:
         vals = [r[name] for r in _trier_rows(summary) if r.get(name) is not None]
@@ -642,7 +642,7 @@ VARIANTS: dict[str, tuple[ScoreWeights, Override]] = {
         ),
         None,
     ),
-    # -- the validity gate as a POLICY, not just a multiplier ----------------
+    # -- the validity gate as a POLICY, not merely a multiplier -------------
     #
     # The gate is the only part of the score that is not the crowd's opinion.
     # `evidence_graded` scales the floor up towards 1.0 by the fraction of the
@@ -868,10 +868,10 @@ def score_corpus_with(
             # founder-directed -- has to reach simulation.db, and the summary is
             # the only channel it has. `config.out_dir` records the path the run
             # was WRITTEN to, which is wrong the moment a corpus is copied, so
-            # pass the directory actually opened.
+            # pass the directory that was opened.
             summary["_crowd_dir"] = str(crowd_dir)
             override(sig, summary, components)
-            # Recombine by hand so an override actually changes the number.
+            # Recombine by hand so an override changes the number.
             w = weights.as_dict()
             pairs = [
                 (components[k], w[k])

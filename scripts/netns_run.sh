@@ -18,10 +18,10 @@
 # WHY: a founder team build starts the app it is writing so the Designer and QA
 # can drive it in a browser. The app's port comes from the model-authored
 # manifest, and the example manifest says 8000 -- so N concurrent builds fight
-# over one port on the host loopback. That is not just a crash: build B's QA can
+# over one port on the host loopback. That is not merely a crash: build B's QA can
 # bind-fail, connect to 8000 anyway, and review build A's app. A harness race
 # that hits one model more than the other reads out as a capability difference
-# (see docs/crowd_bugs.md T0.1 for the last time that happened here).
+#.
 #
 # The same applies to PROCESSES. Agents clean up after themselves with blunt
 # instruments; observed verbatim in the first six builds of this fleet:
@@ -72,8 +72,8 @@ mkfifo "$gofifo"
 
 # The command waits on the fifo so it does not start before pasta has configured
 # the interface. `unshare` itself joins the new user+net namespace before forking
-# for the PID namespace, so $! is the handle pasta attaches to -- we must NOT ask
-# the inner process for its own pid, which inside a PID namespace is 1.
+# for the PID namespace, so $! is the handle pasta attaches to. The inner
+# process must NOT be asked for its own pid, which inside a PID namespace is 1.
 READYFILE="$readyfile" GOFIFO="$gofifo" unshare \
   --user --map-current-user --net --pid --fork --mount-proc -- \
   bash -c 'echo ready >"$READYFILE"; read -r _ <"$GOFIFO"; exec "$@"' bash "$@" &

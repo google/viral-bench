@@ -150,7 +150,7 @@ class Store:
             return cached[1]
         data = founder_mod.load_trajectory(self.builds_root, build_id)
         if data is not None:
-            # Bounded so a long browsing session cannot grow without limit; the
+            # Bounded so a long browsing session cannot grow without limit. The
             # payloads are ~0.2-1.4 MB each.
             if len(self._trajectories) > 24:
                 self._trajectories.clear()
@@ -230,8 +230,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        # Everything here is generated from files that change under us; a cached
-        # timeline showing a build's previous state would be actively misleading.
+        # Everything here is generated from files that keep changing, and a cached
+        # timeline showing a build's previous state would be misleading.
         self.send_header("Cache-Control", "no-store")
         for key, value in (extra or {}).items():
             self.send_header(key, value)
@@ -282,7 +282,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
         except Exception:  # noqa: BLE001 - a viewer must not die on one bad build
             traceback.print_exc()
-            self.fail(500, "internal error; see server log")
+            self.fail(500, "internal error, see server log")
 
     def _serve_page(self, path: str) -> bool:
         pages = {
@@ -587,7 +587,7 @@ class Handler(BaseHTTPRequestHandler):
             if query.get("gated") == "1":
                 rows = [r for r in rows if r["gate_zeroed"]]
             if query.get("diverged") == "1":
-                # Only grades where the two tracks actually disagree. This is the
+                # Only grades where the two tracks disagree. This is the
                 # question the whole second track exists to answer, so it gets a
                 # filter rather than making you open grades one at a time.
                 rows = [

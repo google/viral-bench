@@ -28,7 +28,7 @@ configurations:
   flattenable to one agent, because
 
   1. **each specialist keeps its own context.** An agent's first turn starts a
-     fresh opencode session; the structure captures that session id and, on every
+     fresh opencode session. The structure captures that session id and, on every
      later round, resumes *that* session (``--session``). So the Architect always
      reasons with the Architect's memory even though the Implementer, Designer,
      and QA ran in between.
@@ -63,7 +63,7 @@ configurations:
   session resumes, up to ``max_turns``. That is a completion backstop, not a
   process -- without it, a model that stops after planning would be recorded as
   unable to build an app, which is a harness artifact reported as a capability
-  difference (docs/crowd_bugs.md T0.1).
+  difference.
 
 How the team *collaborates* during turns (shared local files vs Google Workspace)
 is decided by the collaboration toolset (see :mod:`viral_bench.founder.collab`),
@@ -132,15 +132,15 @@ DYNAMIC = "dynamic"
 #: it is written (opencode reads agent definitions at turn start), so a cap of 1
 #: would advertise a capability the model cannot reach and a cap of 2 would let it
 #: use a self-defined team exactly once. Three gives write -> use -> revise, and a
-#: model that finishes sooner simply says so and stops.
+#: model that finishes sooner says so and stops.
 DEFAULT_DYNAMIC_TURNS = 3
 
 #: Where a dynamic founder writes subagent definitions, relative to the workspace
 #: root. Deliberately NOT inside ``app/``: opencode treats any directory holding
 #: ``.opencode`` as an instance directory and installs ~60 MB of plugin
 #: dependencies beside it, which inside the app would be 60 MB of node_modules
-#: sitting in the tree we ship and diff. At the workspace root it lands next to
-#: the team's skills, outside everything that ships.
+#: sitting in the tree that ships and gets diffed. At the workspace root it lands
+#: next to the team's skills, outside everything that ships.
 AGENTS_DIRNAME = "agents"
 
 
@@ -246,7 +246,7 @@ class RoundTableTeam:
 
     See the module docstring for the design. The four roles come from
     :func:`~viral_bench.founder.roles.roles_for` (Architect, Implementer, UX &
-    Virality Designer, QA & Finisher); the last owns QA & Finish.
+    Virality Designer, QA & Finisher), and the last owns QA & Finish.
     """
 
     name = "team"
@@ -267,7 +267,7 @@ class RoundTableTeam:
         self.min_turns = TEAM_SIZE * min_rounds
         self.rounds_run = 0
         self.shipped_early = False
-        # Whether QA actually exercised the running app on its final turn (browser
+        # Whether QA exercised the running app on its final turn (browser
         # for a web app, or running the real command for a CLI/bot). None until QA
         # first acts. Early ship is gated on this being True.
         self.qa_verified: bool | None = None
@@ -368,7 +368,7 @@ class RoundTableTeam:
                         return result
 
                     # Only QA (which acts last) can end the build early, and only
-                    # once the minimum number of rounds is done AND QA actually
+                    # once the minimum number of rounds is done AND QA has
                     # exercised the running app this turn (a browser interaction for
                     # a web app, or running the real command for a CLI/bot) -- a
                     # ship signal from a QA turn that never ran the app is ignored.
@@ -400,12 +400,12 @@ class DynamicOrchestrator:
     the interesting structure is decided by the model at run time rather than
     here. What this class owns is only:
 
-    1. **the brief**, once, on turn 1 (:func:`dynamic_founder_prompt`);
+    1. **the brief**, once, on turn 1 (:func:`dynamic_founder_prompt`),
     2. **a completion backstop** -- if a turn ends with the deliverables missing,
        resume the same session with a content-free nudge naming only the gap, up
-       to ``max_turns``;
+       to ``max_turns``,
     3. **telemetry** -- every ``task`` call the founder made, so a sweep can ask
-       what shape of team each model actually built for itself.
+       what shape of team each model built for itself.
 
     Note what is *not* here: no evidence gate on the completion signal, unlike
     :class:`RoundTableTeam`, which ignores QA's ship signal unless QA was seen
@@ -413,7 +413,7 @@ class DynamicOrchestrator:
     dynamic founder that delegates verification leaves that evidence in a CHILD
     session the parent transcript never shows. Gating on it would mark exactly
     the models that delegate well as unverified -- a harness artifact dressed up
-    as a capability difference. Verification is recorded, not enforced; the
+    as a capability difference. Verification is recorded, not enforced, and the
     container check and the crowd remain the real judges of whether an app works.
     """
 
@@ -461,7 +461,7 @@ class DynamicOrchestrator:
             by_type[key] = by_type.get(key, 0) + 1
         resumed = sum(1 for s in self.spawns if s.get("resumed_task_id"))
         failed = sum(1 for s in self.spawns if s.get("status") == "error")
-        # Which self-defined agents the founder actually RAN, as opposed to
+        # Which self-defined agents the founder RAN, as opposed to
         # merely wrote. The two came apart in practice: a model authored two
         # specialists, finished inside one turn, and spawned only `general` --
         # because opencode loads agent definitions at turn start, so an agent is
@@ -477,7 +477,7 @@ class DynamicOrchestrator:
             "failed_spawns": failed,
             "peak_concurrent_subagents": self.peak_concurrent,
             # From opencode's session store, so it counts subagents a SUBAGENT
-            # spawned too; `subagents_spawned` above counts only the founder's
+            # spawned too, while `subagents_spawned` above counts only the founder's
             # own task calls. A gap between the two is nested delegation.
             "session_tree": self.tree,
             "max_delegation_depth": self.tree.get("max_depth", 0),
@@ -541,7 +541,7 @@ class DynamicOrchestrator:
                 session_id = turn.session_id
 
             # Record what happened even on a failed turn: a turn that died having
-            # already spawned eight subagents is a very different failure from one
+            # already spawned eight subagents is a quite different failure from one
             # that died before delegating anything, and the record should say so.
             spawns = read_task_spawns(turn.transcript_path)
             self.spawns.extend(spawns)
@@ -557,7 +557,7 @@ class DynamicOrchestrator:
             if not turn.ok:
                 return result
             if self.done_signalled and not _dynamic_gaps(workspace.app_dir, True):
-                # Declared finished AND the contract is actually satisfied.
+                # Declared finished AND the contract satisfied.
                 self.shipped_early = turn_index < self.max_turns
                 break
 
@@ -595,7 +595,7 @@ def _dynamic_gaps(app_dir, done_signalled: bool) -> list[str]:
     if not path.is_file():
         # Name the exact path rather than "the app root". A model that wrote the
         # manifest one directory up reads "there is no manifest" as a claim it
-        # can see is false, argues with it, and never moves the file; the path
+        # can see is false, argues with it, and never moves the file. The path
         # makes the mismatch obvious without telling it what to do about it.
         gaps.append(
             f"There is no manifest at `{path}` (that exact path is what is checked)."
@@ -653,12 +653,12 @@ def _ran_command(bash_cmd: str, target: str) -> bool:
 
 
 def _turn_has_test_evidence(transcript_path, app_dir) -> bool:
-    """True if QA's turn actually exercised the running app, not just read it.
+    """True if QA's turn exercised the running app rather than merely reading it.
 
     Evidence is a real browser interaction (a ``browser_*`` tool call) or a shell
     run of the app's manifest ``run.command``. For a single-page-app the browser is
     the only real check *when a browser is available on the host* (a server started
-    via bash does not prove the UI renders); when no browser is available the gate
+    via bash does not prove the UI renders). When no browser is available the gate
     degrades to accepting a run of the server so a build is never hard-blocked.
     """
     calls = read_tool_calls(transcript_path)

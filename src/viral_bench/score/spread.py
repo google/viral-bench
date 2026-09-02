@@ -49,7 +49,7 @@ rank a corpse above a product -- which is exactly what the autorater rubric
 already warns about ("a broken app that generates a long thread of criticism is
 0-3, not 8"). So every scored rate here is restricted to agents whose **own**
 stated verdict was ``would_share=yes``: not "how much did the crowd talk" but
-"how many people who would put their name behind this actually passed it on".
+"how many people who would put their name behind this passed it on".
 
 Two further exclusions, both deliberate:
 
@@ -83,20 +83,20 @@ class SpreadSignals:
 
     # -- scored: peer engagement BY AGENTS WHO ENDORSE THE APP ---------------
     #: Distinct would-share agents who reposted another agent's post, per
-    #: exposed agent. The advocacy actually spreading, rather than the volume of
-    #: talk.
+    #: exposed agent. The advocacy spreading, rather than the volume of talk.
     advocate_repost_participation: float | None = None
     #: The same for quotes -- a repost with a stated reason. Quoting has the
     #: highest peer share of any amplification verb (33.5%).
     advocate_quote_participation: float | None = None
     #: Distinct would-share agents who commented on another agent's post.
-    #: Commenting on the launch post is talking to the founder; commenting on a
-    #: peer's post is the only unthreaded conversation the platform can record.
+    #: Commenting on the launch post is talking to the founder, while commenting
+    #: on a peer's post is the only unthreaded conversation the platform can
+    #: record.
     advocate_comment_participation: float | None = None
 
     # -- diagnostic: the same rates without the advocacy filter --------------
     #: Kept because they are what proves the filter is necessary. These run
-    #: *higher* on broken apps; see the module docstring.
+    #: *higher* on broken apps. See the module docstring.
     peer_repost_participation: float | None = None
     peer_quote_participation: float | None = None
     peer_comment_participation: float | None = None

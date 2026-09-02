@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Is a measured model gap real, or did one model just get luckier builds?
+"""Is a measured model gap real, or did one model get luckier builds?
 
 A founder model is sampled at temperature, so building the same brief twice
 produces two different apps. Any comparison built on **one** app per brief is
@@ -34,7 +34,7 @@ Given a corpus with two or more replicates, this reports:
 
 Everything is read from artifacts already on disk. No LLM calls, no re-running.
 The statistics themselves live in :mod:`viral_bench.score.fleet`, where they are
-tested; this is a thin renderer over them.
+tested. This is a thin renderer over them.
 
     scripts/replicate_analysis.py
     scripts/replicate_analysis.py --model-a claude-x --model-b gemini-y
@@ -128,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Every one of these is Optional and is None on a thin corpus, which is the
     # normal state of a fleet mid-sweep. Formatting them unconditionally is the
-    # same crash as the confidence interval above; _num keeps one missing
+    # same crash as the confidence interval above, and _num keeps one missing
     # statistic from taking down the whole analysis.
     def _num(value: float | None, width: int = 5) -> str:
         return "  n/a" if value is None else f"{value:{width}.2f}"

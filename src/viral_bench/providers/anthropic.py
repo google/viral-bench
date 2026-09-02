@@ -37,7 +37,7 @@ import urllib.request
 from viral_bench.providers.client import Adapter, Reply, ToolCall
 from viral_bench.providers.errors import TransientError, from_status
 
-#: Pinned by Anthropic's Vertex integration; not the model version.
+#: Pinned by Anthropic's Vertex integration, and not the model version.
 VERTEX_ANTHROPIC_VERSION = "vertex-2023-10-16"
 
 #: Public Messages API version header.
@@ -85,10 +85,10 @@ class AnthropicAdapter(Adapter):
     def _clean(messages: list[dict]) -> list[dict]:
         """Drop the canonical-shape-only keys Anthropic's API rejects.
 
-        A ``tool_use`` block carries our opaque ``metadata`` dict so a provider
-        that needs per-call state can round-trip it. Anthropic is strict about
-        unknown keys, so it is lifted back into the ``signature`` field it came
-        from and the dict itself is removed.
+        A ``tool_use`` block carries the harness's opaque ``metadata`` dict so a
+        provider that needs per-call state can round-trip it. Anthropic is
+        strict about unknown keys, so it is lifted back into the ``signature``
+        field it came from and the dict itself is removed.
         """
         cleaned = []
         for message in messages:
@@ -112,15 +112,15 @@ class AnthropicAdapter(Adapter):
     def _body(
         self, messages: list[dict], tools: list[dict] | None, system: str
     ) -> bytes:
-        # Anthropic requires max_tokens; 0 ("no ceiling") becomes its maximum
+        # Anthropic requires max_tokens, so 0 ("no ceiling") becomes its maximum
         # rather than being omitted, which the API would reject.
         payload: dict = {
             "max_tokens": self.max_tokens or 64000,
             "messages": self._clean(messages),
         }
         if self._via_vertex:
-            # Vertex takes the model from the URL and the version from the body;
-            # the public API is the other way round.
+            # Vertex takes the model from the URL and the version from the body.
+            # The public API is the other way round.
             payload["anthropic_version"] = VERTEX_ANTHROPIC_VERSION
         else:
             payload["model"] = self.model

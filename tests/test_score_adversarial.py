@@ -20,7 +20,7 @@ of defect: it lands in a comparison table with no indication anything went wrong
 
 These tests do not check that the score is *right* for a realistic run -- that is
 what the calibration work covers. They check that it cannot be made to lie or
-explode by inputs the pipeline can genuinely produce: a crowd where every agent
+explode by inputs the pipeline can produce: a crowd where every agent
 agreed, a run where nobody reached the app, a build that failed the validity
 gate, rates at exactly 0 and exactly 1, and every optional signal missing at
 once. Each of those has occurred in the stored corpus.
@@ -51,7 +51,7 @@ def _sig(**kw) -> RunSignals:
 def test_everything_missing_does_not_crash_and_scores_nothing() -> None:
     """A run that collected no signal must be unscorable, not zero.
 
-    Zero is a claim about the app ("nobody liked it"); unmeasured is a claim
+    Zero is a claim about the app ("nobody liked it"), while unmeasured is a claim
     about the run. Collapsing the second into the first would let a crashed
     crowd run masquerade as a terrible app.
     """
@@ -94,7 +94,7 @@ def test_unanimous_crowd_is_scorable() -> None:
 def test_rates_at_the_boundaries_stay_in_range() -> None:
     """Every component must stay in [0,1] for every combination of 0.0 and 1.0.
 
-    Components are combined with weights that assume a bounded range; one term
+    Components are combined with weights that assume a bounded range, and one term
     escaping it silently re-weights every other term.
     """
     fields = [
@@ -178,7 +178,7 @@ def test_validity_gate_multiplier_is_bounded_and_monotone() -> None:
 def test_negative_and_out_of_range_inputs_are_not_silently_accepted() -> None:
     """Corrupt signals should fail loudly or clamp -- never propagate.
 
-    A rate above 1 or below 0 means an upstream extraction bug; letting it flow
+    A rate above 1 or below 0 means an upstream extraction bug, and letting it flow
     into a weighted sum produces a plausible-looking score from broken data.
     """
     sig = _sig(
@@ -205,7 +205,7 @@ def test_negative_and_out_of_range_inputs_are_not_silently_accepted() -> None:
 
 @pytest.mark.parametrize("n", [0, 1, 2])
 def test_tiny_crowds_do_not_crash(n: int) -> None:
-    """Pilot runs use tiny crowds; they must degrade, not explode."""
+    """Pilot runs use tiny crowds, which must degrade rather than explode."""
     sig = _sig(
         n_interviews=n,
         adoption_rate=1.0 if n else None,

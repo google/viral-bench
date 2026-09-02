@@ -185,7 +185,7 @@ _NO_WEB = {"webfetch": "deny", "websearch": "deny"}
 _WEB_RESEARCH = {"webfetch": "allow", "websearch": "allow"}
 
 
-# -- The solo founder (baseline; no specialist tooling) ---------------------- #
+# -- The solo founder (baseline, no specialist tooling) ---------------------- #
 
 _FOUNDER = Role(
     key="founder",

@@ -31,7 +31,7 @@ Three translations happen here, in this order:
    ``to_openai_tools``. Writing them as a matched pair rather than as a third
    independent translator is the whole point, and the round trip through both is
    pinned by a test so the pair cannot silently drift into two dialects.
-2. **Screenshot markers -> real image parts.** A tool result reaches us as a
+2. **Screenshot markers -> real image parts.** A tool result arrives as a
    string carrying ``[[VB_IMAGE:/path.png]]`` (see
    :mod:`viral_bench.crowd.interaction.imagery`), under the same newest-wins
    budget the Gemini path uses. The crowd's design verdicts -- 22% of the score --
@@ -84,10 +84,11 @@ _LOG = logging.getLogger("viral_bench.crowd.unified_model")
 #: for why it is one number rather than a per-provider table.
 _CONTEXT_WINDOW_TOKENS = 1_048_576
 
-#: Stop reasons from every provider we speak to, mapped onto the OpenAI values
-#: CAMEL's ``ChatCompletion`` accepts. An unmapped value must never reach pydantic:
-#: ``Choice.finish_reason`` is a Literal, so an honest passthrough of Anthropic's
-#: ``end_turn`` would raise a ValidationError and cost the very turn it reports on.
+#: Stop reasons from every provider this backend speaks to, mapped onto the
+#: OpenAI values CAMEL's ``ChatCompletion`` accepts. An unmapped value must
+#: never reach pydantic: ``Choice.finish_reason`` is a Literal, so an honest
+#: passthrough of Anthropic's ``end_turn`` would raise a ValidationError and
+#: cost the turn it reports on.
 _FINISH_REASONS = {
     "stop": "stop",
     "end_turn": "stop",
@@ -262,7 +263,7 @@ def _tool_use_block(call: dict, metadata_by_id: dict[str, dict]) -> dict:
         except json.JSONDecodeError:
             # A model can emit malformed JSON arguments. Replaying the call with
             # empty arguments still preserves the turn's structure, which is what
-            # the next request needs; dropping the block instead orphans the tool
+            # the next request needs. Dropping the block instead orphans the tool
             # result that answers it.
             args = {}
     cid = call.get("id", "")
@@ -292,7 +293,7 @@ def _finish_reason(reply: Reply) -> str:
     Truncation and safety blocks have to stay distinguishable from a clean stop.
     The Gemini path hard-coded "stop" for years, so a reply cut off at the token
     limit looked exactly like a complete one and nobody could tell whether the cap
-    was ever binding. The same mistake is available here for free; it is not made.
+    was ever binding. The same mistake is available here for free, and not made.
     """
     mapped = _FINISH_REASONS.get(str(reply.stop_reason or "").strip().lower())
     if mapped in ("length", "content_filter"):
@@ -366,7 +367,7 @@ class UnifiedModel(BaseModelBackend):
         whole request rejected.
 
         One large number rather than a per-provider table, because the trade is
-        asymmetric. Over-reporting means we never trim, and a genuinely over-long
+        asymmetric. Over-reporting means nothing is ever trimmed, and an over-long
         request comes back as a 400 that lands in ``skipped_bad_request`` and says
         so in the run summary. Under-reporting silently mangles tool history and
         loses the turn with no evidence of why.

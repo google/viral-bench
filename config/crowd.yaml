@@ -20,7 +20,7 @@
 # of the run/test runtime (config/runtime.yaml), which decides host-vs-container
 # and env injection.
 #
-# EVERY knob in this file is loaded by viral_bench.config and actually takes
+# EVERY knob in this file is loaded by viral_bench.config and takes
 # effect. That was not always true: seed, interview, temperature, max_tokens,
 # semaphore and the whole interaction block used to be silent no-ops that merely
 # looked configurable, and interaction.max_steps advertised 40 while the code
@@ -34,8 +34,8 @@ browser:
   # browser MCP). Set to null to use Playwright's bundled Chromium instead.
   channel: chrome
   headless: true
-  # A crowd shares ONE browser process (BrowserEngine); each agent trial gets its
-  # own browser *context* (isolated cookies/storage) -- cheap to fan out.
+  # A crowd shares ONE browser process (BrowserEngine), and each agent trial gets
+  # its own browser *context* (isolated cookies/storage) -- cheap to fan out.
   viewport: [1280, 800]
   nav_timeout_ms: 30000     # navigation (page load) budget
   # Per click/type/press budget. 90 of 147 failed interaction steps in the
@@ -62,21 +62,21 @@ interaction:
   # crowd arch v8 made the bench web-only, so bot trials no longer exist. It had
   # also been dead for its whole life -- config.crowd_turn_timeout loaded it into
   # sim_defaults.DEFAULT_TURN_TIMEOUT, which nothing ever imported.
-  # How long to wait for a web app to actually ANSWER HTTP. Not a TCP connect:
+  # How long to wait for a web app to ANSWER HTTP. Not a TCP connect:
   # a rootless port forwarder accepts long before the server serves, and handing
   # out the URL early is how triers ended up reviewing error pages. Generous
   # because a cold `uv run` boot installs dependencies before it listens.
   start_wait_s: 90
 
 # Scaling model (see viral_bench.founder.apphost.AppHost). A web app is served
-# ONCE and shared across many agents (like a real deployment); each agent still
-# gets an isolated browser context. CLI/bot trials materialize an isolated copy
+# ONCE and shared across many agents (like a real deployment), and each agent
+# still gets an isolated browser context. CLI/bot trials materialize an isolated copy
 # per trial. The crowd runs apps in a container by default (see runtime.yaml).
 scale:
   share_web_instances: true
 
 # The crowd agent stack (CAMEL FunctionTool adapter for SocialAgent(tools=...)).
-# The app-interaction tools work and are tested without it; the full OASIS
+# The app-interaction tools work and are tested without it. The full OASIS
 # simulation runs in the isolated .venv-crowd (see below).
 agent:
   framework: camel        # camel-ai FunctionTool adapter (SocialAgent(tools=...))
@@ -84,11 +84,11 @@ agent:
 # ---------------------------------------------------------------------------
 # The crowd social simulation (viral_bench.crowd.sim, run in .venv-crowd).
 # `agents`, `triers`, `rounds`, and `model.id` below are loaded via
-# viral_bench.config (see sim_defaults.py); the CLI (`viral-bench crowd-run`)
+# viral_bench.config (see sim_defaults.py), and the CLI (`viral-bench crowd-run`)
 # overrides them per run. Create the isolated env with scripts/setup_crowd_env.sh.
 # ---------------------------------------------------------------------------
 simulation:
-  # Crowd size. Start 5-10 to validate; scale toward ~30-50 for scored runs,
+  # Crowd size. Start 5-10 to validate, then scale toward ~30-50 for scored runs,
   # calibrated empirically (see README "Calibrating crowd size").
   agents: 30
   # How many crowd members first-hand TRY the app. **-1 means all of them.**
@@ -96,13 +96,13 @@ simulation:
   # This used to be 8 of 30, on the reasoning that a hands-on trial is expensive
   # and its cost should stay flat as the crowd grows. That traded away the
   # measurement. Split across 44 stored runs, the hands-on tier separates builds
-  # at between/within 7.17 (adoption) and 7.86 (delight); the feed-only tier
+  # at between/within 7.17 (adoption) and 7.86 (delight). The feed-only tier
   # manages 3.66 and 4.74 -- and the hands-on tier is *less* noisy run to run
   # despite being a quarter of the sample, which sampling alone cannot explain.
   # Twenty-two agents reading one feed are one measurement echoed, not
   # twenty-two measurements, and they were supplying 73% of the primary signal.
   #
-  # It is also what a launch actually looks like: a link is a thing anyone can
+  # It is also what a launch looks like: a link is a thing anyone can
   # click. Set a positive number to go back to a mixed crowd -- the reactor tier
   # still works and is worth re-testing whenever the feed changes.
   triers: -1
@@ -113,7 +113,7 @@ simulation:
   # 4/1410 -> 731/1410 -> 1173/1410 -> 1272/1410, so the last two rounds were
   # 83% and 90% nothing for ~45% of the spend, and new vocabulary per round
   # decayed 1.00 -> 0.85 -> 0.51 -> 0.50 as agents restated the consensus they
-  # had just read. Three rounds keeps the two that carry content.
+  # had already read. Three rounds keeps the two that carry content.
   # Three. The third round IS mostly idle -- 90% `do_nothing`, 4,235 of 4,680
   # turns across 156 runs, for ~3 comments and 1 repost each -- and cutting it
   # to two was the best-looking change on a matched 10-brief arm. On the full
@@ -143,8 +143,8 @@ simulation:
   # rather than set, so a maximal trial can never silence a trier. It used to be
   # a hardcoded 30 next to an unrelated max_steps of 24: enough in practice
   # (worst observed trier used 25 of 30 across 600) but nothing enforced it, and
-  # an agent that runs out just stops mid-turn with no error. Under the original
-  # budget of 10 this was the worst bug in the crowd -- 95% of triers who really
+  # an agent that runs out stops mid-turn with no error. Under the original
+  # budget of 10 this was the worst bug in the crowd -- 95% of triers who had
   # used the app were silenced, so a VIRALITY benchmark was discarding the
   # opinions of precisely the people who had tried the product.
   social_headroom: 16
@@ -153,7 +153,7 @@ simulation:
 
   model:
     # '<provider>/<model>' for the simulated users. Empty means "not chosen
-    # yet"; `viral-bench init` writes your choice to config/local.yaml, which is
+    # yet". `viral-bench init` writes your choice to config/local.yaml, which is
     # gitignored and takes precedence over this file.
     #
     # HOLD THIS FIXED across a comparison. The crowd is the measuring
@@ -161,7 +161,7 @@ simulation:
     # results from two different crowd models are not comparable.
     #
     # Choose a CHEAP, FAST model, and resist the urge to upgrade it. A stronger
-    # judge sounds obviously better and measured worse for us: a reasoning model
+    # judge sounds obviously better and measured worse: a reasoning model
     # was harsher on everything, including apps that deserved praise, so the top
     # of the scale compressed while a deliberately broken control stayed put and
     # separation collapsed. It also roughly doubled within-cell noise. And it
@@ -175,7 +175,7 @@ simulation:
     id: ''
     # Credentials are read from the environment or the repo .env, never from
     # here -- this file is tracked. See `viral-bench models`.
-    # Higher gives livelier, more varied social behaviour; lower makes the
+    # Higher gives livelier, more varied social behaviour, and lower makes the
     # measurement more repeatable. This is a real lever on the reliability /
     # richness tradeoff and is worth sweeping.
     temperature: 0.7

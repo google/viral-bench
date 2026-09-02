@@ -37,11 +37,11 @@ opencode wiring notes:
 - Model access goes through Vertex AI model garden, authenticated via Application
   Default Credentials (no API key). The opencode provider follows from the model:
   ``google-vertex`` for Gemini, ``google-vertex-anthropic`` for Claude (see
-  :mod:`viral_bench.founder.models`). We scope the Vertex project + quota project
-  to the opencode child-process env only (see :mod:`viral_bench.founder.vertex`),
+  :mod:`viral_bench.founder.models`). The Vertex project + quota project are
+  scoped to the opencode child-process env only (see :mod:`viral_bench.founder.vertex`),
   so this never disturbs a co-resident Cloud Code that relies on the ambient
   ``GOOGLE_CLOUD_PROJECT``.
-- Config is passed via ``OPENCODE_CONFIG`` pointing at a file we write OUTSIDE
+- Config is passed via ``OPENCODE_CONFIG`` pointing at a file written OUTSIDE
   the app directory, so the shipped app stays clean. It pins the model, pins the
   small model to the same Vertex model (so opencode never calls its default
   hosted small model), and disables session sharing so nothing leaves the machine.
@@ -103,15 +103,15 @@ _BINARY_CANDIDATES = (
 #: because a turn killed part-way returns rc=124 and is recorded as a failed
 #: build: set them too tight and the harness converts "this model thinks for
 #: longer" into "this model cannot ship an app", which is a fabricated
-#: capability difference (docs/crowd_bugs.md T0.1). The previous
+#: capability difference. The previous
 #: 1200/2400/2700 were tight enough to do exactly that on heavy team turns.
 _DESIGN_TIMEOUT_S = _config.founder_timeout("design", 5400.0)
 _BUILD_TIMEOUT_S = _config.founder_timeout("build", 10800.0)
 _TEAM_TURN_TIMEOUT_S = _config.founder_timeout("team_turn", 10800.0)
 #: One dynamic orchestrator turn is the largest unit of work in the bench: it may
 #: contain an arbitrary number of subagent runs, sequential or concurrent, all
-#: inside the single opencode process we are timing. A team turn is one model's
-#: turn; this can be a whole team's round. Sized accordingly.
+#: inside the single opencode process being timed. A team turn is one model's
+#: turn, whereas this can be a whole team's round. Sized accordingly.
 _DYNAMIC_TURN_TIMEOUT_S = _config.founder_timeout("dynamic_turn", 14400.0)
 
 #: Capture the model's chain of thought, and opencode's own session store, for
@@ -147,8 +147,8 @@ class PhaseResult:
     """Outcome of a single opencode turn (design or build).
 
     ``role``, ``agent_index`` and ``turn`` are populated for multi-agent
-    specialist builds so the transcript can be attributed to a specific agent;
-    they default to empty/zero for the solo (N=1) path.
+    specialist builds so the transcript can be attributed to a specific agent.
+    They default to empty/zero for the solo (N=1) path.
     """
 
     phase: str
@@ -162,12 +162,12 @@ class PhaseResult:
     session_id: str = ""  # opencode session id (so an agent can resume its own)
     #: The turn was SIGKILLed by the wall-clock backstop rather than exiting on
     #: its own. Recorded separately because it is NOT evidence about the model's
-    #: ability to build the app -- it is evidence about our timeout. Collapsing
+    #: ability to build the app -- it is evidence about the harness timeout. Collapsing
     #: the two lets a slow-but-working model be scored as a broken one.
     timed_out: bool = False
     #: How much chain of thought this turn recorded, and where the full opencode
     #: session store for it was dumped. Counted rather than inlined so a build
-    #: record stays readable; the text itself is in the transcript and the dump.
+    #: record stays readable, and the text itself is in the transcript and the dump.
     #: Zero reasoning is a real result (Claude's `adaptive` thinking skips easy
     #: turns) -- and it is also what a capture regression looks like, so the
     #: numbers are recorded per turn rather than only totalled per build.
@@ -304,7 +304,7 @@ def preflight(model: str) -> None:
     try:
         make_client(spec).ping()
     except MissingCredentialError as exc:
-        # Not reachable-but-refused: simply not configured. The message already
+        # Not reachable-but-refused, but not configured at all. The message already
         # says which variable to set and where to get a key.
         raise HarnessError(str(exc)) from exc
     except ModelError as exc:
@@ -318,7 +318,7 @@ def preflight(model: str) -> None:
 def _thinking_options(model: str) -> dict:
     """Provider options that make this model's thinking come back *readable*.
 
-    ``--thinking`` decides whether opencode PRINTS reasoning; this decides
+    ``--thinking`` decides whether opencode PRINTS reasoning, while this decides
     whether there is any reasoning text to print. The two providers differ, and
     the difference is not cosmetic:
 
@@ -335,7 +335,7 @@ def _thinking_options(model: str) -> dict:
       characters, ``adaptive`` + ``summarized`` gave 290.
 
     Note what is deliberately NOT used here: opencode's own ``--variant high``.
-    For every Claude model in our registry it resolves to
+    For every Claude model in the registry it resolves to
     ``thinking: {type: "enabled", budgetTokens: N}``, and Vertex rejects that
     outright -- ``"thinking.type.enabled" is not supported for this model``,
     HTTP 400. Verified against all four of gemini-2.0-flash, sonnet-5, opus-4-8 and
@@ -343,7 +343,7 @@ def _thinking_options(model: str) -> dict:
     capturing anything, which is why the shape is spelled out here instead.
 
     ``effort`` rides along because ``adaptive`` lets the model decide whether to
-    think at all; without it a Claude build's easy turns record no reasoning.
+    think at all. Without it a Claude build's easy turns record no reasoning.
     """
     from viral_bench.founder.models import transport_for  # noqa: PLC0415
 
@@ -359,7 +359,7 @@ def _parse_session_id(transcript_text: str) -> str:
     """Extract opencode's ``sessionID`` from a JSON turn transcript.
 
     ``opencode run --format json`` emits one JSON event per line, each carrying a
-    ``sessionID``. We read it from the first parseable line so a specialist can
+    ``sessionID``. It is read from the first parseable line so a specialist can
     resume *its own* session on a later turn via ``--session`` (the mechanism that
     lets each agent keep an independent context across interleaved rounds).
     Returns ``""`` if no id can be found.
@@ -409,14 +409,14 @@ def read_assistant_text(transcript_path: Path) -> str:
     scan for a control token like the QA ship signal without matching the prompt.
     Returns ``""`` if the transcript is missing or unparseable.
 
-    Reasoning is deliberately NOT included, even now that we capture it. The
+    Reasoning is deliberately NOT included, even now that it is captured. The
     control tokens are matched against this text: QA's ship signal
     (``structures._turn_signals_ship``) and the dynamic founder's done signal.
     A model that merely *considers* shipping -- "the app looks complete, I could
     emit READY_TO_SHIP now, but let me check the manifest first" -- would end its
     own build a turn early if its thinking counted as its answer. That is a
     harness artifact that would hit the models which think out loud hardest,
-    i.e. a fabricated capability difference (docs/crowd_bugs.md T0.1). Use
+    i.e. a fabricated capability difference. Use
     :func:`read_reasoning` when you want the thinking.
     """
     return "\n".join(_read_part_text(transcript_path, "text"))
@@ -432,7 +432,7 @@ def read_reasoning(transcript_path: Path) -> str:
     turns, and a build run before ``trajectory.thinking`` was switched on has
     none at all.
 
-    Never feed this to a control-token check; see :func:`read_assistant_text`.
+    Never feed this to a control-token check. See :func:`read_assistant_text`.
     """
     return "\n".join(t for t in _read_part_text(transcript_path, "reasoning") if t)
 
@@ -440,10 +440,10 @@ def read_reasoning(transcript_path: Path) -> str:
 def read_tool_calls(transcript_path: Path) -> list[tuple[str, dict]]:
     """Return ``(tool_name, input)`` for each tool call in a JSON turn transcript.
 
-    ``opencode run --format json`` emits one JSON event per line; a tool call is a
-    ``part`` of ``type == "tool"`` carrying the tool ``name`` and its ``input``.
-    Used to check whether a turn actually *exercised* the app (e.g. a ``browser_*``
-    interaction or a ``bash`` run of the app), not just reasoned about it. Returns
+    ``opencode run --format json`` emits one JSON event per line, and a tool call
+    is a ``part`` of ``type == "tool"`` carrying the tool ``name`` and its ``input``.
+    Used to check whether a turn *exercised* the app (e.g. a ``browser_*``
+    interaction or a ``bash`` run of the app), not merely reasoned about it. Returns
     ``[]`` if the transcript is missing or unparseable.
     """
     try:
@@ -486,8 +486,8 @@ def read_task_spawns(transcript_path: Path) -> list[dict]:
     a ``task`` part carries ``input`` (``subagent_type``/``description``/
     ``prompt``, plus ``task_id`` when the agent is resuming a subagent it already
     used) and ``state.metadata`` (the child ``sessionId``, the ``parentSessionId``
-    and the ``model`` the child actually ran on). ``time.start``/``time.end`` are
-    epoch milliseconds, and they genuinely overlap when several tasks are issued
+    and the ``model`` the child ran on). ``time.start``/``time.end`` are
+    epoch milliseconds, and they do overlap when several tasks are issued
     in one message -- which is what makes "did this model parallelise?" an
     answerable question.
 
@@ -551,8 +551,8 @@ def concurrent_spawn_peak(spawns: list[dict]) -> int:
 
     A sweep-level question the raw count cannot answer: two models may each spawn
     six subagents, one strictly in sequence and the other three at a time, and
-    those are very different orchestrations. Computed by sweeping the start/end
-    intervals; spawns missing a timestamp are skipped rather than guessed at.
+    those are quite different orchestrations. Computed by sweeping the start/end
+    intervals. Spawns missing a timestamp are skipped rather than guessed at.
     """
     events: list[tuple[int, int]] = []
     for spawn in spawns:
@@ -666,7 +666,7 @@ def _descendant_session_ids(con, root_session_id: str) -> list[str]:
 def dump_session_trace(root_session_id: str, dest: Path) -> int:
     """Write opencode's own record of ``root_session_id`` to ``dest`` as JSONL.
 
-    The JSON transcript we capture from stdout is not the whole build, and the
+    The JSON transcript captured from stdout is not the whole build, and the
     gaps are exactly the parts worth keeping:
 
     * **The prompts are missing.** ``run_turn`` sends the prompt on stdin and
@@ -819,7 +819,7 @@ def _collect_session_records(con, session_ids: list[str]) -> list[dict]:
 
 
 #: Set to "1" to leave agent-started processes running after a turn. Escape hatch
-#: for debugging a build by hand; never set it for a scored run.
+#: for debugging a build by hand. Never set it for a scored run.
 NO_REAP_ENV = "VIRAL_BENCH_NO_REAP"
 
 
@@ -869,7 +869,7 @@ def reap_workspace_processes(root: Path, *, grace_s: float = 5.0) -> list[tuple]
     port-probing commands fighting infrastructure it had leaked itself. The real
     hazard is across builds -- build B's QA binds and fails, ``curl`` still
     answers 200 from build A's server, and QA verifies and ships B while looking
-    at A. That is docs/crowd_bugs.md T0.1 in a new costume: a harness race that
+    at A. That is the same failure in a new costume: a harness race that
     hits one model more than the other reads out as a capability difference.
 
     **Why cwd and not the process group.** The obvious implementation -- run
@@ -889,7 +889,7 @@ def reap_workspace_processes(root: Path, *, grace_s: float = 5.0) -> list[tuple]
     the bare-host path (``viral-bench found``, ``scripts/smoke_founder.py``),
     which has no namespace at all.
 
-    Call it only once the turn's opencode process has exited; anything still
+    Call it only once the turn's opencode process has exited. Anything still
     running in the workspace at that point is by definition something the agent
     left behind.
 
@@ -1029,7 +1029,7 @@ class OpenCodeRunner:
     def _build_env(self, config_path: Path) -> dict[str, str]:
         env = dict(os.environ)
         # Provider credentials go to THIS opencode child only -- never exported
-        # into our own process -- so a sweep can run two arms against two
+        # into the harness process -- so a sweep can run two arms against two
         # providers at once, and an ambient cloud project set by the surrounding
         # environment cannot leak into a build that named a different one.
         env.update(self._opencode_target().env)
@@ -1037,7 +1037,7 @@ class OpenCodeRunner:
         env["OPENCODE_DISABLE_AUTOUPDATE"] = "1"
         # Backstop for the workspace's own repo (BuildWorkspace.init_git_boundary):
         # halt git's upward search below the ViralBench checkout, so a stray `git`
-        # cannot reach our history even if that repo is missing or was deleted
+        # cannot reach the harness history even if that repo is missing or was deleted
         # mid-build. Prepend rather than overwrite so a caller's ceiling survives.
         ceiling = str(builds_root().parent)
         inherited = env.get("GIT_CEILING_DIRECTORIES")
@@ -1051,7 +1051,7 @@ class OpenCodeRunner:
 
         ``"build"``, ``"team"`` (a collaborative team turn, which both plans and
         edits) and ``"dynamic"`` (an orchestrator turn, which may contain a whole
-        fan-out of subagent runs) get the longer budgets; anything else uses the
+        fan-out of subagent runs) get the longer budgets. Anything else uses the
         design budget.
         """
         if turn == "build":
@@ -1125,20 +1125,20 @@ class OpenCodeRunner:
             prompt: The message to send to opencode.
             workspace: The build workspace (opencode runs with ``--dir app_dir``).
             phase: Transcript label (also the transcript filename stem). For the
-                solo path this is ``"design"``/``"build"``; team builds use a
+                solo path this is ``"design"``/``"build"``. Team builds use a
                 per-agent, per-round label like ``"r2_a3_designer"``.
             turn: The turn kind, ``"design"``/``"build"``/``"team"`` (chooses the
                 default timeout and is recorded on the result).
             continue_session: If true, pass ``--continue`` so this turn resumes the
                 most recent session (used to link the solo build turn to its own
-                design turn); ignored when ``session_id`` is given.
-            timeout_s: Override the timeout; defaults to :meth:`timeout_for`.
+                design turn). Ignored when ``session_id`` is given.
+            timeout_s: Override the timeout, defaulting to :meth:`timeout_for`.
             role: Role key, recorded on the result (team builds only).
             agent_index: 1-based agent position, recorded on the result.
             extra_env: Per-turn env overrides merged over the prepared env (used by
                 a collaboration toolset to inject, e.g., an OTA token + PATH for
                 this specific agent's turn).
-            agent: opencode agent name to run as (``--agent``); empty uses the
+            agent: opencode agent name to run as (``--agent``). Empty uses the
                 default build agent. Team turns pass the specialist's role key.
             session_id: Resume this exact opencode session (``--session``) so a
                 specialist keeps its OWN context across interleaved rounds. Empty
@@ -1167,11 +1167,11 @@ class OpenCodeRunner:
             "--format",
             "json",
             "--auto",
-            "--print-logs",  # route opencode's logs to stderr so we capture them
+            "--print-logs",  # route opencode's logs to stderr so they are captured
         ]
         if self.capture_thinking:
             # Keep the model's chain of thought. opencode already ASKS the
-            # provider for thoughts and we already pay for the tokens; this flag
+            # provider for thoughts and the tokens are already paid for. This flag
             # only decides whether they are printed, and it defaults to off --
             # which is why every build before this silently discarded its
             # reasoning while being billed 18-32k thinking tokens a session.
@@ -1192,7 +1192,7 @@ class OpenCodeRunner:
         # prompt in /proc/<pid>/cmdline, and that turned the founder's own
         # instructions into a landmine.
         #
-        # Our single-page-app guidance contains the literal string
+        # The single-page-app guidance contains the literal string
         # "python3 -m http.server". A QA agent that starts the app that way and
         # then tidies up with `pkill -f "python3 -m http.server"` -- a completely
         # ordinary thing to do -- matched the opencode process running its own
@@ -1200,7 +1200,7 @@ class OpenCodeRunner:
         # rc=-15 mid-QA-turn, three of them one model's. A model that happens to
         # prefer `pkill -f` over `kill $PID` would have been recorded as less
         # able to finish a build, which is a fabricated capability difference of
-        # exactly the kind in docs/crowd_bugs.md T0.1.
+        # of exactly that kind.
 
         transcript_dir = workspace.app_dir.parent / "transcript"
         transcript_dir.mkdir(parents=True, exist_ok=True)
@@ -1213,7 +1213,7 @@ class OpenCodeRunner:
                 argv,
                 env=env,
                 input=prompt,
-                # Without this opencode inherits *our* cwd -- the repo root --
+                # Without this opencode inherits the harness cwd -- the repo root --
                 # so any command the agent runs before it cds lands in the
                 # ViralBench checkout rather than the app it is building.
                 # `--dir` only scopes opencode's own tools, not the shell.
@@ -1315,7 +1315,7 @@ class OpenCodeHarness:
     For a team structure the harness turns each specialist role into a distinct,
     capability-differentiated opencode agent (own prompt, temperature,
     permissions, gated skills, and -- when ``browser_tools`` is on -- a real
-    browser); the solo path gets none of that and stays byte-for-byte the
+    browser). The solo path gets none of that and stays byte-for-byte the
     baseline. The dynamic structure gets a third shape: no bench-authored agents
     or skills at all, delegation explicitly allowed, and the browser available to
     every agent -- the specialists in that build are the ones the model writes.
@@ -1371,7 +1371,7 @@ class OpenCodeHarness:
                 skills_for_roles,
             )
 
-            # Auto-detect: only wire the browser MCP when it can actually launch on
+            # Auto-detect: only wire the browser MCP when it can launch on
             # this host. Otherwise degrade gracefully (the Designer/QA reason from
             # markup) instead of failing the build over missing browser tooling.
             browser_tools = bool(browser_tools) and browser_prereqs_ok()

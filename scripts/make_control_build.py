@@ -18,7 +18,7 @@ Every app the crowd had scored until now was a working build by a strong model,
 so there was no evidence the score could recognise a bad one -- and a benchmark
 that cannot identify failure cannot rank success. This generates a negative
 control: an app that installs, starts, and passes its smoke test, but whose
-JavaScript throws on load so nothing on the page actually works.
+JavaScript throws on load so nothing on the page works.
 
 That combination is deliberate. It is exactly the case the coarse ``verify_code``
 gate cannot catch (the server starts, ``test -f index.html`` passes), so it tests

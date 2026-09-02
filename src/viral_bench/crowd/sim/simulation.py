@@ -23,7 +23,7 @@ triers' interaction traces, an action log, and a run summary).
 Each call is fully self-contained and isolated -- a fresh database, a fresh agent
 graph with fresh memory, and a fresh app instance -- so scoring one app never
 leaks into another ("wipe & repeat"). Turning these artifacts into a ViralScore is
-a later stage; this module's job is to produce a rich, well-recorded social run.
+a later stage. This module's job is to produce a rich, well-recorded social run.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ class SimulationConfig:
     #: bill an account nobody chose.
     model_id: str = DEFAULT_MODEL
     #: Crowd sampling temperature. Higher gives livelier, more varied
-    #: social behaviour; lower makes the measurement more repeatable.
+    #: social behaviour. Lower makes the measurement more repeatable.
     #: Swept during score calibration to find the reliability sweet spot.
     temperature: float = 0.7
     #: Output-token cap per LLM call. ``None`` sends no cap, so the model's own
@@ -124,7 +124,7 @@ class SimulationConfig:
     interview: bool = True
     no_llm: bool = False  # scripted wiring smoke: ManualActions only, no LLM spend
     personas_file: str | None = None
-    #: Defaults come from sim_defaults so config/crowd.yaml actually reaches them,
+    #: Defaults come from sim_defaults so config/crowd.yaml reaches them,
     #: and so the trier budget stays TIED to trial_max_steps rather than being a
     #: second hand-picked number that can silently fall below it (see
     #: sim_defaults.DEFAULT_SOCIAL_HEADROOM).
@@ -134,7 +134,7 @@ class SimulationConfig:
     start_wait: float = DEFAULT_START_WAIT
     #: Run the verify_code validity gate (builds / runs / does_what_it_claims)
     #: and record it in the run summary. The ViralScore caps a broken app's
-    #: score, so a scored run needs this; --no-llm wiring smokes can skip it.
+    #: score, so a scored run needs this. The --no-llm wiring smokes can skip it.
     validity_gate: bool = True
     #: How hard the crowd model is allowed to think per call ("low" | "high" |
     #: None for the model's own default). recent Gemini thinks by default, which is
@@ -191,7 +191,7 @@ class SimulationResult:
     #: for the crowd to launch. Recorded so a floor score can be traced back to
     #: a delivery failure rather than to an app users merely disliked.
     undeliverable: bool = False
-    #: Which named sweep the build under test belongs to, e.g. "r4".
+    #: Which named sweep the build under test belongs to.
     #:
     #: Copied from the build record at run time, for the same reason
     #: ``crowd_arch_version`` and ``crowd_transport`` are stamped: record what
@@ -205,10 +205,11 @@ class SimulationResult:
     #: A DISTINCT outcome from both ``undeliverable`` and a disliked app, and it
     #: had to become one. This state used to write nothing at all: every agent
     #: trial re-attempted the start, the run produced no ``run_summary.json``, and
-    #: it died at the wall clock -- so 26 of 1,000 builds on the r3 sweep were
+    #: it died at the wall clock -- so 26 of 1,000 builds on one sweep were
     #: indistinguishable from cells never tried and silently left the denominator.
-    #: Worse, the usual cause was OUR packaging (a clone materialized without its
-    #: dependencies), so a harness bug read as a model that ships broken apps.
+    #: Worse, the usual cause was the harness's own packaging (a clone
+    #: materialized without its dependencies), so a harness bug read as a model
+    #: that ships broken apps.
     app_start_failed: bool = False
     #: Why, in the container's own words.
     app_start_detail: str | None = None
@@ -216,11 +217,11 @@ class SimulationResult:
     #:
     #: This decides the SCORING, so it is recorded rather than re-derived later
     #: from text that may not survive. An app the harness shipped without its
-    #: dependencies is excluded -- scoring a model down for our packaging
-    #: manufactures a capability difference. An app that will not start because
-    #: its own source has a syntax error is FLOORED like any other broken app:
-    #: the crowd did everything right, nobody could use the thing, and noticing
-    #: that is what the benchmark is for.
+    #: dependencies is excluded -- scoring a model down for the harness's
+    #: packaging manufactures a capability difference. An app that will not
+    #: start because its own source has a syntax error is FLOORED like any other
+    #: broken app: the crowd did everything right, nobody could use the thing,
+    #: and noticing that is what the benchmark is for.
     app_start_fault: str = ""
     #: {builds, runs, does_what_it_claims, detail} from the validity gate, or
     #: None when it was skipped. A broken app cannot be viral, so the score
@@ -285,10 +286,10 @@ def _load_build(build_id: str) -> BuildUnderTest:
         )
 
     # No manifest -> no title, no summary and no declared app type from the
-    # founder. Fall back to the IDEA's own metadata, which is ours and identical
-    # for both models on a given idea. That is deliberately generous: the build
-    # gets a clean pitch it did not write, so this biases against finding a
-    # difference rather than for one.
+    # founder. Fall back to the IDEA's own metadata, which the harness supplies
+    # and which is identical for both models on a given idea. That is
+    # deliberately generous: the build gets a clean pitch it did not write, so
+    # this biases against finding a difference rather than for one.
     return BuildUnderTest(
         record=record,
         manifest=None,
@@ -362,7 +363,7 @@ def _engagement_snapshot(db_path: str, launch_post_id: int | None) -> dict:
         }
         # Cascade shape: does the conversation live only on the launch post, or
         # does derived content earn its own engagement (true multi-generation
-        # spread)? Reported for calibration; weighted only once non-degenerate.
+        # spread)? Reported for calibration, and weighted only once non-degenerate.
         secondary = scalar(
             "SELECT COALESCE(SUM(num_likes + num_shares + num_dislikes), 0) "
             "FROM post WHERE original_post_id IS NOT NULL"
@@ -385,7 +386,7 @@ def _engagement_snapshot(db_path: str, launch_post_id: int | None) -> dict:
             else 0.0,
             "late_action_share": round(late / total_acts, 4) if total_acts else 0.0,
         }
-        # Exposure shape: does the recommender actually rank, or does every
+        # Exposure shape: does the recommender rank at all, or does every
         # agent see an identical feed? Two things depend on this. A frozen rec
         # table predicted total interview loss with 9/9 precision and recall in
         # the stored corpus, so it is a live health signal. And "a better app
@@ -438,7 +439,8 @@ def _engagement_snapshot(db_path: str, launch_post_id: int | None) -> dict:
 #: How ``verify_code`` words a failure to START, as opposed to a failure to
 #: BEHAVE. The two are the same ``runs=False`` and must not be treated alike: an
 #: app that starts and serves a 500 is the model's result, while an app that never
-#: starts is usually our packaging and carries no information about the model.
+#: starts is usually the harness's packaging and carries no information about
+#: the model.
 _GATE_START_FAILURE = "start failed:"
 
 
@@ -462,7 +464,7 @@ def _gate_says_it_never_started(validity: dict | None) -> bool:
 async def _run_validity_gate(config: SimulationConfig) -> dict:
     """Run ``verify_code`` off-thread and return its dict (never raises).
 
-    A gate that errors out must not abort the crowd run: we record the failure
+    A gate that errors out must not abort the crowd run: the failure is recorded
     so the scoring stage can treat the run as unverified rather than silently
     assuming the app works.
     """
@@ -476,9 +478,9 @@ async def _run_validity_gate(config: SimulationConfig) -> dict:
         )
         return res.as_dict()
     except Exception as exc:  # noqa: BLE001 - gate failure must not kill the run
-        # None, not False. False means "we checked and the app is dead", which
+        # None, not False. False means "the app was checked and is dead", which
         # fires the 0.2x broken-app multiplier and prints "app failed to build or
-        # start" -- a verdict about the app, from an error in our own harness.
+        # start" -- a verdict about the app, from an error in the harness.
         # None is the sentinel validity_gate() already treats as unverified: no
         # discount, surfaced as a confidence warning instead.
         return {
@@ -513,7 +515,7 @@ async def _safe_step(env, actions: dict, label: str) -> bool:
 
 
 def _answered_agents(db_path: str, crowd) -> set[int]:
-    """Agent ids whose interview reply actually PARSED into a verdict."""
+    """Agent ids whose interview reply PARSED into a verdict."""
     return {
         row["agent_id"]
         for row in (interview_verdicts(db_path, crowd).get("per_agent") or [])
@@ -689,7 +691,7 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
     result.undeliverable = build.undeliverable
     result.cohort = getattr(build.record, "cohort", "") or ""
 
-    # Validity gate FIRST: does the app actually build, run, and do what it
+    # Validity gate FIRST: does the app build, run, and do what it
     # claims? A broken app cannot legitimately be viral, so the ViralScore caps
     # its score -- but only if this evidence exists. Runs in its own ephemeral
     # container, so it never touches the crowd's shared instance.
@@ -700,7 +702,7 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
         # The gate already tried to start this app in a container, so it is the
         # earliest -- and often the ONLY -- place the failure is visible. The
         # AppHost signal below is better evidence when it exists, but it only
-        # exists if some agent actually opened the app; a run where nobody did
+        # exists if some agent opened the app, and a run where nobody did
         # would otherwise record a dead app as a merely unpopular one.
         if _gate_says_it_never_started(result.validity):
             result.app_start_failed = True
@@ -708,9 +710,9 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
             result.app_start_fault = _start_fault(result.app_start_detail)
 
     # Shared running app instance + shared browser (for web-app triers). An
-    # undeliverable build has nothing to serve and nothing to render, so we start
-    # neither -- spinning up a browser for an app that cannot exist just burns
-    # 30 seconds per run.
+    # undeliverable build has nothing to serve and nothing to render, so neither
+    # is started -- spinning up a browser for an app that cannot exist burns
+    # 30 seconds per run for nothing.
     #
     # Clear the app's durable state first. State must accumulate *within* a run
     # -- that is the whole multi-user signal, one agent seeing what another wrote
@@ -822,7 +824,7 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
 
         # Capture every agent's reasoning BEFORE the env is closed: it lives
         # only in agent memory until now, and it is what the agentic autorater
-        # reads. Best-effort -- never let capture cost us a completed run.
+        # reads. Best-effort -- capture must never cost a completed run.
         try:
             trajectories = collect_trajectories(env, crowd)
         except Exception as exc:  # noqa: BLE001
@@ -859,7 +861,7 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
         # None for an undeliverable build: there was never an app to host.
         if app_host is not None:
             # Read the host's verdict BEFORE closing it. The AppHost gives up on a
-            # build after MAX_START_ATTEMPTS and remembers why; that memory is the
+            # build after MAX_START_ATTEMPTS and remembers why. That memory is the
             # only place the reason exists, since the container log lives in a
             # clone that close() is about to retire to builds/.trash.
             detail = app_host.unstartable(config.build_id)
@@ -917,7 +919,7 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
 def _scripted_round(env, crowd, rnd: int) -> dict:
     """No-LLM wiring smoke: deterministic ManualActions on the launch post.
 
-    Round 1 = triers like + comment; round 2 = reactors like; later rounds are
+    Round 1 = triers like + comment, round 2 = reactors like, and later rounds are
     skipped (empty) -- each agent acts once, so the platform's like de-dup never
     fires. This validates the platform + artifact wiring without any LLM spend.
     """
@@ -1012,7 +1014,7 @@ def _write_summary(
             "trier_skepticism": _tier_skepticism_counts(selection),
         },
         # Aggregated crowd verdicts -- the discriminating signal the scoring stage
-        # reads (raw distributions; no composite score computed here). Computed
+        # reads (raw distributions, with no composite score computed here). Computed
         # by the caller, because run health depends on them.
         "verdicts": verdicts,
         "n_actions_logged": len(actions),

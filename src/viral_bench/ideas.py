@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Stage 1 — Idea Bench: load and validate vibe-coding idea specs.
+"""Idea Bench (stage 1): load and validate vibe-coding idea specs.
 
 An *idea spec* is a single YAML file under the top-level ``ideas/`` directory
 describing one vibe-coding project. Every model under test receives the same
@@ -43,8 +43,9 @@ import yaml
 # much of it lives on the server.
 #
 # * ``client-app``     -- runs in the browser. State is local (localStorage,
-#                         IndexedDB); any server is just a static file server or
-#                         a thin same-origin proxy hiding an API key.
+#                         IndexedDB), and any server is no more than a static
+#                         file server or a thin same-origin proxy hiding an
+#                         API key.
 # * ``full-stack-app`` -- has a real backend and a database. Accounts, persisted
 #                         records, and MULTI-USER behaviour: one visitor's write
 #                         is visible to another. That last property is why this
@@ -87,7 +88,7 @@ class GroundTruth:
 
 @dataclass(frozen=True)
 class Idea:
-    """A single, validated vibe-coding idea spec (Stage 1 — Idea Bench)."""
+    """A single, validated vibe-coding idea spec from Idea Bench, stage 1."""
 
     idea_id: str
     title: str
@@ -103,7 +104,7 @@ class Idea:
 
 def ideas_dir() -> Path:
     """Return the absolute path to the top-level ``ideas/`` directory."""
-    # ideas.py lives at src/viral_bench/ideas.py; ideas/ is at the repo root.
+    # ideas.py lives at src/viral_bench/ideas.py, and ideas/ is at the repo root.
     return Path(__file__).resolve().parents[2] / "ideas"
 
 

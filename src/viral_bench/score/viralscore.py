@@ -18,9 +18,9 @@ The crowd is the benchmark's measuring instrument, so the score is designed
 around two properties that can be *measured*, not asserted:
 
 * **reliability** -- scoring the same app twice should give nearly the same
-  number (low within-app variance);
-* **discrimination** -- genuinely different apps should land far apart (high
-  between-app variance).
+  number (low within-app variance).
+* **discrimination** -- different apps should land far apart (high between-app
+  variance).
 
 Their ratio, ``sigma^2_between / (sigma^2_between + sigma^2_within)``, is what
 ``viral_bench.score.calibrate`` reports, and it is the number to optimise.
@@ -59,7 +59,7 @@ Design decisions, each driven by a measurement rather than taste:
 
 The score reports **breadth** (whole-crowd adoption). In-audience *resonance* is
 reported alongside but deliberately kept out of the number, so one score stays
-comparable across apps aimed at very different audiences.
+comparable across apps aimed at different audiences.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ from viral_bench.score.signals import RunSignals
 #: numbers produced by different definitions.
 SCORE_VERSION = "1.8"
 
-#: What an app that genuinely does not run is multiplied by (it can still be
+#: What an app that does not run is multiplied by (it can still be
 #: *discussed*, so the floor is not zero -- but it cannot compete with something
 #: that works).
 BROKEN_APP_MULTIPLIER = 0.2
@@ -83,19 +83,20 @@ BROKEN_APP_MULTIPLIER = 0.2
 #: What an app that RUNS but fails its own smoke check is multiplied by.
 #:
 #: ``verify_code`` reports ``does_what_it_claims = builds and runs and smoke_ok``,
-#: which lumps two very different failures together. Calibration surfaced the
+#: which lumps two different failures together. Calibration surfaced the
 #: distinction: a weak model shipped a working app with a *network-dependent*
 #: smoke command, violating the manifest contract. The app started, served, and
-#: the agents who actually used it rated its functionality 7.5/10 -- yet the full
+#: the agents who used it rated its functionality 7.5/10 -- yet the full
 #: broken-app penalty cut its score fivefold. Direct observation by agents who
 #: used the app is stronger evidence than a health check the same model wrote
 #: about itself, so a failed self-check is a real but far smaller penalty than a
 #: dead app.
 FAILED_SELF_CHECK_MULTIPLIER = 0.6
 
-#: Gate policies. ``hard`` applies the multiplier outright; ``evidence_graded``
-#: scales it up towards 1.0 by the share of the crowd that got the app working,
-#: so a deterministic probe can no longer overrule first-hand experience.
+#: Gate policies. ``hard`` applies the multiplier outright, while
+#: ``evidence_graded`` scales it up towards 1.0 by the share of the crowd that
+#: got the app working, so a deterministic probe can no longer overrule
+#: first-hand experience.
 GATE_HARD = "hard"
 GATE_EVIDENCE_GRADED = "evidence_graded"
 GATE_POLICIES = (GATE_HARD, GATE_EVIDENCE_GRADED)
@@ -104,7 +105,7 @@ GATE_POLICIES = (GATE_HARD, GATE_EVIDENCE_GRADED)
 #:
 #: The old value of 50 came from a reliability table whose n=50 bucket contained
 #: no runs of the strong build at all -- every one of them had been destroyed by
-#: the recsys crash (docs/crowd_bugs.md T0.4) -- so "noise collapses to 2.2 points
+#: the recommender crash -- so "noise collapses to 2.2 points
 #: at 50" was computed over the two floored apps and is not reproducible.
 #:
 #: Re-measured on the fixed instrument (crowd arch v4, 3 builds, 3 seeds each):
@@ -120,7 +121,7 @@ GATE_POLICIES = (GATE_HARD, GATE_EVIDENCE_GRADED)
 #: n=50 is worse on every axis at twice the cost: the strong build scored 70.0 /
 #: 43.5 / 41.3 across three seeds. Interviews were complete in all of them (47-50
 #: of 50), so this is genuine crowd-behaviour variance, not lost data -- which is
-#: what docs/crowd_bugs.md T1.4 predicted from the collapse of distinct opinion
+#: what was predicted from the collapse of distinct opinion
 #: clusters at n=50.
 #:
 #: Loaded from config/score.yaml ``minimums.calibrated_crowd_size`` (the YAML used
@@ -128,7 +129,7 @@ GATE_POLICIES = (GATE_HARD, GATE_EVIDENCE_GRADED)
 CALIBRATED_CROWD_SIZE = _config.score_minimum("calibrated_crowd_size", 30)
 
 #: Interviews below which a run cannot produce a number at all. The crowd's own
-#: verdicts are the primary signal; scoring without them reports a different
+#: verdicts are the primary signal, and scoring without them reports a different
 #: metric under the same name (see :func:`unscorable_reasons`).
 MIN_INTERVIEWS = _config.score_minimum("interviews", 1)
 
@@ -213,7 +214,7 @@ class ScoreWeights:
     #: Did the crowd's work survive a reload. Behavioural, verifiable, and the
     #: only quality signal here that is not somebody's opinion.
     persistence: float = 0.00
-    cascade: float = 0.00  # degenerate today; see the module docstring
+    cascade: float = 0.00  # degenerate today, see the module docstring
     #: Weights for the agentic autorater's dimensions (see score/autorater.py).
     #: Empty means a purely deterministic score.
     autorater: dict = field(default_factory=dict)
@@ -394,7 +395,7 @@ def _in_unit(value: float | None, *, name: str) -> float | None:
     escaping it does not merely misreport that term -- it silently re-weights
     every other one, and the result still looks like a plausible score.
 
-    The inputs are bounded by construction (rates are counts over counts; craft
+    The inputs are bounded by construction (rates are counts over counts, craft
     is an LLM-rated 0-10 mean) and across 4,954 stored verdicts this would never
     have fired. It exists because that 0-10 rubric is enforced by a docstring
     rather than a schema, and because a run is scored from JSON that may have
@@ -473,7 +474,7 @@ def _confidence_warnings(sig: RunSignals, components: dict) -> list[str]:
 
 
 def _weighted(components: dict, weights: ScoreWeights) -> float | None:
-    """Weighted mean over the components that were actually measured.
+    """Weighted mean over the components that were measured.
 
     An unmeasured component is dropped and the remaining weights renormalised,
     so a missing signal never silently scores as zero.
@@ -535,8 +536,8 @@ def validity_gate(sig: RunSignals, weights: ScoreWeights | None = None) -> float
     Two failure modes stay apart, because "the app is dead" and "the app works
     but its self-written health check is wrong" are different things:
 
-    * the app did not build or start -> the profile's ``broken_app`` floor;
-    * it ran but failed its own smoke check -> its ``failed_self_check`` floor;
+    * the app did not build or start -> the profile's ``broken_app`` floor.
+    * it ran but failed its own smoke check -> its ``failed_self_check`` floor.
     * verified, or never verified at all -> no discount (an *unverified* app is
       not the same as a broken one, and is flagged in the confidence warnings
       instead of being silently punished).
@@ -553,8 +554,8 @@ def validity_gate(sig: RunSignals, weights: ScoreWeights | None = None) -> float
     ``evidence_graded`` (default from score_version 1.7) interpolates from the
     floor up to 1.0 with :func:`witness_rate`, so the size of the discount is
     set by how much of the crowd could not get the app working rather than by a
-    constant. An app nobody could open takes the whole floor; one everybody used
-    takes none of it, whatever the probe thinks.
+    constant. An app nobody could open takes the whole floor, while one
+    everybody used takes none of it, whatever the probe thinks.
 
     Chosen by sweep, not by taste (``scripts/gate_sweep.py``): 64
     policy x multiplier combinations, priced on both live profiles and on both
@@ -602,7 +603,7 @@ def unscorable_reasons(sig: RunSignals, components: dict) -> list[str]:
     A missing component is normally re-weighted out, which is right for a small
     gap but catastrophic when the *primary* measurement is gone. An upstream
     recsys bug used to destroy every interview in runs that generated a lot of
-    discussion; those runs still reported ``ok: True`` and were still scored,
+    discussion. Those runs still reported ``ok: True`` and were still scored,
     silently, off craft and amplification alone -- and because craft is the most
     stable component, the resulting numbers looked *more* trustworthy than
     healthy runs. That is the worst possible failure mode for a benchmark, so

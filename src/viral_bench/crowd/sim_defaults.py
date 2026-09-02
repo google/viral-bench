@@ -34,7 +34,7 @@ from viral_bench import config as _config
 #: is free). This covers the run itself, which is NOT free to redo -- so it has
 #: to be recorded at the time, or the corpus silently becomes a mixture.
 #:
-#: 1: the instrument as inherited on 2026-08-01 (post bug-fix branch).
+#: 1: the instrument as inherited at the start of this work (post bug-fix branch).
 #: 2: craft facets defined per app type, so cli and bot trials rate them at all
 #:    (0 of 25 did under v1, while 259 of 293 web trials did).
 #: 3: the feed carries author handles and every account has a bio, so agents can
@@ -60,10 +60,10 @@ from viral_bench import config as _config
 #:    how an app looks -- was being answered for apps that render no text to
 #:    look at. Measured over 2,088 stored web trials: apps whose output is a
 #:    canvas or an image averaged design 6.89, while apps a text-only agent
-#:    could genuinely read averaged 6.64. The blind apps scored HIGHER, which is
+#:    could read averaged 6.64. The blind apps scored HIGHER, which is
 #:    the signature of a number produced from the pitch rather than the artifact.
 #:    The bench is also web-only now, so cli and bot trials no longer exist.
-#: 9: the crowd actually USES the apps. Under v8, 36% of triers recorded a
+#: 9: the crowd USES the apps. Under v8, 36% of triers recorded a
 #:    verdict without one successful click, type or upload -- the modal
 #:    trajectory was open -> look -> finish, i.e. rating a landing page -- and
 #:    they scored delight 5.94 against 7.05 for triers who interacted 3-5 times.
@@ -73,15 +73,15 @@ from viral_bench import config as _config
 #:    mechanic -- fired 0.8 times per 30-agent run because the prompt named it
 #:    once and then spent four sentences discouraging amplification. Measured on
 #:    one build after the fixes: never-interacted 54% -> 0%, reposts 0.7 -> 9.0.
-#: 10: **everyone can try the app.** Triers go from 8 of 30 to all 30; each
-#:    trier publishes its own post instead of commenting on the launch; the
+#: 10: **everyone can try the app.** Triers go from 8 of 30 to all 30. Each
+#:    trier publishes its own post instead of commenting on the launch. The
 #:    follow graph gains interest neighbourhoods instead of being one star on
-#:    the founder; the feed is ranked (max_rec_posts 20 < the ~40 posts a run
+#:    the founder. The feed is ranked (max_rec_posts 20 < the ~40 posts a run
 #:    now produces) so reach is earned rather than handed out identically to
-#:    every agent in 47 of 47 runs; server-backed apps hand each agent its own
+#:    every agent in 47 of 47 runs. Server-backed apps hand each agent its own
 #:    account and ask it to check persistence and whether it can see anyone
-#:    else's work; agents get `reload_page` and `select_option`, without which
-#:    "did my work survive" and "choose from this menu" were untestable; and a
+#:    else's work. Agents get `reload_page` and `select_option`, without which
+#:    "did my work survive" and "choose from this menu" were untestable. And a
 #:    verdict filed without ever calling open_app is pushed back once (32 of 352
 #:    stored trials rated an app they never opened, from reading its source).
 #:    Rounds 4 -> 3: the last two rounds were 83% and 90% do_nothing.
@@ -99,7 +99,7 @@ from viral_bench import config as _config
 #:     asked) instead of as failed attempts. It was dropped/(rows+dropped), so a
 #:     run whose repair pass recovered every agent was recorded as having lost
 #:     12% of its crowd and the health gate failed it. All 14 runs of the v11
-#:     sweep heard from 30 of 30 agents; one was thrown away regardless. The
+#:     sweep heard from 30 of 30 agents, and one was thrown away regardless. The
 #:     gate fired hardest on runs where the model dropped turns, which tracks
 #:     load and the apps that provoke the most output -- so it deleted the
 #:     busiest runs, not the emptiest ones.
@@ -114,7 +114,7 @@ from viral_bench import config as _config
 #:     the 150 runs that are the current corpus in exchange for nothing.
 #: 14: the app the crowd sees is no longer missing its dependencies, and the
 #:     crowd no longer loses turns to a request Vertex refuses. All three changes
-#:     alter what an agent actually observes, so v12 runs may not be pooled with
+#:     alter what an agent observes, so v12 runs may not be pooled with
 #:     these:
 #:
 #:     * Per-build dependency provisioning (``founder/provision.py``). A build is
@@ -124,13 +124,13 @@ from viral_bench import config as _config
 #:       thrown away, because ContainerRuntime runs setup under ``--rm`` where
 #:       site-packages is not a mount. Apps that could not start now start.
 #:     * Node 20 -> 22 in the runtime image, matching the host the founder builds
-#:       and self-tests on. ``node:sqlite`` and ``unsupported engine`` were our
-#:       toolchain being recorded as a model that cannot ship.
+#:       and self-tests on. ``node:sqlite`` and ``unsupported engine`` were the
+#:       harness's own toolchain being recorded as a model that cannot ship.
 #:     * The ``[function_response, image]`` request shape is split into two
 #:       turns. Vertex rejected it as "Requests ending with a model turn are not
 #:       supported" -- a message naming the wrong problem, since that turn's role
 #:       is "user", which is why the guard written for it never fired. It cost
-#:       54,522 agent turns across the r3 sweep; measured on one build, 6 of 368
+#:       54,522 agent turns across one sweep. Measured on one build, 6 of 368
 #:       turns before and 0 of 312 after.
 #:
 #:     Skipping 13 is deliberate: it is taken, by 156 runs still on disk.
@@ -143,7 +143,7 @@ CROWD_ARCH_VERSION = "14"
 #: which made a Google account a silent prerequisite for running the benchmark at
 #: all: a user who had configured some other provider still got a crowd that
 #: tried to call Gemini, and failed doing it. An unset value is not an error
-#: here -- it is an error at the point a model is actually built, where
+#: here -- it is an error at the point a model is built, where
 #: :func:`viral_bench.crowd.sim.model.crowd_model` can say which file to edit and
 #: that ``viral-bench init`` will do it for you.
 DEFAULT_MODEL = _config.crowd_model_id("")
@@ -151,7 +151,7 @@ DEFAULT_MODEL = _config.crowd_model_id("")
 #: Interest-based recommender (TWHIN-BERT). Use "twitter" for a light wiring smoke.
 DEFAULT_RECSYS = "twhin-bert"
 
-#: Crowd size for a scored run (calibrate up toward ~30-50; start smaller).
+#: Crowd size for a scored run (calibrate up toward ~30-50, starting smaller).
 DEFAULT_AGENTS = _config.crowd_agents(8)
 
 #: How many crowd members first-hand try the app. Negative means ALL of them,
@@ -181,7 +181,7 @@ DEFAULT_SEED = _config.crowd_seed(0)
 DEFAULT_INTERVIEW = _config.crowd_interview(True)
 
 #: Crowd sampling temperature. Higher gives livelier, more varied social
-#: behaviour; lower makes the measurement more repeatable.
+#: behaviour. Lower makes the measurement more repeatable.
 DEFAULT_TEMPERATURE = _config.crowd_temperature(0.7)
 
 #: Output token ceiling per crowd LLM call. ``None`` -- the default -- sends no
@@ -216,7 +216,7 @@ DEFAULT_TRIAL_MAX_STEPS = _config.crowd_trial_max_steps(24)
 #: median trial is 5 steps. But the margin was luck, not design: the worst
 #: observed trier used 25 of 30, and a trial is separately allowed up to
 #: ``DEFAULT_TRIAL_MAX_STEPS`` (24), so a single thorough trial can still starve
-#: the voice with 6 calls to spare. Silently -- a truncated agent simply stops.
+#: the voice with 6 calls to spare. Silently -- a truncated agent stops.
 #:
 #: So the budget is DERIVED rather than guessed: a trier always gets its full
 #: trial allowance plus this headroom, which makes "a thorough trial can never
@@ -232,7 +232,7 @@ DEFAULT_MAX_ITERATION_TRIER = DEFAULT_TRIAL_MAX_STEPS + DEFAULT_SOCIAL_HEADROOM
 #: read the feed and react -- so their budget is purely social.
 DEFAULT_MAX_ITERATION_REACTOR = _config.crowd_max_iteration_reactor(8)
 
-#: How long to wait for a web app to actually answer HTTP before giving up.
+#: How long to wait for a web app to answer HTTP before giving up.
 DEFAULT_START_WAIT = _config.crowd_start_wait(90.0)
 
 #: Successful app interactions (click / type / select / upload / press) a trier

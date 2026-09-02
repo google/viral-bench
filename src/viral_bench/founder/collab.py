@@ -30,7 +30,7 @@ one to collaborate with):
 :class:`CollaborationToolset` is the extension point. A toolset that routes
 collaboration through some external surface (a chat service, a shared document
 store, email) only has to satisfy that Protocol and register itself in
-:data:`TOOLSETS`; nothing in the structures or the harness needs to change. Such
+:data:`TOOLSETS`, and nothing in the structures or the harness needs to change. Such
 a toolset may want :func:`files_to_strip` to remove ``DESIGN.md`` too, so the
 working directory stays app-source-only when the design lives elsewhere.
 """
@@ -82,8 +82,8 @@ class CollaborationToolset(Protocol):
     The structure calls :meth:`prepare` once per build, then for every turn reads
     :meth:`turn_env` (env merged into that opencode turn) and
     :meth:`collaboration_brief` (medium-specific instructions appended to that
-    turn's prompt). :meth:`metadata` is recorded on the build; :meth:`cleanup`
-    runs after the build.
+    turn's prompt). :meth:`metadata` is recorded on the build, and
+    :meth:`cleanup` runs after the build.
     """
 
     name: str

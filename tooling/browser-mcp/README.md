@@ -14,8 +14,8 @@ tooling/browser-mcp/bootstrap.sh
 ```
 
 It uses the system `npm` if present, otherwise fetches a pinned local Node (which
-bundles npm) into `.node/`. If you skip this, the browser tooling simply stays
-disabled -- `opencode_agents.browser_prereqs_ok()` returns False, so the team
+bundles npm) into `.node/`. If you skip this, the browser tooling stays
+disabled: `opencode_agents.browser_prereqs_ok()` returns False, so the team
 builds without a browser (the Designer/QA reason from markup) and nothing fails.
 
 ## How it's wired
@@ -25,12 +25,13 @@ builds without a browser (the Designer/QA reason from markup) and nothing fails.
   to match Playwright's bundled-browser revision. The tools appear to the agents
   as `browser_*`.
 - `opencode_agents.browser_prereqs_ok()` enables it only when `node`, this
-  `cli.js`, and a system Chrome/Chromium are all present; otherwise the harness
-  auto-disables the browser (a build never fails just because it is missing).
-- On by default for the team; disable per-run with `viral-bench found ... --no-browser-tools`.
+  `cli.js`, and a system Chrome/Chromium are all present. Otherwise the harness
+  auto-disables the browser, and a build never fails for want of it.
+- On by default for the team. Disable per-run with `viral-bench found ... --no-browser-tools`.
 
 ## Refreshing / bumping the version
 Edit the pinned version in `package.json`, then re-run `bootstrap.sh` (or, with a
 system npm, `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --omit=dev`). Commit
-the updated `package.json` + `package-lock.json` only -- `node_modules/` is
-gitignored. Browser binaries are never vendored here; the system Chrome is used.
+the updated `package.json` + `package-lock.json` only, since `node_modules/` is
+gitignored. Browser binaries are never vendored here, and the system Chrome is
+used.

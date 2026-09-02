@@ -115,15 +115,15 @@ const mean = (v) => (v != null ? v.toFixed(1) : '—');
 /** Spell out which of the two verdict passes a headline number came from.
  *
  *  A crowd agent is scored twice and the passes disagree: the TRIAL verdict is
- *  written by the agents who actually drove the app, the INTERVIEW is asked of
+ *  written by the agents who drove the app, the INTERVIEW is asked of
  *  everyone at the end, including agents who only ever saw a post about it. */
 function verdictTip(what, trial, interview) {
   const t = state.run.verdicts?.triers || {};
   const i = state.run.verdicts?.interviews || {};
   return [
-    `${what} — from the hands-on TRIAL verdicts.`,
+    `${what}: from the hands-on TRIAL verdicts.`,
     '',
-    `trial      ${trial}   (${t.n ?? 0} agents who actually opened and used the app)`,
+    `trial      ${trial}   (${t.n ?? 0} agents who opened and used the app)`,
     `interview  ${interview}   (${i.n ?? 0} agents asked at the end, app-users or not)`,
     '',
     'Click for the full breakdown in the Verdicts tab.',
@@ -161,7 +161,7 @@ function renderHead() {
         el('span', {
           class: 'chip accent',
           style: 'cursor:pointer',
-          title: 'the founder model — the one under test',
+          title: 'the founder model, the one under test',
           onclick: () => { location.href = `/founder?build=${encodeURIComponent(f.build_id)}`; },
         }, [f.model_short || 'unknown model']),
         f.status && f.status !== 'ok' && chip(`build ${f.status}`, 'err'),
@@ -170,7 +170,7 @@ function renderHead() {
         f.subagents_spawned > 0
           && chip(`⑂ ${f.subagents_spawned} subagents`, 'purple'),
         f.arm === 'dynamic' && !f.subagents_spawned
-          && chip('⑂ no subagents — it chose to work alone', 'warn'),
+          && chip('⑂ no subagents, it chose to work alone', 'warn'),
         f.reasoning_chars > 0 && chip(`🧠 ${num(f.reasoning_chars)} chars thinking`, 'purple'),
         f.qa_verified === true && chip('QA verified', 'ok'),
       ]
@@ -214,7 +214,7 @@ function renderHead() {
       // Both of these come from the hands-on TRIAL verdicts, not the exit
       // interview -- two different numbers that a bare "delight" label invites
       // you to confuse. The label names the source and the tooltip shows the
-      // other figure, so the reader can see whether they actually agree.
+      // other figure, so the reader can see whether they agree.
       stat(pct(triers.would_use_rate), 'would use (trial)', {
         title: verdictTip('would use', pct(triers.would_use_rate), pct(interviews.would_use_rate)),
         onclick: showVerdicts,
@@ -244,7 +244,7 @@ function layoutGraph() {
 
   const n = nodes.length || 1;
   nodes.forEach((node, i) => {
-    // The founder is the origin of everything; anchoring it at the centre makes
+    // The founder is the origin of everything, so anchoring it at the centre makes
     // the picture read as "how far did this travel from the source".
     if (node.id === 0) { node.x = 0; node.y = 0; return; }
     const angle = (i / n) * Math.PI * 2;
@@ -292,7 +292,7 @@ function layoutGraph() {
     }
   }
   // Recentre on the centroid so the founder does not end up flush against an edge
-  // just because the crowd settled asymmetrically around it.
+  // only because the crowd settled asymmetrically around it.
   const cx = nodes.reduce((sum, node) => sum + node.x, 0) / n;
   const cy = nodes.reduce((sum, node) => sum + node.y, 0) / n;
   for (const node of nodes) { node.x -= cx; node.y -= cy; }
@@ -398,8 +398,9 @@ function drawGraph() {
     ctx.fillStyle = '#ffd166';
     ctx.fillText('@founder', founder.x, founder.y - 16);
   }
-  // Label whoever the crowd is actually reacting to, plus whatever is selected or
-  // hovered. Labelling all 31 is unreadable; labelling none makes the graph mute.
+  // Label whoever the crowd is reacting to, plus whatever is selected or
+  // hovered. Labelling every node is unreadable, and labelling none makes the
+  // graph mute.
   const loudest = [...received.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => id);
   for (const id of new Set([...loudest, state.selectedAgent, state.hoverAgent])) {
     if (id == null || id === 0) continue;
@@ -474,9 +475,9 @@ function renderTransport() {
         class: 'clock',
         id: 'clockLabel',
         title: 'Each pill is one timestep of the simulation clock. The number is how '
-          + 'many things the crowd DID at that step — posts, reposts, quotes, comments, '
-          + 'likes, follows — excluding feed refreshes and explicit do-nothings, which '
-          + 'every agent logs every round. Hover a pill for the full breakdown.',
+          + 'many things the crowd DID at that step: posts, reposts, quotes, comments, '
+          + 'likes and follows. Feed refreshes and explicit do-nothings are excluded, '
+          + 'since every agent logs one every round. Hover a pill for the full breakdown.',
       }),
     ]));
   }
@@ -531,8 +532,8 @@ function onClock(value) {
 
 function renderAgents() {
   const box = clear($('#agents'));
-  $('#agentCount').textContent = `— ${state.agents.length} incl. the founder`;
-  $('#graphCount').textContent = `— ${state.run.follows.length} follows, ${state.run.posts.filter((p) => p.t <= state.step).length} posts so far`;
+  $('#agentCount').textContent = `· ${state.agents.length} incl. the founder`;
+  $('#graphCount').textContent = `· ${state.run.follows.length} follows, ${state.run.posts.filter((p) => p.t <= state.step).length} posts so far`;
 
   const posted = new Map();
   for (const post of state.run.posts) {
@@ -690,7 +691,7 @@ function viewVerdicts() {
   const triers = v.triers || {}, interviews = v.interviews || {};
 
   box.append(el('div', { class: 'section', style: 'background:transparent;border:none' }, [
-    el('h2', {}, ['Hands-on triers', el('span', { class: 'count' }, [` — ${triers.n ?? 0} agents who actually used the app`])]),
+    el('h2', {}, ['Hands-on triers', el('span', { class: 'count' }, [` · ${triers.n ?? 0} agents who used the app`])]),
     el('div', { class: 'dim small', style: 'padding:0 12px 8px' }, [
       'Written after driving the real app in a browser. These are the numbers shown in the header.',
     ]),
@@ -708,9 +709,9 @@ function viewVerdicts() {
   if (triers.delight_histogram) box.append(histogram(triers.delight_histogram, 'delight distribution (0–10)'));
 
   box.append(el('div', { class: 'section', style: 'background:transparent;border:none' }, [
-    el('h2', {}, ['Exit interviews', el('span', { class: 'count' }, [` — ${interviews.n ?? 0} answered of ${interviews.expected ?? '?'}`])]),
+    el('h2', {}, ['Exit interviews', el('span', { class: 'count' }, [` · ${interviews.n ?? 0} answered of ${interviews.expected ?? '?'}`])]),
     el('div', { class: 'dim small', style: 'padding:0 12px 8px' }, [
-      'Asked of every agent at the end of the run, whether or not they ever opened the app — '
+      'Asked of every agent at the end of the run, whether or not they ever opened the app, '
       + 'so this pass also carries the opinions of agents who only saw it go past in a feed.',
     ]),
     el('div', { class: 'stats' }, [
@@ -737,10 +738,10 @@ function viewVerdicts() {
   box.append(el('table', { class: 'grid' }, [
     el('thead', {}, [el('tr', {}, [
       ['agent', ''], ['tier', ''],
-      ['use', 'would use — trial verdict, falling back to the interview'],
-      ['share', 'would share — trial verdict, falling back to the interview'],
-      ['♦', 'delight 0–10 — trial verdict, falling back to the interview'],
-      ['craft', 'craft 0–10 — trial verdict only'],
+      ['use', 'would use: trial verdict, falling back to the interview'],
+      ['share', 'would share: trial verdict, falling back to the interview'],
+      ['♦', 'delight 0–10: trial verdict, falling back to the interview'],
+      ['craft', 'craft 0–10: trial verdict only'],
       ['steps', 'how many steps the agent took in the app'],
       ['reached', 'whether the app answered when the agent opened it'],
     ].map(([h, tip]) => el('th', tip ? { text: h, title: tip } : { text: h })))]),
@@ -787,7 +788,7 @@ function viewAutorating() {
   if (!Object.keys(dims).length) return empty('No autorating recorded for this run.');
   const box = el('div');
   box.append(el('div', { class: 'section', style: 'background:transparent;border:none' }, [
-    el('h2', {}, [`LLM autorater — ${rating.model || ''}, ${rating.repeats || 1} repeats`]),
+    el('h2', {}, [`LLM autorater: ${rating.model || ''}, ${rating.repeats || 1} repeats`]),
     el('div', { class: 'stats' }, Object.entries(dims).map(([name, d]) =>
       stat(d.score != null ? String(d.score) : '—', name.replace(/_/g, ' ')))),
   ]));
@@ -889,15 +890,15 @@ function viewAgent() {
   box.append(kv([
     ['followers', `${agent.followers} (follows ${agent.followings})`],
     ['posts made', String(agent.posts)],
-    ['trial verdict', agent.trial ? `would use ${truthy(t.would_use)} · would share ${truthy(t.would_share)} · delight ${t.delight ?? '—'} · craft ${t.craft ?? '—'}` : '— (did not get hands on the app)'],
+    ['trial verdict', agent.trial ? `would use ${truthy(t.would_use)} · would share ${truthy(t.would_share)} · delight ${t.delight ?? '—'} · craft ${t.craft ?? '—'}` : '(did not get hands on the app)'],
     ['craft facets', agent.trial ? `function ${t.functionality ?? '—'} · usability ${t.usability ?? '—'} · design ${t.design ?? '—'} · simplicity ${t.simplicity ?? '—'}` : null],
     ['work survived reload', agent.trial ? truthy(t.work_survived) : null],
     ['saw other users', agent.trial ? truthy(t.saw_other_users) : null],
     ['app reachable', agent.trial ? truthy(t.app_reachable) : null],
-    ['interview', agent.interview ? `would use ${truthy(i.would_use)} · delight ${i.delight ?? '—'} · for me ${truthy(i.for_me)}` : '— (no interview recorded)'],
+    ['interview', agent.interview ? `would use ${truthy(i.would_use)} · delight ${i.delight ?? '—'} · for me ${truthy(i.for_me)}` : '(no interview recorded)'],
   ]));
 
-  if (i.why) box.append(fold('Why — in their own words (exit interview)', el('pre', { class: 'block', text: i.why }), true));
+  if (i.why) box.append(fold('Why, in their own words (exit interview)', el('pre', { class: 'block', text: i.why }), true));
 
   if (agent.reasoning?.length) {
     box.append(el('div', { class: 'note', style: 'margin:12px' }, [
@@ -915,7 +916,7 @@ function viewAgent() {
 
   const theirPosts = state.run.posts.filter((p) => p.user_id === agent.id);
   if (theirPosts.length) {
-    box.append(el('h2', { style: 'padding:8px 12px 0' }, [`Everything they posted — ${theirPosts.length}`]));
+    box.append(el('h2', { style: 'padding:8px 12px 0' }, [`Everything they posted (${theirPosts.length})`]));
     for (const post of theirPosts) box.append(postCard(post));
   }
   return box;
@@ -974,7 +975,7 @@ function viewTrial() {
         class: 'shot', src: `/api/shot/${encodeURIComponent(current.screenshot)}`,
         onerror: (e) => e.target.replaceWith(el('div', { class: 'faint small', text: `screenshot no longer on disk: ${current.screenshot_path}` })),
       }),
-      el('div', { class: 'faint small', style: 'margin-top:3px', text: `${current.args?.note || ''} — ${current.screenshot}` }),
+      el('div', { class: 'faint small', style: 'margin-top:3px', text: `${current.args?.note || ''} · ${current.screenshot}` }),
     ]));
   } else {
     // Screenshots only exist on explicit screenshot steps, so for every other step
@@ -983,7 +984,7 @@ function viewTrial() {
     if (previous) {
       box.append(el('div', { style: 'padding:10px 12px 0' }, [
         el('img', { class: 'shot', style: 'opacity:.55', src: `/api/shot/${encodeURIComponent(previous.screenshot)}`, onerror: (e) => e.target.remove() }),
-        el('div', { class: 'faint small', style: 'margin-top:3px', text: `last screenshot taken (step ${previous.index}) — the agent had no camera on this step` }),
+        el('div', { class: 'faint small', style: 'margin-top:3px', text: `last screenshot taken (step ${previous.index}), the agent had no camera on this step` }),
       ]));
     }
   }
@@ -1036,14 +1037,14 @@ function viewFeedOf() {
   box.append(el('div', { class: 'note', style: 'margin:12px' }, [
     el('b', {}, ['This is exposure, not the whole timeline. ']),
     'The recommender decides what each agent is shown, and this is the feed ',
-    el('b', {}, [`@${agent.username}`]), ' actually saw at each step — the only time-resolved record of who was ',
+    el('b', {}, [`@${agent.username}`]), ' saw at each step, the only time-resolved record of who was ',
     'given a chance to see the launch at all.',
   ]));
   if (!steps.length) return box.append(empty('This agent never refreshed a feed.')), box;
 
   for (const step of steps) {
     const ids = feeds[step];
-    box.append(fold(`t${step} — ${ids.length} post(s) in feed${ids.includes(state.run.launch_post_id) ? ' · included the launch post' : ''}`,
+    box.append(fold(`t${step} · ${ids.length} post(s) in feed${ids.includes(state.run.launch_post_id) ? ' · included the launch post' : ''}`,
       el('div', { class: 'faint small' }, ['loading…']), step === steps[steps.length - 1]));
     const target = box.lastChild;
     target.addEventListener('toggle', async function once() {
@@ -1093,7 +1094,7 @@ function viewPost() {
     ['amplified by', `${amplifiers.length} (${amplifiers.filter((a) => a.action === 'repost').length} reposts, ${amplifiers.filter((a) => a.action === 'quote_post').length} quotes)`],
   ]));
 
-  const roster = (ids, title) => ids.length ? fold(`${title} — ${ids.length}`, el('div', { class: 'chips' },
+  const roster = (ids, title) => ids.length ? fold(`${title} (${ids.length})`, el('div', { class: 'chips' },
     [...new Set(ids)].map((id) => el('span', {
       class: 'chip', style: 'cursor:pointer', onclick: () => selectAgent(id),
     }, [`@${state.byId.get(id)?.username || id}`])))) : null;
@@ -1106,7 +1107,7 @@ function viewPost() {
 
 function viewApp() {
   const r = state.run;
-  // The tab body scrolls, so height:100% has nothing to resolve against; a
+  // The tab body scrolls, so height:100% has nothing to resolve against, and a
   // min-height keeps the app pane usable at any window size.
   const box = el('div', { style: 'display:flex;flex-direction:column;min-height:100%' });
   const bar = el('div', { class: 'section', style: 'background:transparent' });
@@ -1155,7 +1156,7 @@ function viewApp() {
     el('div', { class: 'chips' }, [launch, stopBtn, chip(r.app_type || '?'), chip(r.build_id)]),
     el('div', { class: 'small dim', style: 'margin-top:6px' }, [
       'Same build the agents were given. Open the Trial replay tab beside this and you can repeat, ',
-      'by hand, the exact steps an agent took — and judge its verdict for yourself.',
+      'by hand, the exact steps an agent took, and judge its verdict for yourself.',
     ]),
     status,
   );

@@ -15,9 +15,9 @@
 """Tests for the Tier 0 gate and the end-to-end pipeline.
 
 The gate is the most consequential code in the track: it decides whether a build
-scores 0 or gets graded at all, and ~27% of the corpus lands on it. So the cases
-here are the ones where being wrong is expensive in a specific direction --
-zeroing a build that actually works, or grading features on an app that never
+scores 0 or gets graded at all, and a large share of the corpus lands on it. So
+the cases here are the ones where being wrong is expensive in a specific
+direction: zeroing a build that works, or grading features on an app that never
 started.
 
 Everything runs offline. The app host, browser and model are all injected fakes,
@@ -141,8 +141,8 @@ def served():
     """A real HTTP server, because G4 makes a real request.
 
     Faking the fetch would test the fake. The gate's whole job is to find out
-    whether something is actually listening, so the test has to give it
-    something that actually listens.
+    whether something is listening, so the test has to give it something that
+    listens.
     """
 
     class Quiet(http.server.BaseHTTPRequestHandler):
@@ -642,9 +642,9 @@ def test_source_toolkit_resolves_the_app_dir_it_was_given(tmp_path):
 
 
 def test_source_toolkit_reads_past_the_crowd_20kb_cap(tmp_path):
-    """The grader raises the caps; the crowd's would truncate the answer.
+    """The grader raises the caps, where the crowd's would truncate the answer.
 
-    36 of 39 handdrawn_whiteboard builds ship a client file over 20 KB, so a
+    Most handdrawn_whiteboard builds ship a client file over 20 KB, so a
     claim about the whole tree made against the first 20 KB is a claim about a
     fifth of the average bundle.
     """
@@ -664,7 +664,7 @@ def test_the_rubric_client_is_a_shim_over_the_provider_layer():
 
     ``rubric.client`` used to own a Claude client and a Gemini one. They are the
     provider layer's adapters now, and this module is kept only so existing
-    imports resolve; a second copy drifting back is the failure worth catching.
+    imports resolve, and a second copy drifting back is the failure worth catching.
     """
     from viral_bench import providers
     from viral_bench.rubric import client as shim
@@ -686,7 +686,7 @@ def test_a_read_timeout_is_retried_not_fatal(monkeypatch):
     concurrent sweep it is not rare: it lost one build of the first twelve.
 
     The transport now lives in :mod:`viral_bench.providers`, so this asserts it
-    through the client the grader actually builds -- ``rubric.client.make_client``
+    through the client the grader builds: ``rubric.client.make_client``
     on the Vertex Claude path, which is the same request this test always made.
     """
     import json as _json

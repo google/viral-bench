@@ -33,7 +33,7 @@ from viral_bench.ideas import (
     parse_idea,
 )
 
-# A minimal valid spec used as a baseline; individual tests mutate a copy.
+# A minimal valid spec used as a baseline. Individual tests mutate a copy.
 VALID = {
     "idea_id": "test_idea",
     "title": "Test Idea",

@@ -15,9 +15,10 @@
 """Tests for the founder collaboration structures.
 
 A fake runner records each turn and writes a minimal opencode-style transcript so
-no real opencode/Gemini calls happen. It mints a per-agent session id on the first
-turn (like real opencode) so we can verify each specialist resumes its OWN session
-across rounds, and can emit the ship signal on demand to test early termination.
+no real opencode/Gemini calls happen. It mints a per-agent session id on the
+first turn (like real opencode), which is what lets each test verify that a
+specialist resumes its OWN session across rounds, and it can emit the ship
+signal on demand to test early termination.
 """
 
 from __future__ import annotations
@@ -77,7 +78,7 @@ class FakeWorkspace:
 
 
 class FakeRunner:
-    """Records each turn; mints per-agent sessions; can emit the ship signal.
+    """Records each turn, mints per-agent sessions, and can emit the ship signal.
 
     Args:
         tmp: directory to write per-turn transcripts into.
@@ -120,11 +121,11 @@ class FakeRunner:
     ) -> PhaseResult:
         idx = len(self.calls)
         rc = self.returncodes[idx] if idx < len(self.returncodes) else 0
-        # Mint a stable per-agent session id on first turn; reuse thereafter (as
-        # real opencode does when handed --session).
+        # Mint a stable per-agent session id on the first turn, then reuse it
+        # thereafter (as real opencode does when handed --session).
         sid = session_id or f"ses-{agent_index}"
 
-        # Assistant output; QA emits the ship token on the configured round.
+        # Assistant output. QA emits the ship token on the configured round.
         text = f"work by {role or 'solo'}"
         m = _ROUND_RE.match(phase)
         rnd = int(m.group(1)) if m else 0
@@ -134,7 +135,7 @@ class FakeRunner:
 
         events = [{"type": "text", "part": {"type": "text", "text": text}}]
         # A QA turn that "ran the app" emits a browser tool call, which the
-        # ship-evidence gate looks for (real runtime verification, not just reading).
+        # ship-evidence gate looks for (real runtime verification, not reading).
         if is_qa and self.qa_runs_app:
             events.append(
                 {
@@ -265,7 +266,7 @@ def test_no_early_ship_runs_to_the_cap(tmp_path) -> None:
 
 
 def test_ship_signal_from_non_qa_is_ignored(tmp_path) -> None:
-    # Force the architect (not QA) to emit the token; it must NOT end the build.
+    # Force the architect (not QA) to emit the token. It must NOT end the build.
     class ArchShips(FakeRunner):
         def run_turn(self, prompt, **kw):
             res = super().run_turn(prompt, **kw)
@@ -339,7 +340,7 @@ def test_min_rounds_prompt_holds_ship_then_allows(tmp_path) -> None:
     runner = FakeRunner(tmp_path)
     team = RoundTableTeam(max_rounds=4, min_rounds=3)
     team.run(IDEA, workspace=FakeWorkspace(tmp_path), runner=runner)
-    # QA is agent 4; its turns are calls index 3, 7, 11, 15 (rounds 1..4)
+    # QA is agent 4, so its turns are calls index 3, 7, 11, 15 (rounds 1..4)
     qa_r1 = runner.calls[3]["prompt"]
     qa_r3 = runner.calls[11]["prompt"]
     # below the floor: QA is told NOT to ship (no ship token in the prompt)
@@ -439,7 +440,7 @@ def test_evidence_false_when_qa_only_reads(tmp_path, monkeypatch) -> None:
 
 def test_web_app_requires_browser_when_browser_available(tmp_path, monkeypatch) -> None:
     # Every app is a web app, so merely starting the server via bash is NOT
-    # evidence when a browser is available -- the UI must actually be rendered.
+    # evidence when a browser is available: the UI must be rendered.
     monkeypatch.setattr(
         "viral_bench.founder.opencode_agents.browser_prereqs_ok", lambda: True
     )
@@ -457,7 +458,7 @@ def test_web_app_requires_browser_when_browser_available(tmp_path, monkeypatch) 
 def test_full_stack_app_requires_browser_too(tmp_path, monkeypatch) -> None:
     """The browser gate keys off the whole scope enum, not one member of it.
 
-    It used to fire only for ``single-page-app``; if it had stayed keyed to a
+    It used to fire only for ``single-page-app``, and had it stayed keyed to a
     single value, a ``full-stack-app`` would silently pass QA on a bash run.
     """
     monkeypatch.setattr(
@@ -508,7 +509,7 @@ def test_ran_command_matches_entrypoint() -> None:
 
 
 class FakeToolset:
-    """Records lifecycle calls; injects per-agent env + a collaboration brief."""
+    """Records lifecycle calls and injects per-agent env + a collaboration brief."""
 
     name = "fake"
 
@@ -628,7 +629,7 @@ VALID_MANIFEST = {
 class DynamicFakeRunner:
     """Drives the dynamic orchestrator without opencode.
 
-    Models the three things the structure actually reacts to: whether the turn
+    Models the three things the structure reacts to: whether the turn
     emitted the done token, whether a manifest exists by then, and what ``task``
     calls the transcript contains.
 
@@ -637,7 +638,7 @@ class DynamicFakeRunner:
         done_on: 1-based turn on which the founder emits the done signal (None =
             never, so the structure should run to the cap).
         manifest_on: 1-based turn on which a VALID manifest appears (None =
-            never; ``"invalid"`` writes unparseable JSON on turn 1 instead).
+            never, and ``"invalid"`` writes unparseable JSON on turn 1 instead).
         spawns_per_turn: how many ``task`` calls each turn records.
         returncodes: return codes in call order (default all 0).
     """
@@ -830,7 +831,7 @@ def test_dynamic_records_the_orchestration_it_observed(tmp_path) -> None:
 
 def test_dynamic_records_spawns_from_a_turn_that_then_failed(tmp_path) -> None:
     """A build that died having already delegated is not the same as one that
-    died before delegating; the record has to be able to tell them apart."""
+    died before delegating, and the record has to be able to tell them apart."""
     runner = DynamicFakeRunner(tmp_path, spawns_per_turn=3, returncodes=[1])
     s = DynamicOrchestrator(max_turns=3)
     s.run(IDEA, _dyn_workspace(tmp_path), runner)
@@ -889,7 +890,7 @@ def test_build_structure_dynamic() -> None:
     assert isinstance(s, DynamicOrchestrator)
     assert s.name == "dynamic"
     assert s.max_turns == 5
-    # One configured agent (the orchestrator process); the rest is the model's
+    # One configured agent (the orchestrator process). The rest is the model's
     # choice and is reported as telemetry, never as configuration.
     assert s.n_agents == 1
     assert s.roles == []

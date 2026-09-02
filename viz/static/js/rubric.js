@@ -168,7 +168,7 @@ function renderHead() {
 
   const stats = [
     stat(fmt(g.score), 'RubricScore', {
-      title: 'Out of 100. base + penalties, floored at 0 — see the Score math tab.',
+      title: 'Out of 100. base + penalties, floored at 0. See the Score math tab.',
       onclick: () => { state.tab = 'math'; renderTabs(); },
     }),
     stat(`${math.points_earned ?? '?'}/${math.points_applicable ?? '?'}`, 'points', {
@@ -221,7 +221,7 @@ function renderHead() {
   if (gateFailed) {
     const failed = (g.gate?.items || []).filter((i) => i.passed === false);
     $('#head').append(el('div', { class: 'note', style: 'margin-top:8px' }, [
-      el('strong', {}, ['Deliverability gate failed — scored 0. ']),
+      el('strong', {}, ['Deliverability gate failed, scored 0. ']),
       failed.length
         ? `${failed[0].id}: ${failed[0].detail || failed[0].text}`
         : 'The build could not be run.',
@@ -342,11 +342,11 @@ function renderItems() {
 }
 
 function tierLabel(tier) {
-  if (tier === 0) return 'Tier 0 — Deliverability gate';
+  if (tier === 0) return 'Tier 0 · Deliverability gate';
   if (tier === -1) return 'Penalties';
   const found = (state.grade.tiers || []).find((t) => t.tier === tier);
   return found
-    ? `Tier ${tier} — ${found.label}  (${found.earned}/${found.points})`
+    ? `Tier ${tier} · ${found.label}  (${found.earned}/${found.points})`
     : `Tier ${tier}`;
 }
 
@@ -413,7 +413,7 @@ function viewItem() {
       ['reason', row.reason || ''],
       ['per-pass', passes.length ? el('span', { class: 'chips' }, passes) : ''],
       ['agreement', row.disagreement
-        ? el('span', { class: 'warn-text' }, ['passes disagreed — majority taken'])
+        ? el('span', { class: 'warn-text' }, ['passes disagreed, majority taken'])
         : (row.passes || []).length > 1 ? 'unanimous' : ''],
       ['note', row.note || ''],
     ]),
@@ -450,7 +450,7 @@ function viewMath() {
     el('h3', {}, ['How this score was reached']),
     ...(g.tiers || []).map((tier) => el('div', { style: 'margin-bottom:10px' }, [
       el('div', { style: 'display:flex;justify-content:space-between' }, [
-        el('span', {}, [`Tier ${tier.tier} — ${tier.label}`]),
+        el('span', {}, [`Tier ${tier.tier} · ${tier.label}`]),
         el('span', { class: 'mono' }, [`${tier.earned}/${tier.points}`]),
       ]),
       bar(tier.earned, tier.points),
@@ -496,7 +496,7 @@ function viewVersus() {
     return el('div', { class: 'detail' }, [
       empty('This build has no crowd runs, so there is no ViralScore to compare.'),
       el('div', { class: 'small dim', style: 'margin-top:8px' }, [
-        'The grade is still valid — it just cannot take part in the comparison.',
+        'The grade is still valid, but it cannot take part in the comparison.',
       ]),
     ]);
   }
@@ -522,7 +522,7 @@ function viewVersus() {
       harsher
         ? 'The rubric is harsher than the crowd here. The items below are what '
           + 'the crowd either did not test or did not mind.'
-        : 'The rubric is kinder than the crowd here — worth reading as a case '
+        : 'The rubric is kinder than the crowd here, worth reading as a case '
           + 'where the crowd punished something the brief never asked for.',
     ]),
     el('div', { class: 'small dim' }, [
@@ -541,7 +541,7 @@ function viewVersus() {
           row.kind === 'penalty' ? String(row.points) : `-${row.points}`,
         ]),
       ])))])
-      : el('div', { class: 'small dim' }, ['Nothing — a clean sheet.']),
+      : el('div', { class: 'small dim' }, ['Nothing. A clean sheet.']),
   ]);
 }
 
@@ -586,7 +586,7 @@ function viewRubric() {
       + 'accurate even after the rubric file is edited.',
     ]),
     ...(state.grade.tiers || []).map((tier) => fold(
-      `Tier ${tier.tier} — ${tier.label} (${tier.earned}/${tier.points})`,
+      `Tier ${tier.tier} · ${tier.label} (${tier.earned}/${tier.points})`,
       el('div', {}, (tier.items || []).map((item) => el('div', {
         style: 'margin-bottom:8px',
       }, [

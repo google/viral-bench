@@ -29,21 +29,21 @@ OpenCode CLI
   The founder stage drives OpenCode as a coding agent. It is executed as a
   separate process (`opencode run`, see `viral_bench.founder.harness`), never
   imported or bundled. `scripts/setup_founder_env.sh` downloads the official
-  release binary to `~/.opencode/bin` on request; this project distributes no
-  copy of it.
+  release binary to `~/.opencode/bin` on request, and this project distributes
+  no copy of it.
 
 Playwright MCP (@playwright/mcp)
   https://github.com/microsoft/playwright-mcp
   Apache License 2.0.
   Gives the founder's QA and Designer agents a real browser. Only the pinned
-  version in `tooling/browser-mcp/package.json` plus its lock file are committed;
+  version in `tooling/browser-mcp/package.json` plus its lock file are committed.
   `tooling/browser-mcp/bootstrap.sh` installs it into a gitignored
   `node_modules/`, and the tooling silently disables itself if it is absent.
 
 Google Chrome / Chromium
   Not distributed here. Both the crowd's browser trials and the rubric checks
   drive whatever system Chrome or Chromium the user already has, via
-  Playwright's `chrome` channel — no browser binary is downloaded or shipped by
+  Playwright's `chrome` channel. No browser binary is downloaded or shipped by
   this project.
 
 Python dependencies
@@ -58,10 +58,10 @@ sqlalchemy, gunicorn), HPND (pillow) and Unlicense (email-validator).
 Two transitive dependencies are weak-copyleft, and are noted here because that
 is worth knowing before redistributing an environment built from this project:
 
-  certifi — MPL-2.0. Pulled in by httpx and requests; unavoidable, and present
-    in essentially every Python HTTP stack. Used unmodified.
-  tqdm — MPL-2.0 AND MIT. Reached only through the optional `crowd` extra
-    (camel-ai -> openai -> tqdm); it is not part of the base install.
+  certifi (MPL-2.0). Pulled in by httpx and requests, unavoidable, and present
+    in nearly every Python HTTP stack. Used unmodified.
+  tqdm (MPL-2.0 AND MIT). Reached only through the optional `crowd` extra
+    (camel-ai -> openai -> tqdm), so it is not part of the base install.
 
 Optional crowd simulation extra
 -------------------------------
@@ -71,21 +71,21 @@ The social simulation is optional and is not installed by default.
 CAMEL (camel-ai) and OASIS (camel-oasis)
   https://github.com/camel-ai/camel and https://github.com/camel-ai/oasis
   Apache License 2.0.
-  CAMEL provides the agent framework the crowd's `SocialAgent`s are built on;
-  OASIS provides the mock social platform they act in. `camel-ai` is the
-  `crowd` extra in `pyproject.toml` (`uv sync --extra crowd`); the full
+  CAMEL provides the agent framework the crowd's `SocialAgent`s are built on,
+  and OASIS provides the mock social platform they act in. `camel-ai` is the
+  `crowd` extra in `pyproject.toml` (`uv sync --extra crowd`), while the full
   `camel-oasis` engine is pinned in `config/crowd-requirements.txt` and is
   installed by `scripts/setup_crowd_env.sh` into a separate Python 3.11
   virtualenv (`.venv-crowd`), because it cannot coexist with this project's
   Python 3.12 dependency set.
 
-  IMPORTANT — GPL: installing `camel-oasis` also pulls in **igraph**
+  IMPORTANT (GPL): installing `camel-oasis` also pulls in **igraph**
   (python-igraph), which is licensed **GPL-2.0-or-later**. ViralBench does not
   distribute, vendor, link against or import igraph. It reaches a machine only
   when the user chooses to run `scripts/setup_crowd_env.sh`, and it lands in the
   isolated `.venv-crowd` environment rather than in this project's own
   environment. If GPL code in your environment is a problem for you, the crowd
-  simulation is the part to leave uninstalled — the rest of the benchmark, the
+  simulation is the part to leave uninstalled. The rest of the benchmark, the
   founder stage and the scoring included, does not need it.
 
 Container image
@@ -94,4 +94,4 @@ Container image
 `docker/Containerfile` builds a local sandbox image for running generated apps.
 It derives from the official `python` Debian image and installs Node.js from
 NodeSource and a small set of Debian packages at build time. Those components
-keep their own licenses; no image is published from this repository.
+keep their own licenses, and no image is published from this repository.

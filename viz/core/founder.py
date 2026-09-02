@@ -18,7 +18,8 @@ A transcript is the raw stdout of ``opencode run --format json``: newline-delimi
 JSON, one event per line, four event types (``step_start``, ``tool_use``,
 ``step_finish``, ``text``) plus a rare ``error``. One file per turn, named after the
 phase, and the files of a build are disjoint in time because the agents run
-serially. So the global timeline is just: read every phase, sort by ``timestamp``.
+serially. So the global timeline is simple to build: read every phase, sort by
+``timestamp``.
 
 Three things shape this module.
 
@@ -56,10 +57,10 @@ from .trace import capture_summary, load_trace
 #: about what the agent considered.
 THINKING_NOTE = (
     "Reasoning is read from opencode's own session store, which the harness dumps "
-    "per turn. It is the model's actual chain of thought, not a proxy. Three states "
-    "are distinguished and mean different things: readable text; 'redacted', where "
-    "the provider returned the thought encrypted (Vertex does this for Claude unless "
-    "the request asks for a summary) and the model did think; and genuinely absent. "
+    "per turn. It is the model's own chain of thought, not a proxy. Three states "
+    "are distinguished and mean different things: readable text, then 'redacted', "
+    "where the provider returned the thought encrypted (Vertex does this for Claude "
+    "unless the request asks for a summary) and the model did think, and absent. "
     "Measured in characters, never tokens -- Vertex Anthropic reports "
     "tokens_reasoning as 0 while returning thousands of characters. Builds recorded "
     "before the capture existed are labelled 'partial trace' and have none of this."
@@ -119,7 +120,7 @@ def _clip(text: str | None, limit: int) -> tuple[str, int, bool]:
 def iter_events(path: Path) -> Iterator[tuple[int, dict]]:
     """Yield ``(line_number, event)`` for a transcript, skipping unparseable lines.
 
-    A turn killed mid-write leaves a partial final line; the harness itself parses
+    A turn killed mid-write leaves a partial final line, and the harness itself parses
     these files line-by-line with the same tolerance.
     """
     try:
@@ -192,8 +193,8 @@ def build_lanes(mode: str, phases: list[dict]) -> list[Lane]:
     * ``team`` -- one lane per specialist, rounds running left to right. The
       session id repeats down a lane, which is the visible proof that a specialist
       resumes its own session rather than being re-rolled each round.
-    * ``dynamic`` -- one orchestrator lane; the subagents it invented get their own
-      lanes elsewhere, from spawn intervals that genuinely overlap.
+    * ``dynamic`` -- one orchestrator lane. The subagents it invented get their own
+      lanes elsewhere, from spawn intervals that do overlap.
     """
     lanes: dict[str, Lane] = {}
     for phase in phases:
@@ -284,7 +285,7 @@ def _diff_stats(metadata: dict) -> dict | None:
 
 
 def _input_summary(tool: str, args: dict) -> str:
-    """One line that says what the call actually did, per tool.
+    """One line that says what the call did, per tool.
 
     Generic argument dumps make a 400-call feed unreadable. The point of a feed is
     that you can skim it and see the shape of the work.
@@ -469,7 +470,7 @@ def _phase_of(timestamp, windows: list[tuple[str, int, int]]) -> str:
     event that has no turn of its own but ran inside its parent's.
 
     Events in the *gap* between two turns belong to the turn that is starting, not
-    the one that just ended: the previous turn's window closes on its last output,
+    the one that has ended: the previous turn's window closes on its last output,
     and the thing that reliably happens in that gap is the next turn's prompt being
     sent. Crediting the build prompt to the design turn is the bug this rule fixes.
     """
@@ -537,7 +538,7 @@ def _ui_events(
                 }
             )
         elif kind == "text":
-            # A prompt is a text part with role user; there is no prompt type.
+            # A prompt is a text part with role user, since there is no prompt type.
             is_prompt = event.get("role") == "user"
             text, chars, truncated = _clip(
                 event.get("text") or "", 8000 if is_prompt else 4000
@@ -614,7 +615,7 @@ def _spawn_lanes(record: dict, events: list[dict]) -> list[dict]:
 
     ``build.json.orchestration.spawns`` is the richer source but is absent on the
     older dynamic builds, so the transcript's own ``task`` calls are the fallback.
-    These intervals genuinely overlap -- that overlap is the only place the
+    These intervals do overlap -- that overlap is the only place the
     orchestrator's parallelism is visible, and it is the point of the mode.
     """
     orchestration = record.get("orchestration") or {}
@@ -730,8 +731,8 @@ def load_trajectory(builds_root: Path, build_id: str) -> dict | None:
     for order, entry in enumerate(raw_phases):
         phase_id = entry.get("phase") or f"phase{order}"
         # Transcript paths inside build.json are absolute paths from the machine
-        # that produced the run. Resolve by name against the directory we are
-        # actually reading, and only fall back to the recorded path.
+        # that produced the run. Resolve by name against the directory being
+        # read, and only fall back to the recorded path.
         candidate = paths.transcript_dir / f"{phase_id}.json"
         if not candidate.is_file():
             recorded = entry.get("transcript")
@@ -763,7 +764,7 @@ def load_trajectory(builds_root: Path, build_id: str) -> dict | None:
                 "stderr_tail": (entry.get("stderr_tail") or "")[-4000:],
                 # What the harness counted for this turn at build time, off the
                 # stdout transcript -- so root-session only, blind to subagents.
-                # `_root` since the counts were split by source; the bare names
+                # `_root` since the counts were split by source. The bare names
                 # are what builds recorded before the split.
                 "reasoning_parts": entry.get("reasoning_parts_root")
                 or entry.get("reasoning_parts")
@@ -1018,7 +1019,7 @@ def _strip_attachments(part: dict) -> dict:
             {
                 "type": a.get("mime") or a.get("type"),
                 "inline_bytes": len(a.get("url") or ""),
-                "note": "base64 payload omitted; use the on-disk screenshot",
+                "note": "base64 payload omitted, use the on-disk screenshot",
             }
             for a in state["attachments"]
         ]

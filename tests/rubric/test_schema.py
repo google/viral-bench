@@ -222,7 +222,7 @@ def test_real_rubric_is_valid(idea_id):
     )
     assert rubric.penalties, "a rubric with no anti-pattern penalties is incomplete"
     assert all(item.points < 0 for item in rubric.penalties)
-    # A rubric that could lose more than the cap is fine; one that cannot reach
+    # A rubric that could lose more than the cap is fine, but one that cannot reach
     # it means the cap is doing nothing and the weighting deserves a second look.
     assert sum(item.points for item in rubric.penalties) <= PENALTY_CAP
 
@@ -232,7 +232,7 @@ def test_rubric_content_never_reaches_the_founder_prompt():
 
     Tested against the *actual* rubric text rather than a hand-written needle
     list: a brief may legitimately share vocabulary with its rubric (the CodeShot
-    brief really does say "clipboard"), so the question is whether a rubric's own
+    brief does say "clipboard"), so the question is whether a rubric's own
     wording -- its item text and its expected values -- shows up in the prompt.
     """
     for idea in load_ideas():

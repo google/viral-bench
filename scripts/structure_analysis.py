@@ -152,10 +152,9 @@ def main(argv: list[str] | None = None) -> int:
     #
     # ABSOLUTE noise: how much a build's score moves when a DIFFERENT crowd
     # judges it. Each seed samples 30 personas from a pool of 150, so seeds get
-    # genuinely different crowds and the level swings a lot -- measured here, the
-    # solo arm's mean ranges 38.7 to 46.4 across four seeds (sd 3.6). Any
-    # comparison of absolute scores between differently-seeded runs must clear
-    # this.
+    # different crowds and the level swings a lot: measured here, one arm's mean
+    # moved by nearly 8 points across four seeds (sd 3.6). Any comparison of
+    # absolute scores between differently-seeded runs must clear this.
     #
     # PAIRED noise: how much a GAP moves. Far smaller, because the same crowd
     # judges every arm within a seed, so a generous crowd lifts all of them and

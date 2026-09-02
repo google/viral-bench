@@ -162,9 +162,9 @@ def test_dom_text_absent_catches_a_shipped_placeholder(served):
 def test_arith_treats_the_sign_as_part_of_the_answer(served):
     """The sharpest finding in the corpus, as a unit test.
 
-    Two builds produced byte-identical outcomes; the one printing ``-166.9``
-    scored 2.53 and the one printing ``166.9`` under a "saved" label scored 7.73.
-    A check that ignored the sign would rate them the same.
+    Two builds produced byte-identical outcomes, and the one printing ``-166.9``
+    scored far below the one printing ``166.9`` under a "saved" label. A check
+    that ignored the sign would rate them the same.
     """
     js = (
         "() => document.getElementById('savings').textContent"
@@ -220,7 +220,7 @@ def test_network_origins_catches_a_third_party_fetch(served):
 
 def test_download_and_image_props_catch_a_dead_export_button(served, tmp_path):
     """An export that fires nothing is indistinguishable from a working one to
-    the crowd; it is trivially distinguishable here."""
+    the crowd, and trivially distinguishable here."""
 
     async def click_export(page, ctx):
         directory = tmp_path / "dl"
@@ -275,7 +275,7 @@ def test_survives_reload_requires_the_users_own_nonce(served):
     """A demo default surviving a reload is not persistence.
 
     One build was awarded 30/30 on persistence for preserving an em-dash
-    placeholder; the nonce precondition is what makes the check honest.
+    placeholder, and the nonce precondition is what makes the check honest.
     """
     nonce = "ZQX-CANARY-7741"
 
@@ -374,7 +374,7 @@ def test_controls_have_names_catches_a_div_posing_as_a_field(served):
 
     The bad page carries both shapes that break a crowd agent -- a div wearing
     role="textbox" where an input belongs, and an icon-only button with no
-    accessible name at all. Neither is visible to an agent, which simply reports
+    accessible name at all. Neither is visible to an agent, which reports only
     that it could not find the control.
     """
     good = run(served, "good", "controls_have_names")
@@ -467,7 +467,7 @@ FAKE_GOOGLE_KEY = "AIza" + "SyB" + "1234567890abcdefghijklmnopqrstuvw"
 
 
 def test_client_secret_present_ignores_a_server_side_key(tmp_path):
-    """A key in a server module is configuration; in a bundle it is a leak.
+    """A key in a server module is configuration. In a bundle it is a leak.
 
     Grepping the whole tree, as a naive check would, fires on both and so
     distinguishes nothing -- which is the entire point of this primitive.
@@ -611,7 +611,7 @@ def test_third_party_requests_is_the_inverse_of_network_origins(served):
 
 
 def test_value_changes_compares_two_harness_snapshots(served):
-    """The model picks the moment; the harness picks what a snapshot is."""
+    """The model picks the moment, the harness picks what a snapshot is."""
 
     async def capture_two(page, ctx):
         ctx.captures["before"] = await page.evaluate("() => document.title")
@@ -668,7 +668,7 @@ def test_captures_monotonic_accepts_a_falling_series(served):
 
 
 def test_pdf_props_reads_object_stream_pdfs(tmp_path):
-    """pdf-lib defaults to object streams; 59 of 60 surveyed builds use them.
+    """pdf-lib defaults to object streams, and nearly every surveyed build uses them.
 
     Their page dictionaries are Flate-compressed inside an /ObjStm, so a raw
     byte scan finds zero pages in a perfectly correct three-page merge. Before

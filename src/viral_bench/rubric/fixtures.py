@@ -23,8 +23,8 @@ Same discipline as ``CodeInspectionToolkit.grader_tools``.
 Only one file so far, and it exists because an item needs it. The crowd's
 ``photo.png`` is 320x240 and 816 bytes, which is small enough that re-encoding it
 to JPEG makes it *bigger* -- excellent as an arithmetic-honesty trap, useless for
-"at quality 50 the output is genuinely smaller". That claim needs a photograph
-big enough to actually compress.
+"at quality 50 the output is smaller". That claim needs a photograph big enough
+to compress.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _large_photo(path: Path, width: int = 1024, height: int = 768) -> None:
     """Write a large RGB PNG that behaves like a photograph under compression.
 
     Photograph-like matters. A flat or geometric image compresses so well that
-    every build looks good; real photographic noise is what makes a quality
+    every build looks good. Real photographic noise is what makes a quality
     setting show its effect. The pattern is a deterministic pseudo-random
     gradient, so the file is byte-identical on every machine and the grade is
     reproducible.

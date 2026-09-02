@@ -137,11 +137,11 @@ def test_reap_orphans_spares_live_containers_but_removes_leaks(tmp_path) -> None
         reap_orphans()
         assert rt.is_running(app), "a live container was reaped out from under a run"
 
-        # One running longer than any plausible trial is genuinely leaked.
+        # One running longer than any plausible trial is leaked.
         assert reap_orphans(running_grace_seconds=0) >= 1
         assert not rt.is_running(app)
     finally:
-        rt.stop(app)  # idempotent; already reaped
+        rt.stop(app)  # idempotent, already reaped
 
 
 class _BusyboxHarness:
@@ -182,7 +182,7 @@ def test_crowd_path_verify_and_try_in_container(monkeypatch, tmp_path) -> None:
     assert result.builds and result.runs and result.does_what_it_claims
 
     # Delight probe drives the shared container instance like a user (browser if
-    # available, else a static-HTTP fallback); either way it sees the rendered
+    # available, else a static-HTTP fallback). Either way it sees the rendered
     # title.
     host = AppHost(container=True, image=IMAGE)
     try:

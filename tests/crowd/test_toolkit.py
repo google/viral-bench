@@ -90,7 +90,7 @@ def test_finish_trial_records_verdict(web_build) -> None:
     async def inner():
         toolkit = AppInteractionToolkit(web_build, container=False)
         try:
-            # An agent that never opened the app is pushed back once; the
+            # An agent that never opened the app is pushed back once, and the
             # second call always goes through (see the never-opened guard).
             first = await toolkit.finish_trial(True, True, 9, "loved it")
             assert "have not opened this app" in first
@@ -229,7 +229,7 @@ def test_facet_definitions_are_one_rubric_for_every_app(web_build, full_stack_bu
         for facet in ("functionality", "usability", "design", "simplicity"):
             assert f"{facet}:" in doc
 
-    # The doc an agent actually reads off the exported tool is that same rubric.
+    # The doc an agent reads off the exported tool is that same rubric.
     for build in (web_build, full_stack_build):
         toolkit = AppInteractionToolkit(build, container=False)
         finish = next(t for t in toolkit.tools() if t.__name__ == "finish_trial")
@@ -274,7 +274,7 @@ def test_finish_trial_tells_an_agent_it_never_got_the_app_working(web_build):
 
 
 def test_undeliverable_build_is_never_reachable_and_says_why(undeliverable_build):
-    """A build with no runnable manifest still gets a trial; it just fails.
+    """A build with no runnable manifest still gets a trial, and the trial fails.
 
     These used to be dropped from the crowd stage entirely, so a model that
     failed to ship a launch contract vanished from the denominator instead of
@@ -347,7 +347,7 @@ def test_a_trier_that_only_read_the_page_has_not_interacted() -> None:
     without one successful click, type, upload or keypress -- 218 never even
     attempted one. Their verdicts ran delight 5.94 / would_use 0.55 against
     7.05 / 0.81 for triers who interacted 3-5 times, so a large slice of the
-    hands-on signal was really a reading-comprehension signal.
+    hands-on signal was a reading-comprehension signal.
     """
     tk = _toolkit_with_trace(
         reachable=True,

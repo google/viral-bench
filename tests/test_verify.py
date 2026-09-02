@@ -138,7 +138,7 @@ def test_smoke_may_probe_the_running_app(builds_dir) -> None:
     """A smoke command that talks to the app's own port must be able to pass.
 
     The gate used to run smoke BEFORE starting the app, so this class of health
-    check -- the only kind that actually proves the app serves -- failed by
+    check, the only kind that proves the app serves, failed by
     construction. Measured over the stored corpus, network-dependent smoke
     commands passed 0 times out of 45 while local ones passed 372/450.
     """
@@ -187,7 +187,7 @@ def test_app_state_survives_a_restart(builds_dir) -> None:
 
 def test_try_app_uses_running_web_app(builds_dir) -> None:
     # try_app now drives the app like a user (real browser when available, else a
-    # static-HTTP fallback); either way the rendered title is observed.
+    # static-HTTP fallback). Either way the rendered title is observed.
     build_id = _make_build(_free_port())
     host = AppHost(container=False)
     try:
@@ -213,7 +213,7 @@ def test_http_probe_budget_is_wall_clock_not_attempt_count() -> None:
 
     from viral_bench.founder.verify import _http_probe
 
-    # Nothing is listening, so every attempt fails fast; the probe must still
+    # Nothing is listening, so every attempt fails fast, but the probe must still
     # spend its wall-clock budget rather than returning almost immediately.
     port = _free_port()
     started = _time.monotonic()

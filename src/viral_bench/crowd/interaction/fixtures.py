@@ -27,7 +27,7 @@ content, and each file is tiny and deterministic so a run is reproducible. They
 are written once into a cache directory and reused.
 
 Everything here is stdlib-only on purpose. Pillow or reportlab would give nicer
-samples, but the crowd venv should not grow a dependency just to make a 1 KB PNG.
+samples, but the crowd venv should not grow a dependency to make a 1 KB PNG.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def _png(path: Path, width: int, height: int, palette: str) -> None:
 
 
 def _pdf(path: Path, text: str) -> None:
-    """Write a minimal one-page PDF (hand-built; no dependency needed)."""
+    """Write a minimal one-page PDF, hand-built so no dependency is needed."""
     stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode("latin-1")
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",

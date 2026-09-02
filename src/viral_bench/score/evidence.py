@@ -60,9 +60,9 @@ _MAX_COMMENTS = 400
 _MAX_TRIALS = 60
 _MAX_VERDICTS = 200
 
-#: How many of a trial's actions to render. What an agent actually DID is the
-#: strongest evidence in the pack that a trial was real rather than imagined, so
-#: this should not be the thing that silently drops.
+#: How many of a trial's actions to render. What an agent DID is the strongest
+#: evidence in the pack that a trial was real rather than imagined, so this
+#: should not be the thing that silently drops.
 #:
 #: It was an inline ``[:12]``, which bound: measured over the 4,970 stored
 #: trials, 109 of them (2.2%) took more than 12 actions, topping out at 41 -- and

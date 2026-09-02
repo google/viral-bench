@@ -17,7 +17,7 @@
 Why this exists: CAMEL 0.2.78's built-in ``GeminiModel`` talks to Gemini through
 the OpenAI-compatibility endpoint, which cannot round-trip the ``thought_signature``
 that recent Gemini requires for multi-turn function calling. In practice that breaks
-*every* OASIS crowd agent -- not just the ones with app-interaction tools, because
+*every* OASIS crowd agent -- not only the ones with app-interaction tools, because
 OASIS's own social actions (like/repost/comment/...) are also tool calls -- the
 moment an agent makes a second tool call it gets an HTTP 400
 ("Function call is missing a thought_signature").
@@ -172,7 +172,7 @@ class GeminiNativeModel(GeminiModel):
             # Developer API throttles this workload at ~10-12 concurrent, Vertex
             # does not. Measured on the replicate-3 sweep, crowd throughput on
             # the Developer API plateaued at ~11 runs/h with the concurrency knee
-            # at 10-12, and at 16 and 20 a pass returned ZERO completed runs; the
+            # at 10-12, and at 16 and 20 a pass returned ZERO completed runs. The
             # same model on Vertex ran 10, 30 and 60 concurrent calls at 100% OK
             # with p50 latency flat at 0.7-0.8 s. That is a reason to CHOOSE
             # `google-vertex/...` for a sweep, which is now what naming it means
@@ -190,7 +190,7 @@ class GeminiNativeModel(GeminiModel):
             key = api_key or os.environ.get("GEMINI_API_KEY")
             self._genai = genai.Client(api_key=key)
         # tool_call_id -> the thought_signature / function name from the genai
-        # response that produced it, so we can re-attach on the next turn.
+        # response that produced it, so it can be re-attached on the next turn.
         self._sig_by_id: dict[str, bytes | None] = {}
         self._name_by_id: dict[str, str] = {}
         # Bounded retries for transient failures before a turn is skipped, so one
@@ -268,7 +268,7 @@ class GeminiNativeModel(GeminiModel):
         # of 30 agents making ~460 calls a run that is the difference between a
         # sweep finishing overnight and not finishing, so it has to be a knob --
         # and "how much deliberation does a good judge need" is a real question
-        # about the instrument, not just a cost dial.
+        # about the instrument, not merely a cost dial.
         level = cfg.get("thinking_level")
         if level:
             try:
@@ -289,7 +289,7 @@ class GeminiNativeModel(GeminiModel):
         #
         # The conversation is replayed on every turn, so attaching every shot an
         # agent ever took would grow request size quadratically over a trial.
-        # Newest wins; older ones degrade to the text that described them, which
+        # Newest wins, and older ones degrade to the text that described them, which
         # keeps the transcript coherent.
         keep = keep_newest_images(convo)
 
@@ -369,8 +369,8 @@ class GeminiNativeModel(GeminiModel):
                 #
                 # A separate content is preferred over merely reordering the parts
                 # (image first also passes) because a function_response content
-                # carrying only function_response parts is the documented shape;
-                # the ordering workaround depends on a quirk of the validator that
+                # carrying only function_response parts is the documented shape.
+                # The ordering workaround depends on a quirk of the validator that
                 # produced this error message in the first place.
                 shots = []
                 for path in images:
@@ -388,9 +388,9 @@ class GeminiNativeModel(GeminiModel):
                 if shots:
                     contents.append(types.Content(role="user", parts=shots))
 
-        # Vertex rejects a request whose final turn genuinely IS the model's,
+        # Vertex rejects a request whose final turn IS the model's,
         # with "400 INVALID_ARGUMENT: Requests ending with a model turn are not
-        # supported." The Developer API accepts the same request and simply
+        # supported." The Developer API accepts the same request and
         # continues, so this only became reachable when the crowd changed
         # transport -- nothing about the conversation itself changed.
         #
@@ -573,8 +573,8 @@ def _dump_rejected_shape(exc: Exception | None, contents: list | None) -> None:
     already appends a trailing user turn whenever the last content is the
     model's, and that guard demonstrably fires for both shapes that should
     produce this error (a conversation ending in an assistant message, and one
-    ending in a tool result). So the request being rejected is a shape we have
-    not identified, and it cannot be reasoned out from the code alone.
+    ending in a tool result). So the request being rejected is an unidentified
+    shape, and it cannot be reasoned out from the code alone.
 
     Recording the role sequence -- not the content, which is large and
     sensitive -- is enough to identify it. Turn it on for a handful of runs

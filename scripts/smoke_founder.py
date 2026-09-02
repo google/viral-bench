@@ -38,11 +38,11 @@ from viral_bench.founder.runner import describe_build
 
 
 def preflight(model: str) -> bool:
-    """Check opencode is installed and ``model`` is actually callable on Vertex.
+    """Check opencode is installed and ``model`` is callable on Vertex.
 
-    Pings the model the run will actually use, not a hardcoded Gemini id -- the
-    old version proved ``gemini-2.0-flash`` worked and then happily launched a
-    build against a Claude model the project had never enabled.
+    Pings the model the run will use, not a hardcoded Gemini id: the old version
+    proved ``gemini-2.0-flash`` worked and then went on to launch a build
+    against a Claude model the project had never enabled.
     """
     from viral_bench.founder.harness import HarnessError, preflight_vertex
     from viral_bench.founder.models import UnknownModelError, to_opencode_model

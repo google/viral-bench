@@ -20,11 +20,11 @@ simulated population that *uses* them and decides whether to adopt and share the
 
 This package is built in two layers:
 
-* :mod:`viral_bench.crowd.interaction` -- give an agent hands to actually drive a
+* :mod:`viral_bench.crowd.interaction` -- give an agent hands to drive a
   running app *like a human would*, per app type (click/type through a web app in
   a real browser, run a CLI with real inputs, hold a multi-turn bot
   conversation), and record a structured evidence trace. This is the substrate
-  the scoring stage consumes; it is what this module ships first.
+  the scoring stage consumes, and it is what this module ships first.
 * the scoring/crowd-simulation layer (turning those interaction traces into
   social reactions on OASIS and a composite ViralScore) is built on top of the
   interaction layer and is added separately.

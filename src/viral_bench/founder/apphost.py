@@ -14,7 +14,7 @@
 
 """Shared running-app instances for the crowd (the ``try_app`` scaling lever).
 
-When the OASIS crowd "tries" an app, we do *not* spin up a fresh container per
+When the OASIS crowd "tries" an app, it does *not* get a fresh container per
 agent trial -- that would not scale and is unrealistic. Instead, like a real
 deployed app, one instance runs and many agents hit it. :class:`AppHost` owns
 those shared instances: it starts an app on first request, caches the handle
@@ -22,8 +22,8 @@ keyed by ``build_id``, hands the same running app to every subsequent caller,
 transparently restarts one that has died, and tears everything down (including
 a label-based orphan sweep) on :meth:`close`.
 
-By default instances run in containers (the crowd path is container-forced);
-pass ``container=False`` for host-mode local testing.
+By default instances run in containers (the crowd path is container-forced).
+Pass ``container=False`` for host-mode local testing.
 """
 
 from __future__ import annotations
@@ -35,16 +35,16 @@ from viral_bench.founder.runtime import AppRuntimeError, RunningApp, reap_orphan
 
 #: How many times one build may fail to start before the host stops trying.
 #:
-#: An app that cannot start does not start on the fifth attempt either. Measured on
-#: the r3 sweep, where there was no cap: a single unstartable build was retried
+#: An app that cannot start does not start on the fifth attempt either. Measured
+#: on a sweep with no cap: a single unstartable build was retried
 #: 15-34 times in one run -- once per agent trial -- because every failure raised
-#: out of ``get`` and the next agent simply called it again. Each attempt clones the
+#: out of ``get`` and the next agent called it again. Each attempt clones the
 #: whole app tree (~188,600 files for a node app), so the run leaked twenty-odd
 #: trees, produced nothing, and was finally culled at the 3600s wall clock having
 #: written no ``run_summary.json`` at all. The cell then looked untried and was
 #: re-offered on the next pass, forever.
 #:
-#: Three is enough to ride out a genuinely transient start (a port still in
+#: Three is enough to ride out a transient start failure (a port still in
 #: TIME_WAIT, a slow first import) and small enough that a dead build costs seconds.
 MAX_START_ATTEMPTS = 3
 
@@ -88,8 +88,8 @@ class AppHost:
     def get(self, build_id: str, *, wait_timeout: float = 90.0) -> RunningApp:
         """Return the shared running app for ``build_id``, starting it if needed.
 
-        Concurrency-safe: many crowd agents may call this at once; the app is
-        started exactly once and shared. A dead instance is replaced.
+        Concurrency-safe: many crowd agents may call this at once, and the app
+        is started exactly once and shared. A dead instance is replaced.
 
         Raises :class:`AppStartFailed` once the build has failed to start
         :data:`MAX_START_ATTEMPTS` times, and thereafter without trying again.
@@ -178,7 +178,7 @@ class AppHost:
                 pass
         if self.container:
             reap_orphans(self.runtime_name)
-        # Sessions that died before we could close them leak their clone. Sweep
+        # Sessions that died before they could be closed leak their clone. Sweep
         # the stale ones here (the only place that reliably runs at the end of a
         # crowd run) or they accumulate unboundedly -- and a clone carrying
         # node_modules is ~440 MB, not the few MB a static app leaves behind.

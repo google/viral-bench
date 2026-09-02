@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Element resolution against the DOM shapes real generated apps actually use.
+"""Element resolution against the DOM shapes real generated apps use.
 
 These are regression tests for the two interaction failures measured across the
 25 solo builds: clicks timing out 9.3% of the time (109 of 136 timeouts were
@@ -107,7 +107,7 @@ def test_click_prefers_the_visible_match_over_a_hidden_duplicate(page_url):
 def test_upload_drives_the_hidden_file_input(page_url):
     """Upload must work through a display:none input behind a styled label.
 
-    That is how essentially every real upload UI is built, and it is why
+    That is how nearly every real upload UI is built, and it is why
     uploading failed on 7 of 10 attempts in the fleet.
     """
 
@@ -122,7 +122,7 @@ def test_upload_drives_the_hidden_file_input(page_url):
         try:
             page = await engine.open_page()
             await page.goto(page_url)
-            # Named by the label the agent can actually see, not the input.
+            # Named by the label the agent can see, not the input.
             await page.set_files("Select Image File", [str(fixture_path("photo.png"))])
             await asyncio.sleep(0.3)
             assert "uploaded: photo.png" in (await page.snapshot()).text
@@ -194,9 +194,9 @@ def test_click_recovers_a_label_wrapped_control_and_an_overlay(controls_url):
     """The two shapes that survived the visibility fix.
 
     On the validation build these were 13 and 7 of 32 residual click failures.
-    A styled <label> over a visually-hidden checkbox is how essentially every
-    toggle switch is built, and a person clicks the label; a transient overlay
-    blocks a click a person would simply make a moment later. Both must recover,
+    A styled <label> over a visually-hidden checkbox is how nearly every toggle
+    switch is built, and a person clicks the label. A transient overlay blocks a
+    click a person would make a moment later. Both must recover,
     and quickly -- the first attempt uses a short budget so a blocked click does
     not spend the full timeout before the fallback even starts.
     """

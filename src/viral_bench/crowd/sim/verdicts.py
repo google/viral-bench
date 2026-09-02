@@ -55,7 +55,7 @@ def normalize_reply(text: str) -> str:
 
 
 def _json_payload(text: str) -> dict | None:
-    """The first JSON object in a reply, if it holds any field we want."""
+    """The first JSON object in a reply, if it holds any wanted field."""
     if not text or "{" not in text:
         return None
     start = text.find("{")
@@ -136,7 +136,7 @@ def distribution(
 
     Raw signals only (adoption/share rates + the delight distribution). Rows may
     carry ``None`` for a field an agent did not supply (e.g. a trier that never
-    finished, or an interview reply missing a score); those are ignored per field.
+    finished, or an interview reply missing a score). Those are ignored per field.
 
     ``dropped`` records replies that never became rows at all. Every drop has to
     be counted: ``n`` is what the score's confidence checks read, so a run that
@@ -177,7 +177,7 @@ def distribution(
         dist["would_share_rate"] = round(sum(shares) / len(shares), 3)
 
     # Per-facet means (hands-on trials only) -- the diagnostic breakdown, plus
-    # the multi-item `craft` mean the ViralScore actually reads.
+    # the multi-item `craft` mean the ViralScore reads.
     for facet in ("functionality", "usability", "design", "simplicity", "craft"):
         value = _mean_of(rows, facet)
         if value is not None:
@@ -188,7 +188,7 @@ def distribution(
     # The denominator is deliberately "agents who checked", not "agents": a
     # trial that never reloaded says nothing about persistence, and folding its
     # silence in as a "no" would report the crowd's incuriosity as an app
-    # defect. ``*_checked`` carries how much evidence there actually is.
+    # defect. ``*_checked`` carries how much evidence there is.
     for field in ("work_survived", "saw_other_users"):
         answered = [r[field] for r in rows if r.get(field) is not None]
         dist[f"{field}_checked"] = len(answered)
@@ -281,7 +281,7 @@ def trier_verdicts(crowd) -> dict:
             "would_share": verdict.would_share if verdict else None,
             "delight": verdict.delight if verdict else None,
             "finished": verdict is not None,
-            # Only count hands-on evidence that was actually hands-on: a
+            # Only count hands-on evidence that was hands-on in fact: a
             # degraded trial (e.g. a web app observed over static HTTP with no
             # browser) never ran the app, so its craft rating is not evidence.
             "degraded": bool(getattr(toolkit.trace, "degraded", False))
@@ -293,7 +293,7 @@ def trier_verdicts(crowd) -> dict:
             "app_reachable": getattr(toolkit.trace, "app_reachable", None)
             if toolkit
             else None,
-            # How much of the app the agent actually exercised, so "opened it and
+            # How much of the app the agent exercised, so "opened it and
             # left" is distinguishable from "used it".
             "had_effect": _had_effect(toolkit),
             "n_steps": getattr(getattr(toolkit, "trace", None), "n_steps", None),
@@ -309,10 +309,10 @@ def trier_verdicts(crowd) -> dict:
 
 
 def conversion_stats(crowd, decisions: dict[int, dict] | None = None) -> dict:
-    """How many not-yet-users the FEED talked into actually trying the app.
+    """How many not-yet-users the FEED talked into trying the app.
 
     This is the one number here that virality is not allowed to be handed. Every
-    other signal counts something the crowd did to a post; this counts people
+    other signal counts something the crowd did to a post, while this counts people
     who went and used a product because of what they read, and an app nobody can
     recommend convincingly cannot fake it.
 
@@ -446,7 +446,7 @@ def interview_verdicts(db_path: str, crowd) -> dict:
     seen: set[int] = set()
     for user_id, info in fetched:
         # One verdict per agent. A batch interview failure is retried per-agent,
-        # which can re-ask someone; counting them twice would silently
+        # which can re-ask someone. Counting them twice would silently
         # double-weight that persona. First answer wins, mirroring the
         # "a trier's verdict is final" rule on the hands-on side.
         if user_id in seen:
@@ -483,7 +483,7 @@ def interview_verdicts(db_path: str, crowd) -> dict:
                 # The verbatim rationale. The parsed yes/no/score is what the
                 # deterministic score reads, but the reasoning is what an
                 # agentic rater needs -- "no, it leaks my data" and "no, I
-                # already use something else" are the same number and very
+                # already use something else" are the same number and wholly
                 # different signals about the app.
                 "why": _extract_why(response),
             }
@@ -497,7 +497,7 @@ def interview_verdicts(db_path: str, crowd) -> dict:
 #: Measured against coverage (agents who produced a parseable verdict over
 #: agents asked), not against retries. Losses are not random -- they concentrate
 #: in the runs with the most discussion, i.e. the best apps -- so a lenient
-#: threshold here silently biases the very comparison the benchmark exists to
+#: threshold here silently biases the one comparison the benchmark exists to
 #: make, and a threshold applied to the wrong quantity throws away healthy runs
 #: for the same reason.
 MAX_VERDICT_LOSS_RATE = 0.10
@@ -521,11 +521,12 @@ def undeliverable_validity(build_id: str) -> dict:
     """The validity verdict for a build with no launch contract.
 
     ``False``, not ``None``. The distinction is the whole point: ``None`` means
-    *we could not check* (a fault in our harness, which must never be charged to
-    the app and carries no score penalty), while ``False`` means *we checked and
-    it does not run*. A build with no ``viralbench.json`` is the second thing --
-    there is no command to try, and that is the founder's omission, not ours. It
-    therefore takes the same broken-app multiplier as an app that fails to start.
+    *it could not be checked* (a fault in the harness, which must never be
+    charged to the app and carries no score penalty), while ``False`` means *it
+    was checked and does not run*. A build with no ``viralbench.json`` is the
+    second thing -- there is no command to try, and that is the founder's
+    omission, not the harness's. It therefore takes the same broken-app
+    multiplier as an app that fails to start.
     """
     return {
         "build_id": build_id,

@@ -37,7 +37,7 @@ import pytest
 # viral_bench.founder.appenv, which runs the founder package __init__, which
 # imports back into viral_bench.providers before it has finished initialising.
 # Importing the founder package first breaks the cycle. Reported to be fixed in
-# src; remove this line once it is.
+# src, so remove this line once it is.
 import viral_bench.founder  # noqa: F401
 from viral_bench.providers import (
     FULL,
@@ -88,7 +88,7 @@ def test_a_bare_model_id_is_refused_rather_than_guessed() -> None:
 
     With no default provider there is nothing sensible to guess, and a guess
     would silently bill whichever account happened to have a key set. The error
-    therefore has to teach the fix rather than just say no.
+    therefore has to teach the fix rather than merely say no.
     """
     with pytest.raises(UnknownProviderError) as excinfo:
         resolve("gpt-test")
@@ -142,7 +142,7 @@ def test_every_provider_is_reachable_without_being_asked_for_a_base_url() -> Non
 
 
 def test_the_founders_opencode_child_can_be_given_every_keyed_credential() -> None:
-    """opencode reads a per-provider variable, and the names are not always ours.
+    """opencode reads a per-provider variable, and the names do not always match.
 
     A provider opencode knows, that authenticates with a key, but that has no
     entry in the opencode key map, would launch the founder child with no
@@ -153,7 +153,7 @@ def test_the_founders_opencode_child_can_be_given_every_keyed_credential() -> No
         if provider.ambient_auth or not provider.opencode_id or not provider.key_env:
             continue
         assert provider.opencode_id in OPENCODE_KEY_ENV, provider.id
-        # And it must be the SAME variable we resolve the credential from.
+        # And it must be the SAME variable the credential is resolved from.
         assert OPENCODE_KEY_ENV[provider.opencode_id] == provider.key_env
 
 
@@ -166,7 +166,7 @@ def test_a_provider_missing_a_capability_is_refused_before_the_run() -> None:
     A crowd whose model cannot see the screenshots it was sent still produces
     numbers -- it scores a design dimension it never observed -- so this has to
     fail up front, and the message has to name the missing capability and the
-    provider rather than just failing.
+    provider rather than merely failing.
     """
     spec = resolve("groq/model-test")  # tools + json, no image input
     with pytest.raises(UnsupportedCapabilityError) as excinfo:
@@ -255,7 +255,7 @@ def test_a_keyed_provider_opencode_knows_is_named_and_given_its_key(
         "openai": {"models": {"gpt-test": {"name": "gpt-test"}}}
     }
     # The credential goes to the child's environment only, never to the config
-    # file we write into the build workspace.
+    # file written into the build workspace.
     assert target.env == {"OPENAI_API_KEY": "key-test"}
     assert "apiKey" not in str(target.provider_block)
     # A provider opencode has a built-in for must NOT be synthesised.
@@ -263,7 +263,7 @@ def test_a_keyed_provider_opencode_knows_is_named_and_given_its_key(
 
 
 def test_opencode_is_told_the_id_it_knows_the_provider_by(monkeypatch) -> None:
-    """Ours and opencode's ids are not always the same string, and a mismatch
+    """The registry's ids and opencode's are not always the same string, and a mismatch
     would ask opencode for a provider it has never heard of."""
     monkeypatch.setenv("TOGETHER_API_KEY", "key-test")
     target = opencode_provider(resolve("together/model-test"))
@@ -274,10 +274,10 @@ def test_opencode_is_told_the_id_it_knows_the_provider_by(monkeypatch) -> None:
 def test_a_provider_opencode_does_not_know_is_synthesised(monkeypatch) -> None:
     """How a local Ollama, a vLLM server or a private gateway works at all.
 
-    opencode has no built-in for these, so we emit an OpenAI-compatible provider
-    block pointing at the configured base URL. Without it the founder stage --
-    the one place ViralBench does not make the model call itself -- would support
-    strictly fewer providers than every other stage.
+    opencode has no built-in for these, so an OpenAI-compatible provider block
+    pointing at the configured base URL is emitted instead. Without it the
+    founder stage -- the one place ViralBench does not make the model call
+    itself -- would support strictly fewer providers than every other stage.
     """
     target = opencode_provider(resolve("ollama/model-test"))
 
@@ -304,7 +304,7 @@ def test_a_synthesised_provider_carries_its_key_in_the_config(monkeypatch) -> No
 
 
 def test_a_base_url_is_only_overridden_when_the_user_set_one(monkeypatch) -> None:
-    """Otherwise we would pin a provider's endpoint to whatever it was when this
+    """Otherwise a provider's endpoint would be pinned to whatever it was when this
     registry entry was written, and opencode keeps its own copy current."""
     monkeypatch.setenv("OPENAI_API_KEY", "key-test")
     assert (
@@ -426,7 +426,7 @@ def test_ping_is_a_one_token_call_on_the_same_model() -> None:
 
 
 def test_rate_limits_back_off_harder_than_ordinary_failures() -> None:
-    """A 429 is the server asking for room; anything else is usually one bad
+    """A 429 is the server asking for room, while anything else is usually one bad
     connection. Jitter matters too: a sweep runs many workers, and a fixed delay
     has them retry in lockstep and reproduce the burst."""
     limited = [backoff_seconds(3, RateLimitError("429")) for _ in range(20)]

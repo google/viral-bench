@@ -12,23 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Capture what every crowd agent actually did and why.
+"""Capture what every crowd agent did and why.
 
-The deterministic score reads aggregate numbers; an agentic autorater needs the
-*reasoning* behind them -- whether praise was substantive or reflexive, whether a
-criticism was fatal or cosmetic, whether the crowd genuinely convinced each
+The deterministic score reads aggregate numbers, but an agentic autorater needs
+the *reasoning* behind them -- whether praise was substantive or reflexive,
+whether a criticism was fatal or cosmetic, whether the crowd convinced each
 other. None of that survives in a rate or a mean.
 
 Two problems this fixes:
 
 * Only the hands-on triers had a stored trajectory. In a 50-agent run that is 12
-  agents; the other 38 -- the ones whose reaction actually constitutes "did this
+  agents, and the other 38 -- the ones whose reaction constitutes "did this
   spread" -- left nothing but rows in a database.
 * Even the trier trace stored tool calls and observations, never the agent's own
   reasoning, which is the part a rater most needs.
 
 OASIS keeps each agent's full message history on ``SocialAgent.memory``, so this
-is a matter of persisting what already exists. We keep it asymmetric on purpose:
+is a matter of persisting what already exists. It is asymmetric on purpose:
 triers get their full step-by-step trial, reactors get their reasoning and public
 content without the feed dumps that dominate their context. Feed dumps are the
 bulk of the tokens and the least informative part -- they are the *stimulus*, not
@@ -48,8 +48,8 @@ _LOG = logging.getLogger("viral_bench.crowd.trajectory")
 #: environment's prompt to it.
 _AGENT_ROLES = {"assistant", "ai", "model"}
 
-#: A feed dump looks like a system/user turn full of serialised posts. We keep a
-#: short prefix for context and drop the rest.
+#: A feed dump looks like a system/user turn full of serialised posts. Only a
+#: short prefix is kept for context, and the rest is dropped.
 _STIMULUS_CLIP = 400
 
 #: Clip for an agent's own reasoning. This is CAPTURE, not rendering: whatever it
@@ -57,7 +57,7 @@ _STIMULUS_CLIP = 400
 #: rater's window into why the crowd reacted the way it did.
 #:
 #: Raised 2000 -> 32000 as headroom, not as a bug fix. Measured over the 58,887
-#: stored reasoning entries the old 2000 never actually bound (longest: 1,402),
+#: stored reasoning entries the old 2000 never bound (longest: 1,402),
 #: so nothing in the corpus was lost. But it sat *below* the 4000 that
 #: score/evidence.py applies to the same text downstream, which is backwards for
 #: a capture-time clip -- the irreversible one should never be the tighter of the
@@ -113,7 +113,7 @@ def extract_trajectory(agent, *, agent_id, username, tier, influence=0, full=Fal
     """Pull one agent's reasoning out of its OASIS/CAMEL memory.
 
     ``full`` keeps every agent message (used for triers, whose step-by-step trial
-    is the richest first-hand evidence); otherwise only the agent's own outputs
+    is the richest first-hand evidence). Otherwise only the agent's own outputs
     are kept, which is where the judgement lives.
     """
     traj = AgentTrajectory(

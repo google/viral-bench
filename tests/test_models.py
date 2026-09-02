@@ -85,14 +85,14 @@ def test_the_curated_registry_is_not_reintroduced(name: str) -> None:
     ``DEFAULT_MODEL`` picks someone's API to bill on a user's behalf, and
     ``check_location``/``CLAUDE_LOCATIONS`` pinned one cloud's regional
     availability into a benchmark that is now provider-agnostic. They were
-    deleted together; re-adding any one of them re-opens the same problem, so
+    deleted together, and re-adding any one of them re-opens the same problem, so
     the absence is asserted rather than assumed.
     """
     assert not hasattr(models, name)
 
 
 def test_unknown_model_error_is_the_provider_layer_error() -> None:
-    """Old call sites catch ``UnknownModelError``; the provider layer raises
+    """Old call sites catch ``UnknownModelError`` while the provider layer raises
     ``UnknownProviderError``. They have to be the same class or the alias is a
     silent hole in every ``except`` in the CLI."""
     assert UnknownModelError is UnknownProviderError
@@ -128,7 +128,7 @@ def test_a_model_id_containing_slashes_survives_resolution() -> None:
     [
         "gpt-test",  # a bare id: no provider to bill
         "claude-test",
-        "nosuchvendor/some-model",  # a provider we have no entry for
+        "nosuchvendor/some-model",  # a provider with no entry
         "openai/",  # a provider with no model
         "",  # nothing at all
     ],
@@ -156,7 +156,7 @@ def test_transport_is_reported_so_call_sites_need_not_know_the_provider() -> Non
     assert transport_for(FAKE_OPENAI) == "openai_compat"
     assert transport_for(FAKE_ANTHROPIC) == "anthropic"
     assert transport_for(FAKE_GEMINI) == "google"
-    # The two Vertex surfaces differ in wire format, not just in name.
+    # The two Vertex surfaces differ in wire format, not only in name.
     assert transport_for(FAKE_VERTEX) == "google"
     assert transport_for(FAKE_VERTEX_CLAUDE) == "anthropic"
 
@@ -207,12 +207,11 @@ def test_swapping_the_founder_model_cannot_move_the_yardstick(monkeypatch) -> No
     the grader that inspects them and the model the apps themselves call are the
     measuring instrument, and they are held fixed across a comparison. If a
     founder swap could drag any of them along, every cross-model result would be
-    two variables moving at once, read out as one capability difference
-    (docs/crowd_bugs.md T0.1).
+    two variables moving at once, read out as one capability difference.
 
     The separation used to be structural -- different constants in different
     modules. It is now a layering in :func:`viral_bench.config.stage_model`, so
-    it is worth checking that the layering really does keep the stages apart
+    it is worth checking that the layering does keep the stages apart
     rather than collapsing them onto one value.
     """
     _stage_config(
@@ -227,7 +226,7 @@ def test_swapping_the_founder_model_cannot_move_the_yardstick(monkeypatch) -> No
     assert config.stage_model("founder") == FAKE_OPENAI
     assert config.stage_model("crowd") == FAKE_GEMINI
     assert config.stage_model("autorater") == FAKE_ANTHROPIC
-    # Four distinct stages, four independent answers; the app stage is unset
+    # Four distinct stages, four independent answers. The app stage is unset
     # here and stays unset rather than inheriting the founder's.
     assert config.stage_model("app") == ""
     assert config.founder_model_id("") == FAKE_OPENAI

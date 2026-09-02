@@ -429,7 +429,7 @@ teammates:
 # Dynamic orchestrator prompts. ONE agent gets the idea, the deliverable
 # contract, and a factual description of what opencode's delegation machinery can
 # do -- then decides for itself whether to use any of it. Nothing here names a
-# role, a phase, a round or an order of work; that omission is the whole point of
+# role, a phase, a round or an order of work. that omission is the whole point of
 # the mode, so resist the urge to "helpfully" suggest a team shape here.
 # --------------------------------------------------------------------------- #
 
@@ -507,8 +507,8 @@ def dynamic_founder_prompt(
     project root: it wrote `viralbench.json` one level up, in the workspace root,
     on all three of its turns, and the build was recorded `manifest_missing`. A
     mode-specific prompt detail turning into an apparent inability to ship a
-    manifest is precisely the fabricated capability difference in
-    docs/crowd_bugs.md T0.1, so both paths are now stated explicitly.
+    manifest is precisely the failure this bench must not record: a harness
+    fault scored as a model fault. So both paths are stated explicitly.
 
     Args:
         idea: The product idea.

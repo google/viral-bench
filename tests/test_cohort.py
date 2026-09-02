@@ -17,9 +17,9 @@
 A cohort exists because the first full sweep had none: "the whole sweep" was
 reconstructible only as "replicate 3, these arms, brief fingerprint current",
 which had to be restated and re-verified every time anyone asked what a number
-covered. It also does not survive the next step -- r4 keeps the solo and dynamic
-arms and rebuilds team, so its members span two build eras and no replicate
-number describes them.
+covered. It also does not survive the next step: the following cohort keeps the
+solo and dynamic arms and rebuilds team, so its members span two build eras and
+no replicate number describes them.
 """
 
 from __future__ import annotations
@@ -102,7 +102,7 @@ def test_tagging_stamps_the_builds_and_writes_a_manifest(tmp_path, monkeypatch):
 def test_a_cohort_is_filled_in_stages_without_losing_the_first_half(
     tmp_path, monkeypatch
 ):
-    """r4 tags the kept arms today and the rebuilt ones days later.
+    """A cohort tags the kept arms in one pass and the rebuilt ones days later.
 
     A manifest that overwrote rather than merged would drop whichever half was
     written first -- which is the whole corpus, for the arm that finished first.

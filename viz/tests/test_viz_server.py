@@ -52,7 +52,7 @@ def server(builds):  # noqa: F811 - pytest fixture injection
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     # The socket is already bound and listening by the time serve_forever starts,
-    # so a request can go out immediately; this only yields the GIL.
+    # so a request can go out immediately. This only yields the GIL.
     time.sleep(0.05)
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
     httpd.shutdown()

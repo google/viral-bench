@@ -24,7 +24,7 @@ What it does:
   1. Reads GEMINI_API_KEY_FOUNDER from the environment / .env and preflights it
      against the Gemini REST API, auto-picking a text model the key can call.
   2. Ships a tiny single-page "founded app" whose ``/generate`` endpoint calls
-     Gemini using the in-container GEMINI_API_KEY (stdlib only; no SDK install).
+     Gemini using the in-container GEMINI_API_KEY (stdlib only, no SDK install).
    3. Runs it in Podman via the real crowd path: verify_code (validity gate) then
       AppHost + probe_endpoint (a targeted HTTP probe) hitting ``/generate``. A
       random nonce in the prompt proves the response is live, not canned.
@@ -59,7 +59,7 @@ from dotenv import load_dotenv
 _GLM = "https://generativelanguage.googleapis.com/v1beta"
 
 # Preferred text models, newest/cheapest-friendly first. Intersected with what
-# the founder key can actually call; falls back to any flash text model.
+# the founder key can call, falling back to any flash text model.
 _MODEL_PRIORITY = (
     "gemini-2.0-flash",
     "gemini-2.0-flash",
@@ -129,7 +129,7 @@ def _pick_model(key: str, override: str | None) -> str:
 
 # The founded app. A single-page app served by stdlib http.server:
 #   GET /          -> static HTML (works with no key -> passes the validity gate)
-#   GET /generate  -> calls Gemini with GEMINI_API_KEY; HTTP 503 if the key is absent
+#   GET /generate  -> calls Gemini with GEMINI_API_KEY, HTTP 503 if the key is absent
 # __MODEL__ is replaced with the chosen model before shipping.
 _APP_PY = r'''"""Key-injection smoke app (stdlib only)."""
 from __future__ import annotations
@@ -215,7 +215,7 @@ _MANIFEST = {
     },
     "test": {
         "manual": ["Open /", "GET /generate?prompt=... for an LLM response"],
-        # network-free health check (syntax-compile the app; no key needed)
+        # network-free health check (syntax-compile the app, no key needed)
         "smoke": 'python3 -c \'compile(open("app.py").read(), "app.py", "exec")\'',
     },
 }

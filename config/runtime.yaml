@@ -16,30 +16,30 @@
 #
 # This governs how a *built* app is executed for testing -- by a human via
 # `viral-bench serve-build`, and by the OASIS crowd's verify_code / try_app
-# tools. A founder BUILD always runs on the host (see config/founder.yaml); this
-# file is only about running the finished app.
+# tools. A founder BUILD always runs on the host (see config/founder.yaml), so
+# this file is only about running the finished app.
 #
 # NOTE: this documents the intended defaults. The values here mirror the defaults
-# baked into viral_bench.founder.runtime (ContainerRuntime) and apphost.AppHost;
-# wiring a loader to read them is a small follow-up.
+# baked into viral_bench.founder.runtime (ContainerRuntime) and apphost.AppHost,
+# and wiring a loader to read them is a small follow-up.
 
 # Which backend runs an app, per consumer. Directory isolation (a fresh clone per
-# run) always applies; these choose whether real containment is added on top.
+# run) always applies, and these choose whether real containment is added on top.
 isolation:
-  # You testing locally: host is fine (fast); flip to container with --container.
+  # Testing locally: host is fine and fast. Flip to container with --container.
   serve: host
   # The crowd runs untrusted apps unattended and at scale -> always a container.
   # This is enforced in code (verify_code / AppHost default container=True).
   crowd: container
 
 container:
-  runtime: podman # 'podman' (corp-sanctioned) or 'docker' (OSS). OCI either way.
+  runtime: podman # 'podman' or 'docker'. An OCI image either way.
   # Built from docker/Containerfile: python3.12 + uv + node. Build once with:
   #   podman build -t viralbench-runtime:latest -f docker/Containerfile docker
   image: localhost/viralbench-runtime:latest
 
   # Per-container resource caps (rootless cgroups v2). Keep total = concurrency x
-  # these under host RAM; sized for many small apps.
+  # these under host RAM, sized for many small apps.
   limits:
     memory: 1g
     cpus: "1.0"
@@ -77,7 +77,7 @@ container:
 app:
   model: ''
 
-# Leak prevention. Containers are torn down after each session; a label-based
+# Leak prevention. Containers are torn down after each session, and a label-based
 # sweep (viral_bench.founder.runtime.reap_orphans) removes any crash orphans.
 reaper:
   label: viralbench=1

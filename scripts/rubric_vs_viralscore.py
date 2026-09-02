@@ -34,8 +34,9 @@ Usage::
     scripts/rubric_vs_viralscore.py --cohort r4 --arch 14
     scripts/rubric_vs_viralscore.py --json out.json --markdown report.md
 
-PASS ``--arch``. r4 keeps solo and dynamic from the previous generation, so those
-build ids carry crowd runs under both the old architecture and the new one, and
+PASS ``--arch``. A cohort may keep solo and dynamic from the previous
+generation, so those build ids carry crowd runs under both the old architecture
+and the new one, and
 averaging across them mixes two instruments into one number.
 """
 
@@ -138,8 +139,8 @@ def load_rows(
     """Both instruments' scores for every build in scope, joined by build id.
 
     ``arch`` restricts the crowd side to one architecture, and matters more than
-    it looks. r4 keeps the solo and dynamic builds from the previous generation,
-    so those build ids carry crowd runs under BOTH the old architecture and the
+    it looks. A cohort may keep the solo and dynamic builds from the previous
+    generation, so those ids carry crowd runs under BOTH the old architecture and the
     new one. Averaging across them would silently mix two different instruments
     into one number and attribute the difference to the builds.
     """
@@ -201,7 +202,7 @@ def load_rows(
                 newest[build_id] = (run_dir.name, document)
         for build_id, (_, document) in newest.items():
             row = rows[build_id]
-            # `score`, not `final`; `tiers[].items`, not a flat `items`. Reading
+            # `score`, not `final`, and `tiers[].items`, not a flat `items`. Reading
             # the wrong keys yields None everywhere and an empty comparison that
             # looks like "no data" rather than "wrong reader".
             row.rubric = document.get("score")
@@ -345,7 +346,7 @@ def build_report(rows: list[BuildRow], generation: str, arch_label: str = "") ->
 
 def render(report: dict) -> str:
     lines = [
-        f"# RubricScore vs ViralScore — {report['generation']}",
+        f"# RubricScore vs ViralScore, {report['generation']}",
         "",
         f"{report['builds']} builds; {report['with_viralscore']} have a ViralScore, "
         f"{report['with_rubricscore']} a RubricScore, **{report['compared']} both**."

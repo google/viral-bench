@@ -29,11 +29,11 @@ difficulty* in the denominator: a fleet spanning "sliding tile game" and "local
 LLM runner" has enormous between-idea spread that has nothing to do with which
 model built them. A profile can then improve d by **compressing every score
 toward the middle** -- shrinking the denominator faster than the numerator --
-which looks like better discrimination while actually destroying it.
+which looks like better discrimination while destroying it.
 
 Pairing removes that. Each idea is built by both models, so differencing within
 an idea cancels idea difficulty exactly, and the mean of those differences is in
-points -- the unit the question is actually asked in ("how many points better?"),
+points -- the unit the question is asked in ("how many points better?"),
 not a ratio that can be inflated by squeezing the scale.
 
 Two guards travel with it, because a gap on its own proves nothing:
@@ -104,12 +104,12 @@ class FleetBuild:
     #: "negative" (must land at the floor), "positive" (must land high), or ""
     #: for a real founder build.
     control: str = ""
-    #: Which named sweep this build belongs to, e.g. "r4" (see scripts/cohort.py).
+    #: Which named sweep this build belongs to (see scripts/cohort.py).
     cohort: str = ""
     #: Which independent build of this (idea, model) pair this is. The fleet can
-    #: be built more than once under the same config; comparing those replicates
-    #: is the only way to separate "this model is better" from "this build got
-    #: lucky". 0 means the build is not in the fleet index.
+    #: be built more than once under the same config, and comparing those
+    #: replicates is the only way to separate "this model is better" from "this
+    #: build got lucky". 0 means the build is not in the fleet index.
     replicate: int = 0
     #: How the founder chose to orchestrate, in the dynamic arm only (``None``
     #: elsewhere -- the other arms have no such choice to record). Carried up to
@@ -127,9 +127,9 @@ class FleetBuild:
     #: shipped no launch contract IS a result -- it was asked to found an app and
     #: did not -- so it is floored, and 16 of the solo arm's cells are exactly
     #: that, concentrated in the weakest models. A model whose output a provider
-    #: safety filter blocked produced no evidence either way; flooring it would
-    #: confound provider POLICY with model CAPABILITY, and asymmetrically, since
-    #: whichever provider filters hardest would lose the most score.
+    #: safety filter blocked produced no evidence either way, and flooring it
+    #: would confound provider POLICY with model CAPABILITY, and asymmetrically,
+    #: since whichever provider filters hardest would lose the most score.
     UNSCORABLE_STATUSES = frozenset({"provider_refusal"})
 
     @property
@@ -198,7 +198,7 @@ class FleetSpec:
 
 #: The fleet a scored comparison covers: every idea built by each named model,
 #: with the founder configuration and replicate pinned so two runs of the same
-#: cell are genuinely the same experiment.
+#: cell are the same experiment.
 #:
 #: Empty by default. A fleet is a description of YOUR run -- fill it in (or pass
 #: ``--models``) rather than inheriting someone else's model pair.
@@ -259,7 +259,7 @@ class ScoredRun:
     #: The app did not build or did not start. Distinct from "runs but fails its
     #: own smoke check", which is a manifest-contract violation by an app agents
     #: nonetheless used successfully. The score already separates the two at 0.2x
-    #: and 0.6x; anything reading the gate must keep them apart too.
+    #: and 0.6x, so anything reading the gate must keep them apart too.
     dead: bool = False
     #: The founder shipped no usable ``viralbench.json``, so the crowd had
     #: nothing to launch. A stricter statement than ``dead``: the app may be
@@ -273,20 +273,22 @@ class ScoredRun:
     #: The app could not be started, so no agent ever saw it.
     #:
     #: Deliberately not the same thing as ``dead``. ``dead`` is a verdict about the
-    #: app -- we ran it and it does not work, so it is capped at the broken-app
-    #: floor. This is a verdict about US: the dominant cause on the r3 sweep was
-    #: materializing the app from its shipped git branch without the dependencies
-    #: its own .gitignore excludes, and one such app, served by hand, returned
-    #: HTTP 200 in 55 ms and rendered 1,216 DOM nodes with zero console errors.
-    #: Scoring a model down for that manufactures a capability difference.
+    #: app -- it ran and it does not work, so it is capped at the broken-app
+    #: floor. This is a verdict about the harness: the dominant cause on one
+    #: sweep was materializing the app from its shipped git branch without the
+    #: dependencies its own .gitignore excludes, and one such app, served by
+    #: hand, returned HTTP 200 in 55 ms and rendered 1,216 DOM nodes with zero
+    #: console errors. Scoring a model down for that manufactures a capability
+    #: difference.
     #:
     #: So these runs are EXCLUDED from model means and reported as a coverage
     #: caveat, the same treatment ``harness_failed`` gets on the build side.
-    #: Measured on r3 the choice does not change any arm's ranking (team 54.0 vs
-    #: 52.1 floored, and the arm order is identical either way), which is what
-    #: makes it a reporting decision rather than a thumb on the scale.
+    #: Measured over a full sweep the choice does not change any arm's ranking
+    #: (team 54.0 vs 52.1 floored, and the arm order is identical either way),
+    #: which is what makes it a reporting decision rather than a thumb on the
+    #: scale.
     app_start_failed: bool = False
-    #: Which named sweep this run belongs to, e.g. "r4". Read from the stored
+    #: Which named sweep this run belongs to. Read from the stored
     #: summary, so a run says which corpus it is part of without being joined
     #: back to a build list that may since have moved.
     cohort: str = ""
@@ -311,10 +313,10 @@ class ScoredRun:
         """Whether this run may enter a model's mean.
 
         A start failure disqualifies a run ONLY when the harness is at fault.
-        That is the narrow case where the number would describe our packaging
-        rather than the model: the app was materialized without its dependencies,
-        or run under a toolchain the founder never had, and scoring a model down
-        for it manufactures a capability difference.
+        That is the narrow case where the number would describe the harness's
+        packaging rather than the model: the app was materialized without its
+        dependencies, or run under a toolchain the founder never had, and
+        scoring a model down for it manufactures a capability difference.
 
         An app that will not start because of its OWN defect -- a syntax error in
         the shipped source, a manifest naming a file that was never committed --
@@ -447,7 +449,7 @@ def fleet_statuses(builds_root: Path) -> dict[str, str]:
     """Map build id -> the status recorded in the FLEET INDEX.
 
     ``build.json`` carries the status the harness assigned while the build was
-    running; ``fleet.json`` carries the verdict for the cell, which can be revised
+    running. ``fleet.json`` carries the verdict for the cell, which can be revised
     afterwards -- a provider refusal is only recognisable once its error text is
     classified, and ``--reclassify-infra`` does that retroactively. Where the two
     disagree the index is right, because it is the later and better-informed of
@@ -527,7 +529,7 @@ def score_corpus(
     builds: dict[str, FleetBuild],
     weights: ScoreWeights | None = None,
 ) -> list[ScoredRun]:
-    """Re-score every crowd run on disk whose build we know about.
+    """Re-score every crowd run on disk whose build is in the index.
 
     A run that cannot be scored is kept with ``score=None`` and its blockers, so
     missing data is visible rather than quietly dropped from the denominator.
@@ -596,7 +598,7 @@ class BuildCoverage:
     runs: int
     #: seed-count -> how many builds have exactly that many scored seeds.
     seed_histogram: dict[int, int] = field(default_factory=dict)
-    #: Builds with NO scored run whose failure we have attributed to the harness.
+    #: Builds with NO scored run whose failure was attributed to the harness.
     app_start_failed: int = 0
     #: Builds excluded from the denominator entirely (a provider refused them).
     refused: int = 0
@@ -757,10 +759,10 @@ class FleetCorpus:
         """How many FLEET BUILDS have a scored run, and at how many seeds.
 
         THE GRAIN IS THE POINT. Coverage used to be asserted at model x arm, and
-        at that grain the seed-0 pass was genuinely complete: all ten models had
-        runs in all four arms. It was also missing 26 of 1,000 builds, because a
-        model's mean is taken over the runs that exist and a hole simply drops out
-        of it rather than showing up as one. The report went out saying "complete,
+        at that grain the seed-0 pass was complete: all ten models had runs in
+        all four arms. It was also missing 26 of 1,000 builds, because a model's
+        mean is taken over the runs that exist and a hole drops out of it
+        rather than showing up as one. The report went out saying "complete,
         all 10 models x 4 pipelines", and that claim was true and misleading at
         once.
 
@@ -773,7 +775,7 @@ class FleetCorpus:
             for b in self.fleet_builds()
             if not structure or structure_name(b.config) == structure
         ]
-        # An excluded build is not a gap we still owe: no amount of sweeping will
+        # An excluded build is not an outstanding gap: no amount of sweeping will
         # ever produce a score for it. Held out of the denominator so completeness
         # is reachable, and counted so the exclusion stays visible.
         refused = [b for b in every if b.unscorable]
@@ -813,7 +815,7 @@ class FleetCorpus:
     def cells_pooling_structures(self) -> dict[tuple[str, str], list[ScoredRun]]:
         """Runs grouped by (idea_id, model), POOLING founder structures.
 
-        Only for questions that are genuinely about coverage rather than about
+        Only for questions that are about coverage rather than about
         effect size -- "does this cell have enough seeds yet?". Do NOT use it to
         compare scores: pooling a solo build with a team build of the same idea
         counts a real between-structure difference as within-cell noise, which is
@@ -1022,8 +1024,8 @@ class ControlSeparation:
     #: Median of the working cells: the bulk the control has to be far below.
     working_median: float | None = None
     #: Working cells scoring at or below the control's mean, and how many there
-    #: are in total. Some real builds genuinely are worse than a deliberately
-    #: broken one, so this is a bounded exception count rather than zero.
+    #: are in total. Some real builds are worse than a deliberately broken one,
+    #: so this is a bounded exception count rather than zero.
     below_control: list[str] = field(default_factory=list)
     n_working_cells: int = 0
 
@@ -1109,7 +1111,7 @@ class VarianceComponents:
 def variance_components(corpus: FleetCorpus) -> VarianceComponents:
     """Split run-to-run variance into crowd noise and build noise.
 
-    Two very different things move a ViralScore, and a single-replicate corpus
+    Two unrelated things move a ViralScore, and a single-replicate corpus
     cannot tell them apart:
 
     * **crowd noise** -- the same app judged by a different draw of 30 users.
@@ -1228,7 +1230,8 @@ class DeliveryStats:
     attempted: int
     shipped: int
     #: Builds that failed on their own deliverable contract (manifest missing or
-    #: malformed), as opposed to harness faults, which are ours and are retried.
+    #: malformed), as opposed to harness faults, which belong to the harness and
+    #: are retried.
     manifest_failures: int
     per_replicate: dict[int, tuple[int, int]] = field(default_factory=dict)
 

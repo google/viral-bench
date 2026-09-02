@@ -53,7 +53,7 @@ def test_an_unset_stage_falls_back_to_the_callers_default() -> None:
 
 
 def test_vertex_target_from_yaml() -> None:
-    # The location is a real, loaded value; the project ships empty because
+    # The location is a real, loaded value, and the project ships empty because
     # ViralBench presumes no cloud account. Vertex is one optional provider
     # among many now, not the path everything goes through.
     assert config.vertex_location("fallback") == "global"
@@ -103,7 +103,7 @@ def test_code_defaults_reflect_config() -> None:
 # These caps have been reintroduced twice (2048, then 8192), each time as a guess
 # nobody could evaluate because truncation was invisible. They are gone now, and
 # these tests exist so they cannot come back silently. If you are deliberately
-# adding a cap, change the config -- do not just edit the constant.
+# adding a cap, change the config rather than editing the constant.
 
 
 def test_crowd_sends_no_output_token_cap_by_default() -> None:
@@ -117,7 +117,7 @@ def test_crowd_sends_no_output_token_cap_by_default() -> None:
 
 def test_crowd_max_tokens_knob_is_live_not_decorative() -> None:
     # The whole point of the crowd.yaml contract ("EVERY knob in this file
-    # actually takes effect"): a set value must survive to the caller. This used
+    # takes effect"): a set value must survive to the caller. This used
     # to load into sim_defaults.DEFAULT_MAX_TOKENS, which nothing imported.
     assert config.crowd_max_tokens(4096) == 4096
     # Non-positive and null both mean "no cap", never a literal 0.

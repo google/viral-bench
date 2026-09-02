@@ -76,7 +76,7 @@ def test_no_app_model_means_no_llm_variables_at_all(no_env_file, monkeypatch) ->
     """An app that sees a blank key behaves differently from one that sees none.
 
     A blank ``VIRALBENCH_APP_LLM_API_KEY`` looks configured, so an app takes the
-    model-backed path and fails at the call; an absent one is what the graceful
+    model-backed path and fails at the call, while an absent one is what the graceful
     degradation the brief demands is written against. So "unset" has to mean
     the variable is not there.
     """
@@ -115,7 +115,7 @@ def test_a_configured_app_model_resolves_to_the_provider_neutral_triple(
     """Endpoint, key and bare model id -- and the id is bare on purpose.
 
     The app sends the model id to an OpenAI-compatible endpoint, which knows
-    nothing about our ``provider/`` prefix and would reject it.
+    nothing about the harness's ``provider/`` prefix and would reject it.
     """
     _app_stage(monkeypatch, APP_MODEL)
     monkeypatch.setenv("CUSTOM_BASE_URL", APP_URL)

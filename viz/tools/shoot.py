@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Drive the viewer in a real browser and report what actually rendered.
+"""Drive the viewer in a real browser and report what rendered.
 
 Checking a UI by asserting on its JSON API proves the server works, not that the
 page does -- a broken template, a JS exception or a tab that renders `[object

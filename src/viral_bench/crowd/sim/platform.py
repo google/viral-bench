@@ -14,17 +14,17 @@
 
 """The mock social platform: a Twitter-like feed with an interest-based recsys.
 
-Virality is about amplification through a feed, so we use OASIS's Twitter-like
-platform with the **TWHIN-BERT** recommender (``recsys_type="twhin-bert"``): posts
-are surfaced to agents by interest similarity, which is what lets a genuinely
+Virality is about amplification through a feed, so the platform is OASIS's
+Twitter-like one with the **TWHIN-BERT** recommender (``recsys_type="twhin-bert"``):
+posts are surfaced to agents by interest similarity, which is what lets an
 appealing app cascade through the crowd rather than being seen by everyone
 uniformly. A lighter ``"twitter"`` history-based recsys is available for cheap
 wiring smokes (no model download).
 
 Anti-gaming: ``allow_self_rating=False`` so the founder can't like its own launch.
 Feed reach is widened (``refresh_rec_post_count`` / ``following_post_count``) so
-that, at the small crowd sizes we start with, the launch and the early-adopters'
-takes reliably reach agents' feeds.
+that, at the small crowd sizes this starts from, the launch and the
+early-adopters' takes reliably reach agents' feeds.
 
 This module also patches upstream OASIS recsys bugs that otherwise make every
 large crowd run unusable -- see :func:`_patch_oasis_recsys`.
@@ -92,7 +92,7 @@ def _patch_oasis_recsys() -> None:
     them. That is a systematic bias against engaging apps, i.e. against exactly
     the differences this benchmark exists to detect.
 
-    We reimplement the function faithfully (same scoring, same ordering, same
+    The function is reimplemented faithfully (same scoring, same ordering, same
     swap behaviour) with the three defects fixed. Idempotent.
     """
     import random
@@ -199,7 +199,7 @@ def _patch_oasis_recsys() -> None:
         _oasis_platform.rec_sys_personalized_with_trace = (
             rec_sys_personalized_with_trace
         )
-    except Exception:  # noqa: BLE001 - best effort; module layout may change
+    except Exception:  # noqa: BLE001 - best effort, module layout may change
         pass
     _LOG.debug("patched oasis twitter recsys (3 upstream defects at scale)")
 
@@ -274,8 +274,8 @@ def _patch_oasis_feed_identity() -> None:
 _patch_oasis_recsys()
 _patch_oasis_feed_identity()
 
-# Recsys string values (RecsysType enum values). TWHIN-BERT is interest-based;
-# "twitter" is a lighter history-based recsys with no model download.
+# Recsys string values (RecsysType enum values). TWHIN-BERT is interest-based,
+# while "twitter" is a lighter history-based recsys with no model download.
 RECSYS_TWHIN = "twhin-bert"
 RECSYS_TWITTER = "twitter"
 
@@ -311,7 +311,7 @@ class PlatformConfig:
     max_rec_post_len: int = _config.crowd_feed("max_rec_posts", 20)
     #: Posts pulled from accounts this agent follows. Raised with the feed: the
     #: follow graph now has interest neighbourhoods, and this is the channel
-    #: through which a neighbourhood's enthusiasm actually reaches its members.
+    #: through which a neighbourhood's enthusiasm reaches its members.
     following_post_count: int = _config.crowd_feed("following_posts", 15)
     use_openai_embedding: bool = False  # TWHIN uses local TWHIN-BERT, not OpenAI
     show_score: bool = False  # keep likes/dislikes separate (Twitter style)

@@ -157,14 +157,14 @@ def sweep_run_dirs(*, keep_newest: int = 0, older_than_hours: float = 6.0) -> in
     so a concurrent run's live clone is never pulled out from under it.
 
     THIS EXISTED FOR MONTHS WITH NO CALLERS, and the leak it describes duly
-    happened: 1,674 clones by 2026-08-26, at which point the inline unlink in
+    happened: 1,674 clones accumulated, at which point the inline unlink in
     :meth:`AppSession.close` had taken crowd throughput from 102 runs/hour to
     about 2. A sweeper nothing invokes is a comment. It is now called from
     ``scripts/crowd_sweep.py`` between cells -- if you add another long-running
     driver, call it there too.
 
     Retires by rename rather than deleting inline, for the reason in
-    :func:`retire_dir`; :func:`reclaim_trash` does the actual deleting under a
+    :func:`retire_dir`. :func:`reclaim_trash` does the deleting itself, under a
     time budget.
     """
     root = runs_root()
@@ -215,7 +215,7 @@ def _run(argv: list[str]) -> None:
 def materialize_build(build_id: str) -> Path:
     """Create a fresh, isolated copy of a build's app for one test session.
 
-    Prefers a clean ``git clone`` of the shipped orphan branch; falls back to
+    Prefers a clean ``git clone`` of the shipped orphan branch, and falls back to
     copying the work tree for builds that were never shipped. Returns the run
     directory, whose ``app/`` subdir holds the materialized app.
     """
@@ -319,7 +319,7 @@ def open_session(
 
     Args:
         build_id: The build to run.
-        container: If true, use the container runtime; otherwise run on the host.
+        container: If true, use the container runtime, otherwise run on the host.
         image: Override the container base image (container runtime only).
         network: Override the container network mode (container runtime only).
         env_map: ``{container_var: host_var}`` mapping resolved from the env / the

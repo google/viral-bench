@@ -15,7 +15,7 @@
 """Load the curated crowd personas and split them into triers and reactors.
 
 The crowd is the benchmark's *measuring instrument*, so it must be fixed and
-reproducible across every app and model it judges. We therefore ship a curated,
+reproducible across every app and model it judges. It is therefore a curated,
 version-controlled persona set (``data/crowd/personas.csv``) rather than
 generating personas per run. The schema is deliberately rich (interests,
 influence weight, skepticism, early-adopter flag) so the same file can later be
@@ -57,7 +57,7 @@ class Persona:
     username: str
     archetype: str
     interests: str
-    influence: int  # 1..10; higher = more followers / amplification weight
+    influence: int  # 1..10, higher = more followers / amplification weight
     skepticism: str  # low | medium | high
     early_adopter: bool  # a natural first-hand "trier"
     persona: str  # rich free-text description for the system prompt
@@ -181,12 +181,12 @@ def select_crowd(
         n_triers: How many of the crowd should first-hand run the app (clamped
             to ``n_agents``). **Negative means everyone.** In the real world a
             link is something you can click, so the default is that the whole
-            crowd can form its own opinion; measured over 44 stored runs the
+            crowd can form its own opinion. Measured over 44 stored runs the
             hands-on tier separated builds nearly twice as well as the
             feed-only tier (between/within 7.17 vs 3.66 on adoption, 7.86 vs
             4.74 on delight) *and* did it with less run-to-run noise despite
             being a quarter of the sample. Twenty-two agents reading one feed
-            are not twenty-two measurements; they are one measurement echoed.
+            are not twenty-two measurements, but one measurement echoed.
         seed: RNG seed for reproducible selection.
 
     Returns:
@@ -244,13 +244,13 @@ def select_crowd(
 def _rank_triers(chosen: list[Persona], n_triers: int) -> list[Persona]:
     """Pick the hands-on triers, stratified across skepticism.
 
-    Triers are the only agents who actually *use* the app, so they produce the
+    Triers are the only agents who *use* the app, so they produce the
     benchmark's richest evidence. Ranking purely by ``early_adopter`` (the old
     behaviour) handed that evidence exclusively to enthusiasts -- measured on
     three real runs, every trier scored 7-8 while the wider crowd spread 1-8, so
     the most evidence-grounded signal was also the least discriminating.
 
-    We therefore round-robin across skepticism buckets (high first), and only
+    Selection therefore round-robins across skepticism buckets (high first), and only
     prefer early adopters *within* a bucket. Tough critics still get to try the
     app first-hand, while early adopters remain the natural first movers.
     Deterministic: no RNG, stable tiebreak on username.

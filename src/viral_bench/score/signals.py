@@ -17,7 +17,7 @@
 Scoring is a **pure, offline function of the artifacts a crowd run already
 wrote** -- ``run_summary.json`` plus the OASIS database. Nothing here re-runs a
 simulation, which is what makes calibration affordable: when the weights change,
-every historical run can simply be re-scored.
+every historical run can be re-scored.
 
 The extraction is deliberately forgiving. Runs recorded before a signal existed
 (facet ratings, audience fit, the validity gate) still load, with the missing
@@ -69,7 +69,7 @@ class RunSignals:
     persistence_rate: float | None = None
     n_persistence_checked: int = 0
 
-    # -- behaviour: what the crowd actually DID, per exposed agent ----------
+    # -- behaviour: what the crowd DID, per exposed agent -------------------
     exposed_agents: int = 0
     repost_participation: float | None = None
     comment_participation: float | None = None
@@ -84,7 +84,7 @@ class RunSignals:
     #: See :mod:`viral_bench.score.spread` for the measurements behind it.
     advocate_amplification: float | None = None
 
-    # -- cascade shape (measured; see ScoreWeights for why it is unweighted) -
+    # -- cascade shape (measured: see ScoreWeights for why it is unweighted) -
     secondary_share: float | None = None
     late_action_share: float | None = None
 
@@ -161,17 +161,17 @@ def extract_signals(crowd_dir: str | Path) -> RunSignals:
     interview_rows = interviews.get("per_agent") or []
 
     # Hands-on craft: only a trial that finished AND is KNOWN to have reached a
-    # working app is evidence about quality. An unfinished trial has no verdict;
-    # a degraded one saw the app through a narrow window; an unreachable one
+    # working app is evidence about quality. An unfinished trial has no verdict.
+    # A degraded one saw the app through a narrow window, and an unreachable one
     # never saw it at all -- it rated the source tree, or nothing.
     #
-    # The test is ``app_reachable is True``, not ``is not False``. "We never
+    # The test is ``app_reachable is True``, not ``is not False``. "Nothing
     # established that this agent got the app to work" is missing evidence, and
     # missing evidence must not read as good evidence: 6 of 24 bot trials in one
     # sweep finished with a full craft verdict having never sent the bot a single
-    # message. 36 of 314 stored trials were in the same category historically,
-    # every one of them filed a confident four-facet verdict, and all 36 sat in a
-    # single build -- which is precisely how a harness race gets reported as a
+    # message. 36 of 314 stored trials fell in the same category, every one of
+    # them filed a confident four-facet verdict, and all 36 sat in a single
+    # build -- which is precisely how a harness race gets reported as a
     # difference between founder models.
     trial_rows = triers.get("per_agent") or []
     valid_trials = [

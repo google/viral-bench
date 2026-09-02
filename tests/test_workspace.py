@@ -77,7 +77,7 @@ def test_workspace_default_root_uses_builds_root(monkeypatch, tmp_path) -> None:
 #
 # The build runs on the host with the workspace nested inside the ViralBench
 # checkout, and agents get an unrestricted shell. Without a nearer repo their
-# git lands in our history: a built app once committed to the checkout and
+# git lands in the ViralBench history: a built app once committed to the checkout and
 # re-authored it via `git config user.name` with no --global.
 
 
@@ -136,7 +136,7 @@ def test_skills_dir_stays_inside_the_workspace_worktree(tmp_path) -> None:
     """opencode walks up from --dir to the worktree root to find role skills.
 
     The boundary therefore has to sit above ``.opencode/skills`` (which
-    ``OpenCodeRunner.prepare`` writes at the workspace root); a repo in app_dir
+    ``OpenCodeRunner.prepare`` writes at the workspace root). A repo in app_dir
     would cut that walk short and silently hide every role skill.
     """
     ws = BuildWorkspace("b1", root=tmp_path / "b1").create()

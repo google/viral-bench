@@ -14,7 +14,7 @@
 
 """Resolve the environment variables handed to a founder-built app at run time.
 
-A founder-built app may need to call a model when the crowd (or a human) actually
+A founder-built app may need to call a model when the crowd (or a human)
 *uses* it. That credential is kept strictly separate from how the pipeline itself
 authenticates, for one reason: built apps are untrusted, model-generated code,
 and must never see the key the benchmark runs on.
@@ -37,7 +37,7 @@ init``). Hold it FIXED across a comparison: it is part of the environment the
 apps are measured in, not part of what is being measured.
 
 Values are read from the process environment first, then from the repo ``.env``,
-so a new key can simply be added to ``.env`` with no exports. Point
+so a new key can be added to ``.env`` with no exports. Point
 ``VIRAL_BENCH_ENV_FILE`` at a different file to override (used by tests).
 """
 
@@ -66,7 +66,7 @@ APP_API_KEY_VAR = "VIRALBENCH_APP_LLM_API_KEY"
 APP_MODEL_VAR = "VIRALBENCH_APP_LLM_MODEL"
 
 #: Extra ``{container_var: host_var}`` pass-throughs, for anything a specific
-#: deployment wants apps to see. Empty by default; the LLM triple above is
+#: deployment wants apps to see. Empty by default, since the LLM triple above is
 #: resolved from the provider layer rather than from a name mapping.
 DEFAULT_ENV_MAP: dict[str, str] = {}
 
@@ -118,8 +118,8 @@ def resolve_app_env(
     """Resolve ``{container_var: value}`` to inject into an app container.
 
     The provider-neutral LLM triple is always resolved (see :func:`app_llm_env`).
-    ``env_map`` adds plain ``{container_var: host_var}`` pass-throughs on top; a
-    mapping whose host var is unset is skipped.
+    ``env_map`` adds plain ``{container_var: host_var}`` pass-throughs on top,
+    and a mapping whose host var is unset is skipped.
     """
     resolved = app_llm_env(env_file_path=env_file_path)
     mapping = DEFAULT_ENV_MAP if env_map is None else env_map

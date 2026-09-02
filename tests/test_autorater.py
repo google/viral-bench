@@ -237,11 +237,11 @@ def test_parse_handles_bare_fenced_and_noisy_json() -> None:
 
 
 class _StubClient:
-    """A provider client with canned replies; records the prompts it was given.
+    """A provider client with canned replies that records the prompts it was given.
 
     Speaks the same contract as a real one -- ``generate(messages) -> Reply``, the
     canonical shape from :mod:`viral_bench.providers` -- so the rater is exercised
-    over the interface it actually calls rather than a simpler stand-in.
+    over the interface it calls rather than a simpler stand-in.
     """
 
     def __init__(self, replies):
@@ -271,7 +271,7 @@ def _reply(sub, sev, wom, evidence="agent 1"):
 
 
 def test_rating_uses_the_median_of_repeats(crowd_run) -> None:
-    # A single LLM sample is not a measurement; the median resists one outlier.
+    # A single LLM sample is not a measurement, and the median resists one outlier.
     client = _StubClient([_reply(8, 7, 5), _reply(8, 6, 4), _reply(1, 7, 4)])
     r = rate_pack(build_evidence_pack(crowd_run), client=client, repeats=3)
     assert r.dimensions["substance"].score == 8.0  # not dragged down by the 1
@@ -288,7 +288,7 @@ def test_the_rater_asks_for_json_and_a_ceiling_that_bounds_nothing(
     # unparseable sample, i.e. a silently lost measurement.
     #
     # And a ceiling far above any reply the rubric can produce. The cap went
-    # 2048 -> 8192 -> none; the 2048 demonstrably cost a sample (the only stored
+    # 2048 -> 8192 -> none, and the 2048 demonstrably cost a sample (the only stored
     # rating records "unparseable"), and on recent Gemini thinking tokens share the
     # budget, so a tight cap throttles the reasoning before it reaches the JSON.
     # The provider layer always sends some ceiling -- Anthropic requires one --
@@ -347,7 +347,7 @@ def test_a_failed_sample_is_retried_rather_than_dropped(crowd_run) -> None:
 
 
 def test_rating_survives_a_failed_or_unparseable_sample(crowd_run) -> None:
-    # Sample 1 fails every attempt it is given and is written off; the rating
+    # Sample 1 fails every attempt it is given and is written off, but the rating
     # still stands on the two that worked, and records that it is thinner.
     client = _StubClient(
         [_reply(6, 6, 6), "garbage", RuntimeError("boom"), "garbage", _reply(6, 6, 6)]
@@ -414,7 +414,7 @@ def test_missing_autorating_is_reweighted_not_zeroed(crowd_run) -> None:
 
 
 def test_rating_round_trips_through_disk(crowd_run) -> None:
-    # Rating is an expensive LLM call paid for once at score time; every later
+    # Rating is an expensive LLM call paid for once at score time, and every later
     # re-score reads it back from autorating.json instead of paying again.
     client = _StubClient([_reply(8, 6, 4)])
     original = rate_pack(build_evidence_pack(crowd_run), client=client, repeats=1)

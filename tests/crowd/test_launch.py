@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the 3.12-side crowd launcher (subprocess mocked; oasis-free)."""
+"""Tests for the 3.12-side crowd launcher (subprocess mocked, oasis-free)."""
 
 from __future__ import annotations
 

@@ -53,7 +53,7 @@ _README_NAMES = ("README.md", "README", "README.txt", "readme.md")
 _MAX_FILE_BYTES = 20_000
 _MAX_TREE_ENTRIES = 200
 _MAX_READ_CHARS = 8_000
-# Extensions we treat as readable text; everything else is reported, not dumped.
+# Extensions treated as readable text. Everything else is reported, not dumped.
 _TEXT_SUFFIXES = {
     ".py",
     ".js",

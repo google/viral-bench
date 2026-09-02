@@ -14,7 +14,7 @@
 # limitations under the License.
 
 #
-# setup_founder_env.sh — prepare a local machine to run the founder harness.
+# setup_founder_env.sh: prepare a local machine to run the founder harness.
 #
 # The founder pipeline (viral_bench.founder) drives the open-source `opencode`
 # coding agent, backed by whichever model provider you configured, to design +
@@ -62,10 +62,10 @@ done
 if command -v npm >/dev/null 2>&1; then
   ok "npm present ($(npm --version 2>&1 | head -1))"
 elif command -v corepack >/dev/null 2>&1; then
-  warn "npm NOT found — install it without sudo via:
+  warn "npm NOT found. Install it without sudo via:
        corepack enable npm --install-directory \"\$HOME/.local/bin\""
 else
-  warn "npm NOT found on PATH (and no corepack to install it) — JS/TS builds will fail"
+  warn "npm NOT found on PATH, and no corepack to install it. JS/TS builds will fail"
 fi
 
 # 2. opencode (the founder harness agent).
@@ -129,7 +129,7 @@ if providers="$(uv run viral-bench models 2>/dev/null)"; then
   printf '%s\n' "$providers" | sed -n '/^PROVIDER/,/^$/p' | sed '/^[[:space:]]*$/d; s/^/       /'
   info "nothing configured yet? pick a provider and write .env: uv run viral-bench init"
 else
-  warn "'viral-bench models' failed — is the main env installed? Run: uv sync"
+  warn "'viral-bench models' failed. Is the main env installed? Run: uv sync"
 fi
 info "confirm a specific model is really callable, and check the rest of the setup:"
 info "  uv run viral-bench models --check <provider>/<model>"

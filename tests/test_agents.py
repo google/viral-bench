@@ -149,7 +149,7 @@ def test_browser_prereqs_ok(monkeypatch, tmp_path) -> None:
 
 
 def test_dynamic_config_defines_no_agents() -> None:
-    """Dynamic mode's specialists are the model's, not ours."""
+    """Dynamic mode's specialists are the model's, not the harness's."""
     cfg = build_dynamic_config(browser_tools=False)
     assert "agent" not in cfg
     assert cfg["permission"]["task"] == "allow"

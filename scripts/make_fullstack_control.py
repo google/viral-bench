@@ -16,8 +16,8 @@
 
 This is the positive counterpart to ``make_control_build.py`` (which builds a
 deliberately broken app to calibrate the score's floor). This one is deliberately
-*correct*, and exists to answer a different question: **can the harness actually
-run, persist, and observe a real server-side app?**
+*correct*, and exists to answer a different question: **can the harness run,
+persist, and observe a real server-side app?**
 
 It is the acceptance test for the web-dev pivot. Specifically it exercises, in one
 build, every part of the contract a full-stack app depends on:

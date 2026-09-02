@@ -21,7 +21,7 @@ route: one download that carries everything, so a trajectory can be handed to
 someone who does not have the builds tree.
 
 Founder bundles include the transcripts as parsed event arrays rather than raw
-NDJSON, because that is the form anything downstream actually wants, and base64
+NDJSON, because that is the form anything downstream wants, and base64
 screenshot attachments are dropped -- they can be 93% of a transcript's bytes and
 the images are exported separately.
 """
@@ -47,7 +47,7 @@ def _strip_attachments(event: dict) -> dict:
             {
                 "mime": a.get("mime"),
                 "inline_bytes": len(a.get("url") or ""),
-                "note": "base64 omitted from export; see screenshots/",
+                "note": "base64 omitted from export, see screenshots/",
             }
             for a in state["attachments"]
         ]

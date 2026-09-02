@@ -16,10 +16,9 @@
 
 The parts worth pinning down are the ones that decide what gets measured and
 what silently does not: which runs count as already done, and whether the
-autorater actually ran. Not one of the 1,000 stored crowd runs had an
-``autorating.json``, so 15% of the active scoring profile was being renormalised
-away in every number the benchmark had ever reported -- a gap no test existed to
-catch.
+autorater ran. Not one stored crowd run had an ``autorating.json``, so 15% of
+the active scoring profile was being renormalised away in every number the
+benchmark had ever reported, a gap no test existed to catch.
 """
 
 from __future__ import annotations
@@ -169,7 +168,7 @@ def test_a_cell_at_the_attempt_limit_leaves_the_queue(tmp_path):
         max_timeout_attempts=1,
     )
     assert Cellish(skipped) == {("hangs", 0)}
-    # Only the cell that actually timed out is dropped: seed 1 of the same
+    # Only the cell that timed out is dropped: seed 1 of the same
     # build is a different measurement and stays queued, because a build that
     # exceeds the cap at one seed routinely completes at another.
     assert Cellish(todo) == {("hangs", 1), ("fine", 0), ("fine", 1)}

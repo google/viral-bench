@@ -68,7 +68,7 @@ from viral_bench.providers.errors import (
 from viral_bench.providers.spec import Capability, ModelSpec, resolve
 
 #: Attempts per call, including the first. A grade or a crowd turn is expensive
-#: to redo, so a transient failure must not cost the run; a persistent one should
+#: to redo, so a transient failure must not cost the run. A persistent one should
 #: still surface rather than hang forever.
 MAX_ATTEMPTS = 4
 
@@ -154,7 +154,7 @@ class Adapter:
             try:
                 return self._call(messages, tools=tools, system=system)
             except BadRequestError:
-                # The request is malformed; sending it again changes nothing.
+                # The request is malformed, so sending it again changes nothing.
                 raise
             except ModelError as exc:
                 last = exc

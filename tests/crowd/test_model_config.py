@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""What the crowd backend actually sends to Gemini.
+"""What the crowd backend sends to Gemini.
 
 Specifically: no artificial output-token ceiling. This has been reintroduced
 twice -- 2048, then 8192 -- each time as a number nobody could evaluate, because
@@ -108,12 +108,12 @@ def test_trier_budget_cannot_be_starved_by_a_thorough_trial() -> None:
     assert (
         DEFAULT_MAX_ITERATION_TRIER == DEFAULT_TRIAL_MAX_STEPS + DEFAULT_SOCIAL_HEADROOM
     )
-    # Worst case measured over 600 triers on arch v8 was 25 total calls; the
+    # Worst case measured over 600 triers on arch v8 was 25 total calls, and the
     # headroom alone must comfortably exceed the social half of that.
     assert DEFAULT_SOCIAL_HEADROOM >= 12
 
     # SimulationConfig lives behind the OASIS import, which is only installed in
-    # the crowd venv; the invariant itself is in sim_defaults and checked above.
+    # the crowd venv, and the invariant itself is in sim_defaults and checked above.
     pytest.importorskip("oasis", reason="SimulationConfig needs the crowd env")
     from viral_bench.crowd.sim.simulation import SimulationConfig
 

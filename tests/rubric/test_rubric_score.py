@@ -119,7 +119,7 @@ def test_normalisation_makes_two_ideas_comparable():
     )
     assert full.base == pytest.approx(85.0)
     assert reduced.base == pytest.approx(76.9, abs=0.1)
-    # Same items failed; the scores differ only because the denominators do.
+    # Same items failed, and the scores differ only because the denominators do.
     assert full.score > reduced.score
 
 

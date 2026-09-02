@@ -15,14 +15,14 @@
 """How a *built* app is run and tested -- on the host or in a container.
 
 This is the one place containment lives. A founder build always happens on the
-host (see :mod:`viral_bench.founder.workspace`); but *running* the resulting,
+host (see :mod:`viral_bench.founder.workspace`), but *running* the resulting,
 untrusted, agent-generated app is where kernel-enforced isolation matters. Both
 backends implement the same :class:`AppRuntime` interface, driven entirely by
 the app's ``viralbench.json`` manifest, so a human tester and the OASIS crowd
 exercise an app identically whether it runs on the host or in a container:
 
-* :class:`LocalRuntime` -- runs the app as a host subprocess. Fast, zero infra;
-  fine while *you* are testing and only one app runs at a time.
+* :class:`LocalRuntime` -- runs the app as a host subprocess. Fast, zero infra,
+  and fine while *you* are testing and only one app runs at a time.
 * :class:`ContainerRuntime` -- runs the app inside a rootless Podman (or Docker)
   container: only the app dir is mounted, resources are capped, and each app
   gets its own network namespace (so many apps can bind the same internal port
@@ -61,8 +61,8 @@ def record_app_start_failure(app_dir: Path, reason: str, logs: str) -> None:
 
     Failing to start the app is the most consequential thing that can happen to a
     crowd run: no agent can open the app, the run produces nothing, and it dies
-    at a wall clock or under the stall reaper. Yet on 2026-08-26, of 26 builds
-    suppressed as unscorable, **not one** carried the reason in its
+    at a wall clock or under the stall reaper. Yet in one measured pass, of 26
+    builds suppressed as unscorable, **not one** carried the reason in its
     ``crowd_sim.log`` -- Python logging is buffered and the reaper's SIGKILL
     discards the buffer. The reason survived only in the clone's
     ``container.log``, inside a run directory that is retired to ``builds/.trash``
@@ -99,8 +99,8 @@ def record_app_start_failure(app_dir: Path, reason: str, logs: str) -> None:
 #
 # This decides how a run is SCORED, so it belongs in the library and not in the
 # script that first needed it. An app the harness shipped without its
-# dependencies must be excluded -- scoring a model down for our packaging
-# manufactures a capability difference. An app that does not start because its
+# dependencies must be excluded -- scoring a model down for the harness's
+# packaging manufactures a capability difference. An app that does not start because its
 # own source has a syntax error is a result, and is floored like any other broken
 # app: the crowd did everything right, nobody could use the thing, and that is
 # exactly what the benchmark exists to notice.
@@ -111,9 +111,9 @@ def record_app_start_failure(app_dir: Path, reason: str, logs: str) -> None:
 #: the generic ones.
 #:
 #: The classes exist because the scoring layer must treat them differently. A missing
-#: dependency is OUR packaging bug -- the app is fine, we shipped it without its
-#: libraries -- and scoring a model down for it manufactures a capability difference.
-#: A segfault after full provisioning is the app.
+#: dependency is a HARNESS packaging bug -- the app is fine, it was shipped without
+#: its libraries -- and scoring a model down for it manufactures a capability
+#: difference. A segfault after full provisioning is the app.
 START_FAILURE_CLASSES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "missing_python_dep",
@@ -135,8 +135,8 @@ START_FAILURE_CLASSES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        # Container toolchain older than the host the founder built on. Ours: the
-        # model could not have known which node the runtime would use.
+        # Container toolchain older than the host the founder built on. A harness
+        # fault: the model could not have known which node the runtime would use.
         "toolchain_skew",
         ("err_unknown_builtin_module", "node_module_version", "unsupported engine"),
     ),
@@ -145,7 +145,7 @@ START_FAILURE_CLASSES: tuple[tuple[str, tuple[str, ...]], ...] = (
         # A setup step naming a file the founder never committed is a DELIVERY
         # defect, not a packaging one: a human following the README would hit the
         # identical error. Listed before `setup_failed` so it wins, and kept out
-        # of HARNESS_CLASSES so it is not counted against us.
+        # of HARNESS_CLASSES so it is not counted against the harness.
         "manifest_broken",
         (
             "can't open file",
@@ -155,10 +155,10 @@ START_FAILURE_CLASSES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        # An install step that fails IS the packaging problem, just caught one
+        # An install step that fails IS the packaging problem, caught one
         # stage earlier than an import error. `uv pip install` with no active
         # environment and `npm install` under the wrong node major both land
-        # here, and both are ours.
+        # here, and both are the harness's.
         "setup_failed",
         ("setup step failed",),
     ),
@@ -227,7 +227,7 @@ class RunningApp:
 
 @runtime_checkable
 class AppRuntime(Protocol):
-    """Runs and tests one built app; host or container behind one interface."""
+    """Runs and tests one built app: host or container behind one interface."""
 
     def setup(
         self, manifest: Manifest, *, timeout: float | None = None
@@ -261,7 +261,7 @@ class AppRuntime(Protocol):
         ...
 
     def start(self, manifest: Manifest, *, wait_timeout: float = 90.0) -> RunningApp:
-        """Start the app's ``run`` command; return a handle (with URL if web)."""
+        """Start the app's ``run`` command and return a handle (with URL if web)."""
         ...
 
     def is_running(self, app: RunningApp) -> bool: ...
@@ -288,7 +288,7 @@ def _port_in_use(host: str, port: int, timeout: float = 0.5) -> bool:
     """True if anything is already listening on ``host:port``.
 
     A plain TCP connect on purpose: the question is "is this port taken", and a
-    non-HTTP listener squatting on the app's port is just as much of a conflict
+    non-HTTP listener squatting on the app's port is as much of a conflict
     as an HTTP one.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -297,7 +297,7 @@ def _port_in_use(host: str, port: int, timeout: float = 0.5) -> bool:
 
 
 def _wait_for_http(host: str, port: int, timeout: float = 15.0) -> tuple[bool, str]:
-    """Wait until an HTTP server on ``host:port`` actually answers a request.
+    """Wait until an HTTP server on ``host:port`` answers a request.
 
     A TCP connect is NOT sufficient readiness evidence. Under rootless podman the
     host-side port forwarder accepts the connection before anything inside the
@@ -322,7 +322,7 @@ def _wait_for_http(host: str, port: int, timeout: float = 15.0) -> tuple[bool, s
             break
         try:
             # Never let one attempt outlive the overall budget: a socket that
-            # accepts but never replies would otherwise hold us for the full
+            # accepts but never replies would otherwise hold the caller for the full
             # per-request timeout after the deadline has already passed.
             with urllib.request.urlopen(url, timeout=min(2.0, remaining)) as resp:
                 return True, f"HTTP {resp.status}"
@@ -436,7 +436,7 @@ class LocalRuntime:
         log_path = self.app_dir.parent / "run.log"
         # Refuse to start on top of somebody else's server. The readiness probe
         # below asks "does anything answer on this port", NOT "is the thing
-        # answering the process I just started" -- and it cannot ask the second
+        # answering the process that was started here" -- and it cannot ask the second
         # question, because the manifest command is a shell string that may exec,
         # fork or background whatever it likes. So if the port is already taken,
         # every later check would pass against the wrong app: the probe returns
@@ -445,7 +445,7 @@ class LocalRuntime:
         # declare port 8000, and agents leak app servers, so this is not
         # hypothetical -- see reap_workspace_processes in harness.py.
         #
-        # Fail loudly instead. Starting anyway would just add a second doomed
+        # Fail loudly instead. Starting anyway would add a second doomed
         # process and make the confusion worse.
         port = manifest.run.port
         if port is not None and _port_in_use("127.0.0.1", port):
@@ -457,9 +457,9 @@ class LocalRuntime:
                 f"cause) and retry, or run builds under scripts/netns_run.sh so "
                 f"each one gets its own loopback."
             )
-        # start_new_session so we can kill the whole process group on stop. The
-        # child keeps its own dup of the log fd, so we close ours right away to
-        # avoid leaking a handle in the parent.
+        # start_new_session so the whole process group can be killed on stop. The
+        # child keeps its own dup of the log fd, so this one is closed right away
+        # to avoid leaking a handle in the parent.
         with log_path.open("w", encoding="utf-8") as log_file:
             process = subprocess.Popen(
                 manifest.run.command,
@@ -548,14 +548,14 @@ def _foreground(command: str) -> str:
     everything had been redirected to /dev/null before it died.
 
     Backgrounding is a habit from running things in your own shell, where it is
-    correct; it is never what the manifest means here. Stripping it preserves the
+    correct. It is never what the manifest means here. Stripping it preserves the
     intent -- run this server -- and is what LocalRuntime already tolerates, where
     it notes a self-backgrounding command as legitimate rather than failing.
 
     Strips exactly the ONE trailing ``&``, and nothing else. Commands containing
     ``&&`` are left untouched, because there the ``&`` is a conjunction rather
     than a job-control operator. A redirection like ``2>&1`` is deliberately not
-    counted, and is why this cannot simply reject any command containing ``&``.
+    counted, and is why this cannot reject any command containing ``&``.
     """
     text = command.strip()
     if "&&" in text or not text.endswith("&"):
@@ -566,11 +566,11 @@ def _foreground(command: str) -> str:
     return match.group(1).strip()
 
 
-# Label stamped on every container we create, so orphans are always findable.
+# Label stamped on every container created here, so orphans are always findable.
 VIRALBENCH_LABEL = "viralbench=1"
 
 # Default image: built from docker/Containerfile (python + uv + node). Override
-# via config or the ``image=`` argument. Not auto-built; see docker/Containerfile.
+# via config or the ``image=`` argument. Not auto-built, see docker/Containerfile.
 DEFAULT_IMAGE = "localhost/viralbench-runtime:latest"
 
 # Where a build's durable data directory is mounted inside the container. Apps
@@ -583,7 +583,7 @@ class ContainerRuntime:
     """Run an app inside a rootless Podman (or Docker) container.
 
     ``app_dir`` is bind-mounted at ``/work`` and, when given, ``data_dir`` at
-    ``/data``; resources are capped; each container has its own network
+    ``/data``. Resources are capped, and each container has its own network
     namespace, so many apps can bind the same *internal* port without colliding
     (the host port is assigned dynamically and read back). This is the safe path
     for unattended, at-scale crowd testing.
@@ -594,7 +594,7 @@ class ContainerRuntime:
     container. The ``/data`` mount is what makes that true for *state* as well as
     code: without it a migration run in ``setup`` writes into a container layer
     that ``--rm`` throws away, and the app starts against an empty database.
-    Everything we create is labeled ``viralbench=1`` for cleanup.
+    Everything created here is labeled ``viralbench=1`` for cleanup.
     """
 
     def __init__(
@@ -647,11 +647,11 @@ class ContainerRuntime:
         # mark-compacts near heap limit - JavaScript heap out of memory", and
         # collaborative_table with a bare "Killed" -- both apps that build fine
         # with normal headroom. Capping the compile at the app's runtime budget
-        # turns our packaging choice into a model that cannot ship, which is the
-        # fabricated capability difference docs/crowd_bugs.md T0.1 describes.
+        # turns a harness packaging choice into a model that cannot ship, which is the
+        # fabricated capability difference: a harness fault scored as a model fault.
         #
-        # Applied only to one-shot setup/build containers, which run our own
-        # toolchain and exit. The long-lived app container keeps `memory`.
+        # Applied only to one-shot setup/build containers, which run the harness's
+        # own toolchain and exit. The long-lived app container keeps `memory`.
         self.setup_memory = setup_memory
         self.cpus = cpus
         self.pids_limit = pids_limit
@@ -694,7 +694,7 @@ class ContainerRuntime:
         ]
         if self.data_dir is not None:
             # Same mount for setup, smoke and start, so a migration and the
-            # server it prepares genuinely see one database.
+            # server it prepares see one and the same database.
             args += ["-v", f"{self.data_dir}:{CONTAINER_DATA_DIR}:Z"]
             args += ["-e", f"VIRALBENCH_DATA_DIR={CONTAINER_DATA_DIR}"]
         if self.dep_mounts:
@@ -824,13 +824,13 @@ class ContainerRuntime:
         timeout: float | None = None,
         app: RunningApp | None = None,
     ) -> subprocess.CompletedProcess[str] | None:
-        """Run the manifest's smoke command; inside the live app when there is one.
+        """Run the manifest's smoke command, inside the live app when there is one.
 
         ``app`` matters more than it looks. A one-shot runs in its OWN container
         with its OWN network namespace, so a smoke command like
         ``curl localhost:8000/health`` can never reach the server -- it is talking
-        to an empty netns. Handed a running app, we ``exec`` in that container
-        instead, where the app's port is genuinely local. Without this, "check the
+        to an empty netns. Handed a running app, this ``exec``s in that container
+        instead, where the app's port is local in fact. Without this, "check the
         app answers" is unexpressible as a smoke test in container mode.
         """
         if not manifest.test.smoke:
@@ -957,7 +957,7 @@ class ContainerRuntime:
         )
         if proc.returncode != 0 or not proc.stdout.strip():
             return None
-        # Output looks like "127.0.0.1:43765"; take the last colon-separated part.
+        # Output looks like "127.0.0.1:43765", so take the last colon-separated part.
         return int(proc.stdout.strip().splitlines()[0].rsplit(":", 1)[-1])
 
     def is_running(self, app: RunningApp) -> bool:
@@ -1013,7 +1013,7 @@ def reap_orphans(
     force-remove the other three's *live* app containers and their agents would
     suddenly be reviewing a dead port. A container is treated as an orphan only
     if it has already stopped, or if it is still running but older than
-    ``running_grace_seconds`` (long past any real trial, so genuinely leaked).
+    ``running_grace_seconds`` (long past any real trial, so leaked).
     """
     if shutil.which(runtime) is None:
         return 0

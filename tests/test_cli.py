@@ -14,9 +14,10 @@
 
 """Tests for the viral-bench CLI argument parsing.
 
-We only test parser behavior that carries real logic -- an unknown ``--model`` is
-rejected while an unlisted model garden model is not, only the two supported
-founder configurations (1 or 4) are accepted, and ``--collab`` is constrained.
+Only parser behavior that carries real logic is covered here: an unknown
+``--model`` is rejected while an unlisted model garden model is not, only the
+two supported founder configurations (1 or 4) are accepted, and ``--collab`` is
+constrained.
 Plain argparse plumbing (defaults, store_true flags, that a value round-trips) is
 not worth a test.
 """

@@ -46,23 +46,23 @@ def main() -> int:
 
     client = genai.Client(api_key=api_key)
 
-    # 1) Auth check — list models that can generate content (short ids).
+    # 1) Auth check: list models that can generate content (short ids).
     available = []
     for m in client.models.list():
         actions = getattr(m, "supported_actions", None) or []
         if "generateContent" in actions:
             available.append(m.name.split("/")[-1])
 
-    print(f"Auth OK — {len(available)} generateContent-capable models visible.")
+    print(f"Auth OK: {len(available)} generateContent-capable models visible.")
     for name in sorted(available):
         print(f"  - {name}")
 
     # 2) Pick a Gemini 3-series text model by EXACT match from a priority list.
-    #    The 2.x series is intentionally excluded — we only want the latest 3.x
+    #    The 2.x series is intentionally excluded, leaving only the latest 3.x
     #    models (prefer the newest flash tier, then fall back to 3.x pro/preview).
     available_set = set(available)
     priority = [
-        "gemini-2.0-flash",  # latest flash (GA) — preferred
+        "gemini-2.0-flash",  # latest flash (GA), preferred
         "gemini-2.0-flash",  # 3.1 flash tier (GA)
         "gemini-2.0-flash",  # 3.1 pro
         "gemini-2.0-flash",  # 3.0 flash

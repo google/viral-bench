@@ -30,7 +30,7 @@ provider layer speaks the canonical content-block shape.
 drifting into two dialects is that the round trip through both is checked.
 
 The ``UnifiedModel`` half needs ``camel`` + ``openai``, which live in the crowd
-env; those tests skip elsewhere. Everything about routing and refusal runs
+env, so those tests skip elsewhere. Everything about routing and refusal runs
 anywhere, because it must happen before a backend is imported -- refusing a
 40-minute run is worth nothing if it costs a heavyweight import to find out.
 """
@@ -133,7 +133,7 @@ def test_the_keyed_gemini_path_names_the_key_it_wants(no_keys) -> None:
 
 
 def test_a_provider_that_cannot_see_is_refused_up_front() -> None:
-    """The crowd sends PNG screenshots; a text-only provider must not start a run.
+    """The crowd sends PNG screenshots, so a text-only provider must not start a run.
 
     Discovering this three hours into a sweep means scoring a whole arm against
     ``design`` -- 22% of the score -- from a percept the model never received.
@@ -227,7 +227,7 @@ def test_the_tool_schema_pair_round_trips() -> None:
 
 
 def test_a_bare_function_schema_is_accepted_too() -> None:
-    """OASIS builds some schemas unwrapped; both forms have to work."""
+    """OASIS builds some schemas unwrapped, so both forms have to work."""
     pytest.importorskip("camel", reason="needs the crowd extra (uv sync --extra crowd)")
     from viral_bench.crowd.sim.unified_model import from_openai_tools
 
@@ -244,8 +244,8 @@ def test_a_screenshot_reaches_the_model_as_an_image(tmp_path) -> None:
     """The percept has to contain pixels, not a sentence about pixels.
 
     Craft is 22% of the ViralScore and its ``design`` facet asks how an app looks.
-    The Gemini backend learned this the expensive way; the universal one must not
-    have to learn it again.
+    The Gemini backend learned this the expensive way, and the universal one must
+    not have to learn it again.
     """
     pytest.importorskip("camel", reason="needs the crowd extra (uv sync --extra crowd)")
     import base64
@@ -282,7 +282,7 @@ def test_a_failed_turn_is_skipped_and_attributed_by_cause() -> None:
     ``Adapter.generate`` retries and then raises a bare ``ModelError`` naming the
     attempt count, chaining the real failure. Reading the wrapper alone would file
     every exhausted retry under ``skipped_other`` and lose the one distinction the
-    by-cause tally exists to make: our request, or their capacity.
+    by-cause tally exists to make: the request, or the provider's capacity.
     """
     pytest.importorskip("camel", reason="needs the crowd extra (uv sync --extra crowd)")
     from viral_bench.crowd.sim.turns import TURN_STATS, reset_turn_stats

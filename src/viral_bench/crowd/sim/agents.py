@@ -19,7 +19,7 @@ becomes a ``SocialAgent`` whose tool set depends on its tier:
 
 * **triers** get the full :class:`AppInteractionToolkit` (drive the app in a
   browser / CLI / bot) *and* the read-only :class:`CodeInspectionToolkit`, so they
-  can form a first-hand opinion, plus the platform's social actions;
+  can form a first-hand opinion, plus the platform's social actions.
 * **reactors** get only the cheap :class:`CodeInspectionToolkit` plus the social
   actions -- they judge from the announcement, the discussion, and a code skim.
 
@@ -28,7 +28,7 @@ becomes a ``SocialAgent`` whose tool set depends on its tier:
 budget). A dedicated **founder** account (agent 0) posts the launch and never
 gets app tools. The function also returns a **follow plan** (who should follow
 whom) that the simulation seeds so the launch and the early-adopters' takes
-actually reach feeds.
+reach feeds.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ VIRAL_ACTIONS: list[ActionType] = [
     ActionType.DO_NOTHING,
 ]
 
-# The founder only announces + replies; it never rates content (anti-gaming is
+# The founder only announces + replies, and never rates content (anti-gaming is
 # also enforced by the platform's allow_self_rating=False).
 FOUNDER_ACTIONS: list[ActionType] = [
     ActionType.CREATE_POST,
@@ -86,19 +86,19 @@ _LOG = logging.getLogger("viral_bench.crowd.agents")
 class BudgetAwareSocialAgent(SocialAgent):
     """A ``SocialAgent`` that says so when it runs out of tool-call budget.
 
-    CAMEL enforces ``max_iteration`` by simply ``break``-ing out of its
+    CAMEL enforces ``max_iteration`` by ``break``-ing out of its
     tool-calling loop (``chat_agent.py``), with no exception, no flag and no log
-    line -- the agent just stops mid-turn and the run looks normal. That silence
+    line -- the agent stops mid-turn and the run looks normal. That silence
     is the whole reason the trier-starvation defect went unnoticed for so long:
     the only symptom was an agent that happened to say nothing, which is also
-    what a genuinely unimpressed agent looks like.
+    what an unimpressed agent looks like.
 
     Those two must never be confused. "Had nothing to say" is the signal a
-    virality benchmark exists to measure; "was cut off mid-turn" is an
+    virality benchmark exists to measure, while "was cut off mid-turn" is an
     instrument fault that deletes first-hand opinion from exactly the runs where
     triers engaged most -- i.e. the best apps. The budget arithmetic in
-    :mod:`viral_bench.crowd.sim_defaults` is designed so this cannot happen; this
-    class is what verifies that at runtime rather than assuming it.
+    :mod:`viral_bench.crowd.sim_defaults` is designed so this cannot happen, and
+    this class verifies that at runtime rather than assuming it.
     """
 
     async def astep(self, *args, **kwargs):  # type: ignore[override]
@@ -134,7 +134,7 @@ class CrowdAgents:
     trier_ids: list[int]
     reactor_ids: list[int]
     # agent_id -> the trier's app-interaction toolkit (owns its trace + browser
-    # context; the simulation harvests traces from these and closes them).
+    # context, and the simulation harvests traces from these and closes them).
     trier_toolkits: dict[int, AppInteractionToolkit]
     persona_by_id: dict[int, Persona]
     tier_by_id: dict[int, str]
@@ -185,7 +185,7 @@ def persona_bio(persona: Persona) -> str:
     """The public one-liner a crowd member's account shows.
 
     ``UserInfo.description`` is what OASIS signs an agent up with, and it is what
-    lands in ``user.bio``. We never set it, so ``bio`` was NULL in 1,197 of 1,197
+    lands in ``user.bio``. It was never set, so ``bio`` was NULL in 1,197 of 1,197
     stored rows -- which broke two things at once. The interest-based recommender
     scores candidate posts by cosine similarity between the post and the reader's
     **bio**, so with every bio empty there was nothing to personalise on and every
@@ -243,9 +243,9 @@ def _follow_plan(
 
     Three edge classes, each earning its place:
 
-    * **everyone follows the founder**, so the launch reaches every feed;
+    * **everyone follows the founder**, so the launch reaches every feed.
     * **everyone follows the crowd's biggest accounts**, so a take from a hub
-      propagates -- this is the word-of-mouth path;
+      propagates -- this is the word-of-mouth path.
     * **everyone follows a few people with overlapping interests**, so the graph
       has neighbourhoods instead of being one star. Without this the only route
       between two crowd members is through the founder, and an app cannot spread
@@ -329,12 +329,12 @@ def build_crowd_agents(
             silenced, which for a virality benchmark inverts the measurement.
             The default is now derived (``trial_max_steps + social_headroom``,
             see :mod:`viral_bench.crowd.sim_defaults`) so a maximal trial cannot
-            starve the voice; do not pass a bare number here without preserving
+            starve the voice. Do not pass a bare number here without preserving
             that margin.
         max_iteration_reactor: Per-step tool-call budget for reactors. They run
             no trial, so this is purely social and deliberately unrelated.
         trial_max_steps: Cap on interaction steps within a single trier's trial.
-        start_wait: How long to wait for a web app to actually answer HTTP
+        start_wait: How long to wait for a web app to answer HTTP
             before giving up. A cold ``uv run`` boot can take far longer than a
             TCP connect, and handing out the URL early is how triers ended up
             reviewing connection-reset pages.

@@ -189,7 +189,7 @@ def test_writing_fills_in_the_paths_block(tmp_path):
 
 
 def test_a_truncated_grade_reads_as_none_rather_than_raising(tmp_path):
-    """Sweeps get killed; half a file must not take the reader down."""
+    """Sweeps get killed, and half a file must not take the reader down."""
     run_dir = tmp_path / "b1__rubric-20260101-000000"
     run_dir.mkdir(parents=True)
     (run_dir / "grade.json").write_text('{"score": 4')
@@ -314,5 +314,5 @@ def test_the_render_calls_out_a_gate_failure():
 
 
 def test_the_render_survives_a_document_with_missing_sections():
-    """Renderers run over old files; a KeyError here would hide every grade."""
+    """Renderers run over old files, where a KeyError would hide every grade."""
     assert render_grade({"score": 12.0}) is not None

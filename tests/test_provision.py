@@ -18,7 +18,7 @@ The bug this exists to prevent is not subtle once stated: ``materialize_build``
 hands the crowd a ``git clone`` of the shipped branch, which correctly contains
 only what the founder committed, and the founder committed neither the
 ``node_modules`` its own .gitignore excludes nor the ``pip install`` it ran in
-its shell. Measured on the r3 sweep, apps that could not start were the entire
+its shell. Measured over a full sweep, apps that could not start were the entire
 unscorable set -- and because a failed run writes no ``run_summary.json``, they
 were indistinguishable from cells nobody had tried.
 """
@@ -140,7 +140,7 @@ def test_test_only_imports_are_not_runtime_dependencies(tmp_path, monkeypatch):
 
 
 def test_a_clone_that_ships_node_modules_is_never_mounted_over(tmp_path, monkeypatch):
-    """236 r3 builds committed node_modules. Mounting a cache there hides them."""
+    """Hundreds of builds committed node_modules. Mounting a cache there hides them."""
     monkeypatch.setattr(provision, "depcache_root", lambda: tmp_path / "cache")
     app = _app(
         tmp_path,
@@ -213,7 +213,7 @@ def test_the_venv_mount_is_detected_through_a_dangling_symlink(tmp_path, monkeyp
     (venv / "bin").mkdir(parents=True)
     (venv / "pyvenv.cfg").write_text("home = /usr/local/bin\n", encoding="utf-8")
     (venv / "bin" / "python").symlink_to("/nonexistent/python3")
-    # This test is about symlink detection, so give it a finished cache; the
+    # This test is about symlink detection, so give it a finished cache. The
     # stamp gate is covered on its own below.
     (plan.cache_dir / provision.STAMP_NAME).write_text("{}", encoding="utf-8")
 
@@ -475,8 +475,8 @@ def test_uv_sync_is_stopped_from_pruning_what_was_just_installed() -> None:
 
     So an app whose pyproject.toml is thinner than its requirements.txt has its
     dependencies installed by provisioning and then removed again by its own
-    setup step, in that order, and dies at start on the very module we
-    provisioned -- observed as ModuleNotFoundError: fastapi on a build whose
+    setup step, in that order, and dies at start on the exact module that was
+    provisioned: observed as ModuleNotFoundError: fastapi on a build whose
     requirements.txt lists it.
     """
     assert provision.neutralize_pruning("uv sync") == "uv sync --inexact"
@@ -490,7 +490,7 @@ def test_uv_sync_is_stopped_from_pruning_what_was_just_installed() -> None:
 
 
 def test_the_runtime_applies_the_same_transform_at_session_start(tmp_path) -> None:
-    """Provisioning neutralizing it is not enough; setup runs the steps again."""
+    """Provisioning neutralizing it is not enough: setup runs the steps again."""
     from viral_bench.founder.runtime import ContainerRuntime
 
     runtime = ContainerRuntime(
@@ -510,8 +510,8 @@ def test_a_bad_requirements_line_does_not_lose_the_whole_file(tmp_path, monkeypa
 
     That is a typo for `aiosqlite` and exists nowhere on PyPI, so pip rejects the
     file whole -- and the app then died on a missing `fastapi` listed on the line
-    above, which installs fine on its own. The typo is the app's fault; losing
-    fastapi over it was ours.
+    above, which installs fine on its own. The typo is the app's fault, but
+    losing fastapi over it is the harness's.
     """
     monkeypatch.setattr(provision, "depcache_root", lambda: tmp_path / "cache")
     app = _app(
@@ -561,12 +561,12 @@ def test_the_error_phrasings_a_framework_uses_are_all_recognised() -> None:
 
 
 def test_a_build_step_gets_more_memory_than_the_app_it_builds(tmp_path) -> None:
-    """1g is a realistic cap for an untrusted running app; a bundler is not one.
+    """1g is a realistic cap for an untrusted running app, and a bundler is not one.
 
     markdown_slides died in `npm run build` with "JavaScript heap out of memory"
     and collaborative_table with a bare "Killed" -- both apps that build fine
     given normal headroom. Capping the compile at the app's runtime budget turns
-    our packaging choice into a model that cannot ship.
+    a harness packaging choice into a model that cannot ship.
     """
     from viral_bench.founder.runtime import ContainerRuntime
 

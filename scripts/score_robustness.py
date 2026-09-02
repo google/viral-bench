@@ -16,7 +16,7 @@
 """Is the model ranking an artifact of the ViralScore weights?
 
 The challenge this answers is the obvious one to put to any composite score:
-*"can't you just tweak the weights until your favourite model wins?"* It is a
+*"can't you tweak the weights until your favourite model wins?"* It is a
 fair question and it deserves a measurement rather than an assurance.
 
 Scoring is a pure function of stored artifacts, and every run on disk already
@@ -48,7 +48,7 @@ single lever in the score, so the ranking is re-derived with it disabled.
 
 **E. How the weights were set.** Per-component discrimination (between-cell
 spread over within-cell noise), the component correlation matrix, and -- the
-part that actually answers the accusation -- the weighting that *maximises* the
+part that answers the accusation -- the weighting that *maximises* the
 reported model gap, shown next to the shipped one so the difference between
 "chosen for the construct" and "chosen for the headline" is a number.
 
@@ -139,19 +139,20 @@ def SHIPPED(profile: str | None = None) -> np.ndarray:  # noqa: N802
 #: Tier assignment as reported, so tier stability can be checked directly.
 #:
 #: Cut where the data has a gap far larger than the noise floor, not at round
-#: numbers. On r4 (pooled, 3 seeds, noise 3.71) the model means run
-#: 68.9 64.8 63.9 61.0 59.9 58.0 | 41.9 40.3 38.6 | 17.6, so the only two
-#: defensible boundaries are the 16.1- and 21.0-point drops. Inside the top
-#: group every neighbouring gap is 4.1 or less and most are inside noise, so
-#: splitting it further would assert an ordering this sweep cannot resolve.
+#: numbers. Pooled over all seeds, the model means fell into three groups
+#: separated by drops of roughly 16 and 21 points, and those two drops are the
+#: only defensible boundaries. Inside the top group every neighbouring gap is a
+#: few points at most and most are inside noise, so splitting it further would
+#: assert an ordering the sweep cannot resolve.
 #:
 #: Expected quality tier per model, used only to report how often the score's
 #: ranking agrees with a prior expectation.
 #:
-#: This map is DATA and it goes stale -- ours did, silently. An earlier cohort's
+#: This map is DATA and it goes stale, as the original one did, silently. An
+#: earlier cohort's
 #: ranking put two models in the wrong order relative to a later one, and
 #: scoring the later cohort against the stale map reported ~97% "cross-tier
-#: compliance" for what were really tier reassignments. It ships EMPTY for that
+#: compliance" for what were tier reassignments. It ships EMPTY for that
 #: reason: fill it in for your own models, and re-derive it on any new cohort
 #: before quoting a cross-tier number.
 TIERS: dict[str, int] = {}
@@ -564,8 +565,8 @@ def component_discrimination(c: Corpus) -> dict:
     """Between-cell spread over within-cell noise, per component.
 
     This is the empirical basis for the weight ordering: a component whose
-    app-to-app spread is large relative to its run-to-run noise can rank apps;
-    one whose ratio is near 1 is a near-constant dressed up as a signal.
+    app-to-app spread is large relative to its run-to-run noise can rank apps,
+    while one whose ratio is near 1 is a near-constant dressed up as a signal.
     """
     out = {}
     for j, name in enumerate(COMPONENTS):
@@ -700,9 +701,7 @@ def main() -> None:
     validate(c)
     results: dict = {"n_runs": len(c.runs), "n_models": len(c.model_ids)}
 
-    print(
-        f"\n# ViralScore robustness — {len(c.runs)} runs, {len(c.model_ids)} models\n"
-    )
+    print(f"\n# ViralScore robustness: {len(c.runs)} runs, {len(c.model_ids)} models\n")
 
     # --- A ---------------------------------------------------------------- #
     print("## A. Exhaustive bound over the whole weight simplex\n")
@@ -737,7 +736,7 @@ def main() -> None:
             f"Models no weighting can place first: "
             f"**{len(dom['never_first'])} of {len(dom['order'])}**"
             + (
-                " — " + ", ".join(PRETTY.get(m, m) for m in dom["never_first"])
+                ": " + ", ".join(PRETTY.get(m, m) for m in dom["never_first"])
                 if dom["never_first"]
                 else ""
             )
@@ -796,9 +795,7 @@ def main() -> None:
         r = promote(c, m, rng)
         results["adversarial"][m] = r
         winner = (
-            "— (it wins)"
-            if r["best_rank"] == 1
-            else PRETTY.get(r["winner"], r["winner"])
+            "(it wins)" if r["best_rank"] == 1 else PRETTY.get(r["winner"], r["winner"])
         )
         print(
             f"| {PRETTY.get(m, m)} | {r['best_rank']} | {r['score']:.1f} | {winner} |"

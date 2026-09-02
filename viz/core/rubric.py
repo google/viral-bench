@@ -18,7 +18,7 @@ Thin by design, and that is the point. ``grade.json`` is written
 *self-describing*: item text, tier labels, point values, the score arithmetic and
 the founder block are all already in the file. So unlike :mod:`core.crowd`, which
 fuses five sources and resolves the build it scored, this reader mostly hands the
-document over and adds the parts that are genuinely the viewer's job -- paging
+document over and adds the parts that are the viewer's job -- paging
 the transcript, indexing evidence, and pulling the per-item view together.
 
 That self-description is what lets this module obey the rule the rest of
@@ -35,7 +35,7 @@ from pathlib import Path
 from .paths import GRADE_FILE, read_json
 
 #: Transcript rows returned in one page. The grader's log for a whole build runs
-#: to a few hundred calls with large results; the UI pages it the way the crowd
+#: to a few hundred calls with large results, so the UI pages it the way the crowd
 #: viewer pages feeds.
 TRANSCRIPT_PAGE = 200
 
@@ -46,7 +46,7 @@ RESULT_CHARS = 4000
 def load_grade(run_dir: Path) -> dict | None:
     """The whole grade document, or ``None`` if missing or truncated.
 
-    Returns the stored document essentially verbatim -- adding a derived view
+    Returns the stored document near-verbatim -- adding a derived view
     here would be a second implementation of arithmetic the scorer already did,
     and two implementations of one number is one too many.
     """
@@ -153,7 +153,7 @@ def load_transcript(
 def item_rows(grade: dict) -> list[dict]:
     """Every scored item across every tier, flattened, in rubric order.
 
-    The left pane renders one list; keeping the flattening here means the page
+    The left pane renders one list, so keeping the flattening here means the page
     cannot disagree with the tier totals the scorer wrote.
     """
     rows: list[dict] = []

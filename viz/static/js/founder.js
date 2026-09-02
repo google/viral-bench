@@ -74,7 +74,7 @@ function firstMeaningfulLine(text) {
  *  Every path an agent touches is absolute and ~110 characters of it is the same
  *  build directory, which pushes the part that identifies the file off-screen. */
 /** Where to fetch one event's full record.
- *  A traced build addresses events by part_id in the session dumps; a build old
+ *  A traced build addresses events by part_id in the session dumps, while a build old
  *  enough to have no dump still addresses them by transcript file and line. */
 function eventUrl(e) {
   const base = `/api/founder/${encodeURIComponent(state.data.build_id)}/event`;
@@ -117,8 +117,8 @@ async function load(buildId) {
 
     const span = data.span || {};
     if (span.start_ms && span.end_ms && span.end_ms > span.start_ms) {
-      // One second of playback covers a minute of the build by default; a build
-      // runs ~45 minutes and nobody watches that in real time.
+      // One second of playback covers a minute of the build by default, because a
+      // build runs ~45 minutes and nobody watches that in real time.
       playback.setRange(span.start_ms, span.end_ms, 60000);
       playback.seek(span.end_ms);   // land on the finished run; press play to replay
     } else {
@@ -156,7 +156,7 @@ function renderHead() {
     r.brief_fingerprint && chip(`brief ${String(r.brief_fingerprint).slice(0, 8)}`),
     cap.has_thinking && el('span', {
       class: 'chip purple', style: 'cursor:pointer',
-      title: 'the model\'s actual chain of thought — click for the Thinking tab',
+      title: 'the model\'s own chain of thought. Click for the Thinking tab',
       onclick: () => { state.tab = 'thinking'; renderTabs(); },
     }, [`🧠 ${num(cap.stream_chars)} chars of thinking`
         + (cap.team_chars ? ` · ${num(cap.team_chars)} by the team` : '')
@@ -201,7 +201,7 @@ function renderLanes() {
   box.append(el('h2', {}, [
     'Swimlanes',
     el('span', { class: 'count' }, [
-      ` — ${d.lanes.length} actor${d.lanes.length === 1 ? '' : 's'}, ${d.phases.length} turn${d.phases.length === 1 ? '' : 's'}`,
+      ` · ${d.lanes.length} actor${d.lanes.length === 1 ? '' : 's'}, ${d.phases.length} turn${d.phases.length === 1 ? '' : 's'}`,
       d.mode === 'team'
         ? ' · one session id per lane means each specialist resumes its own memory each round'
         : '',
@@ -302,7 +302,7 @@ function renderSpawnGantt() {
 
   return el('div', { style: 'margin-top:12px' }, [
     el('h2', {}, ['Subagents the orchestrator invented',
-      el('span', { class: 'count' }, [` — ${spawns.length} spawn${spawns.length === 1 ? '' : 's'}`,
+      el('span', { class: 'count' }, [` · ${spawns.length} spawn${spawns.length === 1 ? '' : 's'}`,
         peak ? `, up to ${peak} running at once` : '']),
     ]),
     el('div', { class: 'lanes' }, rows),
@@ -434,13 +434,13 @@ function renderFeed(revealed) {
   const rows = visible(revealed);
   const box = $('#feed');
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
-  $('#feedCount').textContent = `— ${rows.length} shown of ${state.events.length}`;
+  $('#feedCount').textContent = `· ${rows.length} shown of ${state.events.length}`;
 
   clear(box);
   if (!rows.length) { box.append(empty('Nothing yet at this point in the run.')); return; }
 
   const base = state.data.span?.start_ms;
-  // The tail is what a replay is watching; a long build's head is reachable by
+  // The tail is what a replay is watching, and a long build's head is reachable by
   // scrubbing rather than by scrolling through thousands of rows.
   const slice = rows.slice(-1200);
   if (rows.length > slice.length) {
@@ -494,7 +494,7 @@ function eventRow(e, base) {
       el('div', { class: 'line1' }, [
         el('span', { class: 'tool', style: 'color:var(--cyan)', text: 'prompt' }),
         el('span', { class: 'badge', text: `${num(e.chars)} chars` }),
-        el('span', { class: 'badge', text: 'what we asked' }),
+        el('span', { class: 'badge', text: 'prompt text' }),
       ]),
       el('div', { class: 'text-preview', style: 'color:#9be5e2', text: e.text.slice(0, 400) }),
     ]));
@@ -629,7 +629,7 @@ function viewEvent() {
       el('pre', { class: 'block', text: e.input_preview }), true));
   }
   if (e.diff) {
-    box.append(fold(`Diff — ${e.diff.file || e.file || ''}  +${e.diff.additions ?? 0} / −${e.diff.deletions ?? 0}`,
+    box.append(fold(`Diff · ${e.diff.file || e.file || ''}  +${e.diff.additions ?? 0} / −${e.diff.deletions ?? 0}`,
       el('div', { class: 'faint small', text: 'Loading patch…' }), true));
     loadPatch(e, box.lastChild.querySelector('.fold-body'));
   }
@@ -648,7 +648,7 @@ function viewEvent() {
   }
   if (e.screenshot_path) {
     const name = e.screenshot_path.split('/').pop();
-    box.append(fold(`Screenshot — ${name}`, el('img', {
+    box.append(fold(`Screenshot · ${name}`, el('img', {
       class: 'shot', src: `/api/founder/${encodeURIComponent(state.data.build_id)}/shot/${encodeURIComponent(name)}`,
       onerror: (ev) => { ev.target.replaceWith(el('div', { class: 'faint small', text: `not on disk: ${e.screenshot_path}` })); },
     }), true));
@@ -697,7 +697,7 @@ function viewOverview() {
     ['build id', el('span', { class: 'mono', text: d.build_id })],
     ['idea', r.idea_id], ['model', r.model], ['created', shortDate(r.created_at)],
     ['structure', `${r.structure} · ${r.n_agents} agent(s) · collab ${r.collab}`],
-    ['roles', (r.roles || []).join(', ') || '— (decided at runtime)'],
+    ['roles', (r.roles || []).join(', ') || '(decided at runtime)'],
     ['rounds', `${r.rounds_run} run of max ${r.max_rounds} (min ${r.min_rounds})`],
     ['turns', `${r.turns_spent} of max ${r.max_turns}`],
     ['shipped early', truthy(r.shipped_early)], ['qa verified', truthy(r.qa_verified)],
@@ -743,7 +743,7 @@ function viewThinking() {
       el('b', {}, ['This is the model\'s actual chain of thought, ']),
       'read from opencode\'s session store. ',
       cap.redacted
-        ? `${cap.redacted} block(s) came back encrypted by the provider — shown as "redacted", which means it thought and we may not read it, not that it did not think. `
+        ? `${cap.redacted} block(s) came back encrypted by the provider, shown as "redacted", which means it thought and the text is unreadable, not that it did not think. `
         : '',
       'Reasoning is measured in characters here, not tokens: Vertex Anthropic reports ',
       el('code', { text: 'tokens_reasoning: 0' }),
@@ -770,7 +770,7 @@ function viewThinking() {
     box.append(el('div', { class: 'note', style: 'margin:0 12px 12px;border-left-color:var(--purple);background:#1a1626;color:#d6bcff' }, [
       el('b', {}, ['Most of this thinking was the team\'s. ']),
       `The orchestrator itself thought ${cap.harness_root.toLocaleString()} characters; `,
-      `the subagents it spawned thought ${cap.team_chars.toLocaleString()} more — ${pct}% of the total. `,
+      `the subagents it spawned thought ${cap.team_chars.toLocaleString()} more, ${pct}% of the total. `,
       'opencode\'s stdout printer drops every event below the root session, so that share exists only because the harness dumps the session store.',
     ]));
   }
@@ -810,7 +810,7 @@ function viewThinking() {
   const thoughts = state.events.filter((e) => e.kind === 'reasoning');
   if (thoughts.length) {
     box.append(el('h2', { style: 'padding:10px 12px 0' }, [
-      `Every thought, in order — ${thoughts.length}`,
+      `Every thought, in order (${thoughts.length})`,
       el('span', { class: 'count' }, [' · click one to jump to it in the run']),
     ]));
     for (const e of thoughts) {
@@ -825,7 +825,7 @@ function viewThinking() {
           : el('span', { class: 'badge', style: 'margin-left:6px', text: `${num(e.chars)} chars` }),
       ].filter(Boolean)), el('div', {}, [
         e.redacted
-          ? el('div', { class: 'faint small' }, ['The provider encrypted this thought. It is evidence the model reasoned, not text we can read.'])
+          ? el('div', { class: 'faint small' }, ['The provider encrypted this thought. It is evidence the model reasoned, not text that can be read.'])
           : el('pre', { class: 'block tall', style: 'color:#d6bcff', text: e.text }),
         el('button', { style: 'margin-top:8px', onclick: () => { playback.pause(); playback.seek(e.t); select(e.i); } }, ['Jump to this moment']),
       ])));
@@ -835,7 +835,7 @@ function viewThinking() {
   const texts = state.events.filter((e) => e.kind === 'text');
   if (texts.length) {
     box.append(el('h2', { style: 'padding:10px 12px 0' }, [
-      `Narration it wrote for its teammates — ${texts.length}`,
+      `Narration it wrote for its teammates (${texts.length})`,
     ]));
     for (const e of texts) {
       box.append(fold(`${e.phase} · ${clockOf(e.t, d.span?.start_ms)} · ${num(e.chars)} chars`,
@@ -850,14 +850,14 @@ function viewPrompts() {
   const prompts = state.events.filter((e) => e.kind === 'prompt');
   const box = el('div');
   box.append(el('div', { class: 'note', style: 'margin:12px;border-left-color:var(--cyan);background:#122726;color:#9be5e2' }, [
-    el('b', {}, ['What we asked, not what it answered. ']),
+    el('b', {}, ['The prompts, not the answers. ']),
     'Prompts go to opencode on stdin and are never echoed back as events, so they exist ',
     'only in the session store. Without them a trajectory records half a conversation.',
   ]));
   if (!prompts.length) {
     box.append(empty(
       (d.trace?.source === 'transcript')
-        ? 'No prompts recorded — this build predates the session-store dump.'
+        ? 'No prompts recorded. This build predates the session-store dump.'
         : 'No prompts found in this build\'s trace.'));
     return box;
   }
@@ -880,7 +880,7 @@ function viewSessions() {
   const sessions = d.trace?.sessions || [];
   const box = el('div');
   if (!sessions.length) {
-    box.append(empty('No session tree — this build predates the session-store dump.'));
+    box.append(empty('No session tree. This build predates the session-store dump.'));
     return box;
   }
   box.append(el('div', { class: 'note', style: 'margin:12px' }, [
@@ -946,7 +946,7 @@ function viewFiles() {
   if (!files.length) return empty('No file edits recorded in this build.');
   const max = files[0][1];
   return el('div', {}, [
-    el('h2', { style: 'padding:10px 12px 4px' }, [`Files the agents edited — ${files.length}`]),
+    el('h2', { style: 'padding:10px 12px 4px' }, [`Files the agents edited (${files.length})`]),
     el('table', { class: 'grid' }, [
       el('thead', {}, [el('tr', {}, ['file', 'edits', ''].map((h) => el('th', { text: h })))]),
       el('tbody', {}, files.map(([name, count]) => el('tr', {}, [
@@ -998,7 +998,7 @@ function viewDynamic() {
 
   if ((d.authored_agents || []).length) {
     box.append(el('h2', { style: 'padding:6px 12px 0' }, [
-      `Agents the founder wrote for itself — ${d.authored_agents.length}`,
+      `Agents the founder wrote for itself (${d.authored_agents.length})`,
       el('span', { class: 'count' }, [' (nobody specified these; the orchestrator invented the roles)']),
     ]));
     for (const agent of d.authored_agents) {
@@ -1039,7 +1039,7 @@ function viewShots() {
   const d = state.data;
   if (!d.screenshots.length) return empty('No screenshots on disk for this build.');
   return el('div', {}, [
-    el('h2', { style: 'padding:10px 12px 4px' }, [`Screenshots the agents took — ${d.screenshots.length}`,
+    el('h2', { style: 'padding:10px 12px 4px' }, [`Screenshots the agents took (${d.screenshots.length})`,
       el('span', { class: 'count' }, [' from app/.playwright-mcp/'])]),
     el('div', { class: 'shot-grid' }, d.screenshots.map((name) =>
       el('a', { href: `/api/founder/${encodeURIComponent(d.build_id)}/shot/${encodeURIComponent(name)}`, target: '_blank', title: name }, [
@@ -1050,7 +1050,7 @@ function viewShots() {
 
 function viewApp() {
   const d = state.data;
-  // The tab body scrolls, so height:100% has nothing to resolve against; a
+  // The tab body scrolls, so height:100% has nothing to resolve against, and a
   // min-height keeps the app pane usable at any window size.
   const box = el('div', { style: 'display:flex;flex-direction:column;min-height:100%' });
   const bar = el('div', { class: 'section', style: 'background:transparent' });
@@ -1113,7 +1113,7 @@ function viewApp() {
       chip(manifest.app_type || '?'), chip(manifest.run.command)]),
     el('div', { class: 'small dim', style: 'margin-top:6px' }, [
       'Runs from a throwaway copy under viz/cache, on a free port, behind a proxy that forbids ',
-      'browser caching — otherwise the previous build\'s JavaScript gets reused against this one\'s markup ',
+      'browser caching, since otherwise the previous build\'s JavaScript gets reused against this one\'s markup ',
       'and a working app looks broken.',
     ]),
     status,
@@ -1127,7 +1127,7 @@ function viewPaths() {
   return el('div', {}, [
     el('div', { class: 'note', style: 'margin:12px' }, [
       el('b', {}, ['Everything is already on disk. ']),
-      'The raw JSON trajectories live in the build folder below — one file per turn. ',
+      'The raw JSON trajectories live in the build folder below, one file per turn. ',
       'The Download buttons in the toolbar bundle them into a single JSON (or a zip with the screenshots ',
       'and authored agents alongside).',
     ]),
@@ -1147,7 +1147,7 @@ function viewPaths() {
       ]))),
     ]),
     (d.crowd_runs || []).length ? el('div', {}, [
-      el('h2', { style: 'padding:10px 12px 0' }, [`Crowd runs against this build — ${d.crowd_runs.length}`]),
+      el('h2', { style: 'padding:10px 12px 0' }, [`Crowd runs against this build (${d.crowd_runs.length})`]),
       el('table', { class: 'grid' }, [
         el('tbody', {}, d.crowd_runs.slice(0, 40).map((r) => el('tr', { class: 'clickable', onclick: () => { location.href = `/crowd?run=${encodeURIComponent(r.run_id)}`; } }, [
           el('td', { text: r.run_id.replace(`${d.build_id}__`, '') }),

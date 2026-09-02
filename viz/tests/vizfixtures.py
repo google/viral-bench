@@ -1008,7 +1008,7 @@ def make_rubric_run(
         },
     ]
     lines = [json.dumps(c) for c in calls]
-    # A killed sweep leaves a truncated final line; the reader must skip it
+    # A killed sweep leaves a truncated final line, so the reader must skip it
     # rather than losing the whole transcript.
     lines.append('{ "id": "tc_015", "name": "look"')
     (run_dir / "transcript.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")

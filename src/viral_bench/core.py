@@ -31,7 +31,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
 # A "model" is anything that maps a prompt string to a response string.
-# In real usage this would call an LLM API; in tests we pass a fake function.
+# In real usage this would call an LLM API. Tests pass a fake function instead.
 ModelFn = Callable[[str], str]
 
 

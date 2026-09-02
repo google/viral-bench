@@ -33,7 +33,7 @@ from viral_bench.crowd.interaction.fixtures import (
 
 
 def test_every_advertised_fixture_can_be_produced() -> None:
-    """The catalogue an agent is shown must match what actually exists.
+    """The catalogue an agent is shown must match what exists on disk.
 
     The docstring the agent reads is generated from FIXTURE_DESCRIPTIONS, so a
     name listed there and missing on disk becomes an agent asking for a file the
@@ -46,10 +46,10 @@ def test_every_advertised_fixture_can_be_produced() -> None:
 
 
 def test_generated_png_is_structurally_valid() -> None:
-    """A malformed PNG would fail inside the app, not in our code.
+    """A malformed PNG would fail inside the app, not in the harness code.
 
     Checked by inflating IDAT and confirming the pixel count matches the header
-    rather than just asserting the file is non-empty.
+    rather than merely asserting the file is non-empty.
     """
     data = fixture_path("photo.png").read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n"

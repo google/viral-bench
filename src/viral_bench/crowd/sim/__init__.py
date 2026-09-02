@@ -36,7 +36,7 @@ The modules:
 * :mod:`~viral_bench.crowd.sim.runner` -- the subprocess entry point.
 
 This layer stands up the *social environment* and records rich interactions to an
-OASIS SQLite database; turning those into a ViralScore is a separate, later stage.
+OASIS SQLite database. Turning those into a ViralScore is a separate, later stage.
 """
 
 from __future__ import annotations

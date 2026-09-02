@@ -145,9 +145,9 @@ def test_unconfigured_screenshots_land_on_disk_not_in_tmpfs(tmp_path, monkeypatc
     """The default screenshot directory must be builds/, never the temp dir.
 
     `/tmp` is a tmpfs on the sweep box, so a screenshot written there is held in
-    RAM until reboot and nothing ever prunes it -- 55,947 files / 6.0 GB had
-    accumulated by the r4 build phase, on a machine whose sweep has been killed
-    seven times by memory exhaustion. And this is not a rare path:
+    RAM until reboot and nothing ever prunes it: 55,947 files / 6.0 GB had
+    accumulated by the end of one build phase, on a machine whose sweep had been
+    killed repeatedly by memory exhaustion. And this is not a rare path:
     `config/crowd.yaml` ships `screenshot_dir: null`, so every screenshot the
     crowd takes goes through this fallback.
     """
@@ -164,7 +164,7 @@ def test_unconfigured_screenshots_land_on_disk_not_in_tmpfs(tmp_path, monkeypatc
             assert path.parent == tmp_path / "builds" / "screenshots"
             # The specific regression. Asserting "not under gettempdir()" would
             # be vacuous, because pytest's own tmp_path lives there too -- so
-            # name the directory that actually filled with RAM.
+            # name the directory that filled with RAM.
             assert path.parent != Path(tempfile.gettempdir()) / "viralbench-shots"
             await handle.close()
 

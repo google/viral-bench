@@ -20,8 +20,8 @@ call. Three things about a turn have to behave identically on the Gemini path
 (:mod:`viral_bench.crowd.sim.unified_model`), or a run stops being comparable
 with the runs beside it:
 
-* how many turns were lost, and to what;
-* what a lost turn returns, so the round survives it;
+* how many turns were lost, and to what,
+* what a lost turn returns, so the round survives it,
 * how many screenshots one request is allowed to carry.
 
 They live here rather than in either backend because the second backend would
@@ -54,14 +54,14 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 #: Process-wide tally of turns the model could not complete. A skipped turn is
 #: recorded by OASIS as an agent choosing to do nothing, which is indistinguishable
 #: from genuine indifference -- so a throttled run reads as an unengaging app. The
-#: run summary must be able to say how much of its silence was ours.
+#: run summary must be able to say how much of its silence was the harness's own.
 #:
 #: ``budget_exhausted`` is that same failure by another route: CAMEL enforces
 #: ``max_iteration`` by breaking out of its tool-call loop with no exception and
 #: no log line, so an agent cut off mid-turn is likewise recorded as one that
-#: simply had nothing to say. See ``BudgetAwareSocialAgent`` in sim/agents.py.
+#: had nothing to say. See ``BudgetAwareSocialAgent`` in sim/agents.py.
 #:
-#: Skips are counted BY CAUSE, not just in total. Only rate limiting used to be
+#: Skips are counted BY CAUSE, not merely in total. Only rate limiting used to be
 #: broken out, so every other reason pooled into an unattributable remainder --
 #: and that remainder turned out to be 84% one fixable bug (a malformed
 #: [function_response, image] turn, see ``gemini_native._to_contents``). Recovering
@@ -93,7 +93,7 @@ SKIPPED_TURN_CONTENT = "(no response)"
 #: 3 -> 8, because 3 was binding: measured over the 4,970 stored trials, 88 of
 #: them (1.77%) took more than 3 screenshots, topping out at 6. In those the
 #: earliest shots degraded to the text that described them -- and "design" is 22%
-#: of the score and is answerable only by an agent that can actually see. 8 keeps
+#: of the score and is answerable only by an agent that can see. 8 keeps
 #: the quadratic guard (the concern was unbounded growth, not six images) while
 #: clearing every trial in the corpus.
 MAX_IMAGES_PER_REQUEST = 8
@@ -153,8 +153,9 @@ def turn_stats() -> dict:
 def skip_reason(error: BaseException | None) -> str:
     """Which ``TURN_STATS`` bucket a lost turn belongs in.
 
-    Coarse on purpose -- the question it answers is "is this our request or their
-    capacity", which decides whether a skip is a bug to fix or weather to ride out.
+    Coarse on purpose -- the question it answers is "is this the request's fault
+    or the provider's capacity", which decides whether a skip is a bug to fix or
+    weather to ride out.
 
     The buckets used to be decided by string-matching the exception text against a
     list of Google phrasings, which read an OpenAI 429 as an unclassifiable

@@ -14,11 +14,12 @@
 
 """Load the documented runtime knobs from ``config/*.yaml``.
 
-The YAML files under ``config/`` are the human-facing description of the defaults;
-this module makes them the *source of truth* for the handful of knobs the code
-reads at import time -- the founder model + Vertex target, and the crowd model +
-sizes -- so changing them no longer requires editing code (removing the old
-"values here mirror the code; wiring a loader is a follow-up" drift).
+The YAML files under ``config/`` are the human-facing description of the
+defaults. This module makes them the *source of truth* for the handful of knobs
+the code reads at import time -- the founder model + Vertex target, and the
+crowd model + sizes -- so changing them no longer requires editing code
+(removing the old "values here mirror the code and wiring a loader is a
+follow-up" drift).
 
 It is deliberately defensive: every getter takes the code default and falls back
 to it if PyYAML or the file is missing/malformed, so importing this never breaks a
@@ -38,14 +39,14 @@ _CONFIG_DIR = Path(__file__).resolve().parents[2] / "config"
 
 @functools.cache
 def _load(name: str) -> dict:
-    """Parse one config YAML into a dict; return {} on any problem."""
+    """Parse one config YAML into a dict, returning {} on any problem."""
     try:
         import yaml
 
         with (_CONFIG_DIR / name).open(encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
         return data if isinstance(data, dict) else {}
-    except Exception:  # noqa: BLE001 - config is best-effort; fall back to code
+    except Exception:  # noqa: BLE001 - config is best-effort, so fall back to code
         return {}
 
 
@@ -77,7 +78,7 @@ def _as_float(value: Any, default: float) -> float:
 
 #: The four stages that need a model. ``config/local.yaml`` (written by
 #: ``viral-bench init``, gitignored) is consulted first so a user's own choices
-#: survive an upgrade and never end up in a commit; the tracked ``config/*.yaml``
+#: survive an upgrade and never end up in a commit. The tracked ``config/*.yaml``
 #: are the fallback, and ship every stage empty.
 _STAGE_FALLBACK: dict[str, tuple[str, tuple[str, ...]]] = {
     "founder": ("founder.yaml", ("model", "id")),
@@ -116,7 +117,7 @@ def stage_models() -> dict[str, str]:
 def founder_model_id(default: str) -> str:
     """Founder model, as a ``provider/model`` string.
 
-    Returned verbatim because the prefix is what selects the provider;
+    Returned verbatim because the prefix is what selects the provider, and
     :mod:`viral_bench.founder.models` validates whatever comes back.
     """
     return stage_model("founder", default)
@@ -164,7 +165,7 @@ def founder_trajectory(key: str, default: bool) -> bool:
 
     Controls how much of a founder build is recorded for later replay: the
     model's own reasoning, and the full opencode session store (which is the
-    only place a subagent's work and the prompts we sent are written down).
+    only place a subagent's work and the prompts it was given are written down).
     """
     value = _get("founder.yaml", ("trajectory", key), default)
     if isinstance(value, bool):
@@ -214,7 +215,7 @@ def crowd_temperature(default: float) -> float:
 
 
 def crowd_max_tokens(default: int | None = None) -> int | None:
-    """Output-token cap for crowd calls; ``None`` means send no cap at all.
+    """Output-token cap for crowd calls. ``None`` means send no cap at all.
 
     Returns ``None`` when the key is absent, ``null``, or non-positive, so the
     "no artificial ceiling" case is expressible in YAML rather than being a
@@ -326,7 +327,7 @@ def autorater_config() -> dict:
 def score_minimum(key: str, default: int) -> int:
     """One value from ``score.yaml`` ``minimums``.
 
-    Formerly documented in the YAML as "NOT YET WIRED"; it is wired now, so the
+    Formerly documented in the YAML as "NOT YET WIRED". It is wired now, so the
     file no longer advertises knobs that do nothing.
     """
     return _as_int(_get("score.yaml", ("minimums", key), default), default)

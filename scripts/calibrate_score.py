@@ -211,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         else sweep(apps, args.sizes, args.seeds, args.recsys)
     )
     if args.analyze_only:
-        # Include any runs we discovered even if the sweep never ran.
+        # Include any runs already discovered even if the sweep never ran.
         for label in apps:
             runs.setdefault(label, [])
     if not any(runs.values()):

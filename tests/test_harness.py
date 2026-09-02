@@ -21,7 +21,7 @@ provider to bill on the user's behalf -- so a harness constructed with no model
 cannot even build its opencode config.
 
 The two Vertex providers are used for most cases because they authenticate
-ambiently, which keeps these tests free of credentials; the keyed path is
+ambiently, which keeps these tests free of credentials. The keyed path is
 covered in ``tests/test_providers.py``.
 """
 
@@ -192,7 +192,7 @@ def test_binary_not_found_raises(monkeypatch) -> None:
 def _fake_run_factory(returncodes, stdout=_STDOUT):
     """Return a fake subprocess.run that yields the given return codes in order.
 
-    Only opencode turns are faked; git passes through to the real subprocess and
+    Only opencode turns are faked. git passes through to the real subprocess and
     is not counted. A workspace created while this patch is installed sets up its
     own repo (``BuildWorkspace.init_git_boundary``), which is not a turn.
     """
@@ -229,7 +229,7 @@ def test_run_records_two_phases_on_success(monkeypatch, tmp_path) -> None:
     # transcripts captured
     assert (workspace.transcript_dir / "design.json").is_file()
     assert (workspace.transcript_dir / "build.json").is_file()
-    # logs routed to stderr for capture; build phase used --continue
+    # logs routed to stderr for capture, and the build phase used --continue
     assert "--print-logs" in calls[0]
     assert "--continue" in calls[1]
     assert "--continue" not in calls[0]
@@ -384,7 +384,7 @@ def test_diagnose_overload_and_auth() -> None:
     assert "overload" in _diagnose("This model is experiencing high demand").lower()
     assert "overload" in _diagnose("Error 503 UNAVAILABLE").lower()
     # An auth failure is not retryable, so the hint points at the two commands
-    # that show which credential is actually in play.
+    # that show which credential is in play.
     auth = _diagnose("API key not valid (403)")
     assert "viral-bench models" in auth
     assert "viral-bench doctor" in auth
@@ -492,8 +492,8 @@ def test_build_env_keeps_an_inherited_ceiling(monkeypatch, tmp_path) -> None:
 
 
 def test_run_turn_launches_opencode_in_the_app_dir(monkeypatch, tmp_path) -> None:
-    """Otherwise opencode inherits our cwd (the repo root) and stray shell
-    commands run against the ViralBench checkout instead of the built app."""
+    """Otherwise opencode inherits the caller's cwd (the repo root) and stray
+    shell commands run against the ViralBench checkout instead of the built app."""
     monkeypatch.setenv("GEMINI_API_KEY", "k")
     # Built before the patch so the workspace's own git setup is not captured.
     workspace = _workspace(tmp_path)
@@ -571,7 +571,7 @@ _LINUX_ONLY = pytest.mark.skipif(
 def _spawn_orphan_in(cwd) -> int:
     """Start a detached `sleep` in ``cwd``, orphaned like an agent's app server.
 
-    Faithful to what opencode actually does: its bash tool spawns detached, so a
+    Faithful to what opencode does: its bash tool spawns detached, so a
     backgrounded server ends up in its OWN session (pgid == sid == the shell's
     pid, unrelated to opencode's group) and is reparented away when the shell
     exits. That is why the reaper matches on cwd and not on the process group.
@@ -765,11 +765,11 @@ def test_dynamic_turns_get_their_own_timeout() -> None:
 
 
 def test_dynamic_harness_ships_no_bench_agents_or_skills() -> None:
-    """Dynamic mode must not hand the model a team we designed.
+    """Dynamic mode must not hand the model a team the harness designed.
 
-    The team arm defines four opencode agents and six skills; if any of that
-    leaked into the dynamic config the mode would be measuring our founder
-    process again, just with the labels filed off.
+    The team arm defines four opencode agents and six skills, and if any of that
+    leaked into the dynamic config the mode would be measuring the harness's own
+    founder process again, with the labels filed off.
     """
     harness = OpenCodeHarness(
         MODEL,
@@ -803,8 +803,8 @@ def test_dynamic_harness_gives_the_browser_to_every_agent(monkeypatch) -> None:
 
 
 def test_session_tree_walks_children_and_grandchildren(tmp_path, monkeypatch) -> None:
-    """Nested delegation is invisible in the parent transcript; this is the only
-    place it shows up."""
+    """Nested delegation is invisible in the parent transcript, and this is the
+    only place it shows up."""
     import sqlite3
 
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
@@ -938,7 +938,7 @@ def test_read_reasoning_returns_the_chain_of_thought(tmp_path) -> None:
 def test_reasoning_is_kept_out_of_the_assistant_text(tmp_path) -> None:
     """Ship/done signals are matched against read_assistant_text. A model that
     only CONSIDERS shipping in its thinking must not end its own build early --
-    that would penalise models which think out loud (crowd_bugs.md T0.1)."""
+    that would penalise models which think out loud."""
     path = tmp_path / "t.json"
     path.write_text(_thinking_stdout("maybe I should emit READY_TO_SHIP now"), "utf-8")
     assert "READY_TO_SHIP" not in read_assistant_text(path)
@@ -1012,8 +1012,8 @@ def _store(tmp_path, monkeypatch, *, rows=None):
 def test_dump_session_trace_captures_prompts_and_subagents(
     tmp_path, monkeypatch
 ) -> None:
-    """The three things stdout never has: the prompt we sent, the subagent's own
-    session, and the file patches."""
+    """The three things stdout never has: the prompt that was sent, the
+    subagent's own session, and the file patches."""
     _store(tmp_path, monkeypatch)
     dest = tmp_path / "out" / "root.jsonl"
 

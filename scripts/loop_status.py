@@ -20,7 +20,7 @@ by re-scoring stored artifacts (free), plus the repo's own lint/format/test
 commands. Run it as the last command of a turn so the state of the instrument is
 in the transcript verbatim.
 
-The floor it enforces is docs/loop.md section 6. The thresholds are set here, on
+The thresholds are set here, on
 purpose, so "done" is a property of the disk rather than of anyone's mood:
 
 * **G1 fleet** -- all 25 ideas *attempted* by both models under one identical
@@ -38,13 +38,13 @@ purpose, so "done" is a property of the disk rather than of anyone's mood:
   failing builds is the finding, and gating on it would let a worse model block
   the loop forever.
 * **G2 crowd** -- >= 3 seeds in every paired cell (2 seeds cannot separate
-  cell-to-cell noise from a difference; 3 is the smallest that can), and >= 90%
+  cell-to-cell noise from a difference, and 3 is the smallest that can), and >= 90%
   of fleet runs scorable. Unscorable runs are *counted*, never skipped.
 * **G3 control** -- can the instrument tell a broken app from a working one? Three
   clauses, because the obvious phrasing ("far below *every* real build") is wrong:
-  some real builds are genuinely worse than a deliberately broken page that at
-  least renders a loading message. I got this wrong twice before writing it this
-  way, both times by testing the slogan instead of the thing.
+  some real builds are worse than a deliberately broken page that at least
+  renders a loading message. This wording went wrong twice before landing here,
+  both times by testing the slogan instead of the thing.
 
   1. ``control_max < 20/100`` -- an absolute floor.
   2. ``median(working cells) - control_mean >= 25`` -- the *bulk* of real builds
@@ -56,13 +56,13 @@ purpose, so "done" is a property of the disk rather than of anyone's mood:
      corpses exist, and no more.
 
   Plus: no build that *does not run* may outscore the median working build.
-  "Does not run" is builds/runs False; an app that runs but fails its own smoke
-  check is a manifest-contract violation by an app agents used happily, and
+  "Does not run" is builds/runs False. An app that runs but fails its own smoke
+  check is a manifest-contract violation by an app agents used successfully, and
   belongs in the working set.
 * **G4 verdict** -- a ``## VERDICT`` section in the iteration log.
 * **G5 CI** -- ruff check, ruff format --check, pytest.
 
-The headline is a **paired per-idea gap in points**, not Cohen's d; see
+The headline is a **paired per-idea gap in points**, not Cohen's d. See
 ``viral_bench.score.fleet`` for why pooling across ideas measures idea
 difficulty and rewards profiles that compress the scale.
 """
@@ -269,7 +269,7 @@ def fleet_section(corpus: FleetCorpus) -> tuple[list[str], Gate, dict]:
 
     # Which cells scored at the floor because nothing was shipped to launch, as
     # opposed to scoring low because users tried them and were unimpressed. Both
-    # are real outcomes; conflating them hides which problem a model has.
+    # are real outcomes, and conflating them hides which problem a model has.
     undeliverable = sorted(
         {
             f"{r.idea_id}[{'A' if r.model == MODEL_A else 'B'}]"
@@ -399,7 +399,7 @@ def signal_section(
             f"{_fmt(null.gap, '+.2f')} over {null.n_ideas} ideas   "
             f"CI [{_fmt(null.ci_low, '+.2f')}, {_fmt(null.ci_high, '+.2f')}]"
         )
-    # The same gap under every other scoring profile. docs/loop.md is explicit
+    # The same gap under every other scoring profile. the stopping rule is explicit
     # that a difference which only exists under one weighting is a weighting,
     # not a difference -- so the report shows all of them rather than making
     # anyone go and check. Re-scoring is free.
@@ -518,7 +518,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-ci", action="store_true", help="skip lint/format/test")
     parser.add_argument("--json", action="store_true", help="also dump raw JSON")
     # Which founder arm the report is about. Defaults to CURRENT_FLEET so the
-    # habitual `loop_status.py` is unchanged; naming an arm here is how a new
+    # habitual `loop_status.py` is unchanged. Naming an arm here is how a new
     # one (e.g. dynamic) gets reported without editing the scoring constant,
     # which is code every other reader depends on meaning one specific thing.
     parser.add_argument(

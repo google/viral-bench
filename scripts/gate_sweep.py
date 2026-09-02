@@ -18,7 +18,7 @@
 The validity gate is the only part of the ViralScore that is not the crowd's
 opinion. It multiplies a finished score by a fixed number because a container
 probe said the app does not run. That is a strong claim to hard-code, and the
-two multipliers it uses (0.2 and 0.6) date from the very first ViralScore commit
+two multipliers it uses (0.2 and 0.6) date from the first ViralScore commit
 and were never fitted to anything -- the ``gates:`` block in config/score.yaml
 has said "Sweep it" ever since.
 
@@ -143,7 +143,7 @@ def floored_cells(corpus: FleetCorpus, eps: float = 0.05) -> int:
     A gate floor of exactly 0.0 sends dead runs to a hard zero. Zero-variance
     cells drag the pooled within-cell SD down and shrink the seed-parity null
     towards nothing, which shows up as a better instrument when in fact the
-    scale has just stopped resolving anything down there. This counts the cells
+    scale has stopped resolving anything down there. This counts the cells
     that would do it.
     """
     n = 0
@@ -199,7 +199,7 @@ def rank_key(s: dict) -> tuple:
 def tied_on_null(results: list[dict]) -> list[dict]:
     """Candidates whose null cannot be distinguished from the best one.
 
-    The null is a bootstrap statistic over 25 briefs; ranking 64 candidates on
+    The null is a bootstrap statistic over 25 briefs, so ranking 64 candidates on
     its point estimate to two decimals is how you overfit an ablation. Anything
     whose interval covers the best point estimate is treated as tied, and the
     tie is broken on discrimination instead.

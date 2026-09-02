@@ -28,17 +28,17 @@
 #
 # `viral-bench models` lists the providers and says which ones you have
 # credentials for. `viral-bench models --check <provider>/<model>` proves one is
-# actually reachable before you spend a build on it. Credentials are read from
+# reachable before you spend a build on it. Credentials are read from
 # the environment or the repo .env -- never from this file, which is tracked.
 #
 # ONLY the founder model is meant to vary: it is the thing under test. The crowd
 # that uses the app, the grader that inspects it and the autorater that rates it
 # are configured separately (config/crowd.yaml, config/score.yaml) and should be
 # held FIXED across a comparison, so changing the model under test never moves
-# the yardstick it is measured against; tests/test_models.py asserts that.
+# the yardstick it is measured against. tests/test_models.py asserts that.
 #
 # The model + vertex target below ARE loaded from this file (via
-# viral_bench.config); env vars VERTEX_PROJECT / VERTEX_LOCATION still take
+# viral_bench.config), and env vars VERTEX_PROJECT / VERTEX_LOCATION still take
 # precedence. The rest of the per-build opencode config
 # (share/small_model/provider block) is applied in
 # viral_bench.founder.harness.OpenCodeHarness.
@@ -94,11 +94,11 @@ harness: opencode
 #                            definitions at turn start), so 1 would advertise a
 #                            capability it cannot reach and 2 would let it use a
 #                            self-defined team exactly once. A founder that
-#                            finishes sooner just says so and stops.
+#                            finishes sooner says so and stops.
 #   collaboration.rounds     hard cap on team rounds (each round = 4 turns, so the
 #                            upper bound is 4 * rounds model turns). QA can end the
 #                            build EARLY by emitting the ship signal once the app
-#                            genuinely runs and meets every success criterion; QA
+#                            runs and meets every success criterion. QA
 #                            always acts last, so the app is left shippable either
 #                            way.
 #   collaboration.min_rounds minimum rounds the team must run before QA may ship
@@ -107,8 +107,8 @@ harness: opencode
 #                            means 3-4 rounds (12-16 turns). QA is told not to ship
 #                            below the floor. Must be 1 <= min_rounds <= rounds.
 #
-#                            Now 2, was 1. At min_rounds=1 the round-table did not
-#                            actually round-table: in a large internal run the
+#                            Now 2, was 1. At min_rounds=1 the round-table barely
+#                            happened: in an earlier sweep the
 #                            overwhelming majority of team builds shipped after ONE
 #                            round, and they were genuine early ships (shipped_early
 #                            and qa_verified both true) rather than truncated
@@ -116,7 +116,7 @@ harness: opencode
 #                            4 specialists x 4 turns, and a team-vs-solo result
 #                            could not speak to whether ITERATION helps -- the
 #                            mechanism barely engaged. A floor of 2 makes the second
-#                            round happen; the cap stays 3, so a team that still
+#                            round happen, and the cap stays 3, so a team that still
 #                            wants a third round can take it.
 #
 #   collaboration.toolset    how the team collaborates (orthogonal to the team),
@@ -144,7 +144,7 @@ collaboration:
 model:
   # '<provider>/<model>'. The provider prefix is required -- it selects which
   # API to call, and there is nothing sensible to guess. Empty means "not
-  # chosen yet"; `viral-bench init` writes your choice to config/local.yaml,
+  # chosen yet". `viral-bench init` writes your choice to config/local.yaml,
   # which is gitignored and takes precedence over this file.
   # `viral-bench found --model` overrides both, per run.
   id: ''
@@ -177,9 +177,9 @@ vertex:
 # A turn that exceeds its limit is SIGKILLed mid-generation and comes back
 # rc=124, which build.py records as `harness_failed` -- so a model that is slow
 # but succeeding gets scored as one that could not build the app. That is a
-# fabricated capability difference of exactly the kind in docs/crowd_bugs.md
+# fabricated capability difference, a harness fault scored as a model fault
 # T0.1, and it is why these were raised from 1200/2400/2700: those numbers were
-# tight enough to bite a genuinely-working long turn.
+# tight enough to bite a working long turn.
 #
 # Set any of them to null for no limit. The per-build ceiling in
 # scripts/build_fleet.py still bounds a fleet run, and a timeout is now recorded
@@ -188,7 +188,7 @@ timeouts_seconds:
   design: 5400      # solo design turn (was 1200)
   build: 10800      # solo build turn (was 2400)
   team_turn: 10800  # one team round-table turn -- plans + edits, and the
-                    # heaviest turn in the bench; may also be waiting out
+                    # heaviest turn in the bench, and may also be waiting out
                     # provider rate limits, which is not the model being slow
   dynamic_turn: 14400  # one dynamic orchestrator turn. The largest unit of work
                     # here: a team turn is ONE model turn, but this can contain a
@@ -198,16 +198,17 @@ timeouts_seconds:
 # What of a founder build gets written down. A build's value does not stop at the
 # app it shipped: the reasoning, the delegation and the dead ends are the record
 # of HOW a model founds something, and they are what a trajectory viewer or a
-# supervised-finetuning set is built from. Both default on; they cost disk, not
-# model behaviour.
+# supervised-finetuning set is built from. Both default on, since they cost disk,
+# not model behaviour.
 #
 #   thinking   pass `--thinking` to `opencode run`, so the JSON transcript keeps
 #              the model's chain of thought. opencode ALREADY asks the provider
-#              for thoughts (thinkingConfig.includeThoughts for Gemini) and we
-#              already pay for those tokens -- the flag only decides whether they
-#              are printed, and it defaults OFF, which is why every build before
-#              this knob existed threw its reasoning away. Display-only: it does
-#              not change the request, the model's behaviour, or the cost.
+#              for thoughts (thinkingConfig.includeThoughts for Gemini) and
+#              those tokens are paid for either way -- the flag only decides
+#              whether they are printed. It defaults OFF, which is why every
+#              build before this knob existed threw its reasoning away.
+#              Display-only: it does not change the request, the model's
+#              behaviour, or the cost.
 #
 #              Claude needs one thing more, applied automatically for the
 #              anthropic family (harness._thinking_options): the request must ask
@@ -218,10 +219,11 @@ timeouts_seconds:
 #
 #   sessions   dump opencode's own session store for this build into
 #              transcript/sessions/. Everything below is in the store and NOWHERE
-#              else: the prompts we sent (they go on stdin and are never echoed
-#              back), every subagent session a dynamic founder spawned (the JSON
-#              stream is filtered to the root session, so a delegating model's
-#              actual work is invisible without this), and the file patches.
+#              else: the prompts sent to the agent (they go on stdin and are
+#              never echoed back), every subagent session a dynamic founder
+#              spawned (the JSON stream is filtered to the root session, so a
+#              delegating model's real work is invisible without this), and the
+#              file patches.
 #              It also has to happen DURING the build: scripts/build_fleet.py
 #              deletes the per-cell store as soon as a cell succeeds.
 trajectory:

@@ -18,15 +18,15 @@
 and tests) use to get a ready-to-drive
 :class:`~viral_bench.crowd.interaction.clients.AppClient`.
 
-Every app in the bench is a web app, so there is no per-type dispatch left: we
-get a *running* instance -- a shared one from an
+Every app in the bench is a web app, so there is no per-type dispatch left. A
+*running* instance is obtained -- a shared one from an
 :class:`~viral_bench.founder.apphost.AppHost` when provided, so many agents hit
-one app like a real deployment; otherwise a private one -- and attach a real
-browser page. If no browser is available it degrades to a static-HTTP client
+one app like a real deployment, otherwise a private one -- and a real browser
+page is attached. If no browser is available it degrades to a static-HTTP client
 rather than failing the run.
 
 The returned client owns whatever it created (browser context, app server,
-materialized copy) and releases it on ``await client.close()``; a shared
+materialized copy) and releases it on ``await client.close()``. A shared
 ``AppHost`` instance is deliberately left running for other agents.
 """
 
@@ -78,7 +78,7 @@ def manifest_or_none(build_id: str) -> Manifest | None:
     ``None`` means *undeliverable*: the founder produced no machine-readable
     contract saying how to start the app, so nothing -- not the runtime, not the
     validity gate, not a trier -- can launch it. That is a fact about the build,
-    not an error in our harness, and the two must not be confused: a harness
+    not an error in the harness, and the two must not be confused: a harness
     fault leaves the app unverified (no score penalty), while an undeliverable
     build is a delivery failure the crowd should see and score.
     """
@@ -107,22 +107,22 @@ async def open_trial(
     Args:
         build_id: The build to try.
         app_host: A shared running-instance pool. When given, a web app is served
-            once and shared across agents; when ``None`` a private instance is
+            once and shared across agents. When ``None`` a private instance is
             started for this trial and torn down on close.
         container: Run the app in a container (the crowd default) vs on the host.
             Ignored for the web path when ``app_host`` is given (the host's own
             setting wins).
-        browser_engine: A shared browser to reuse (crowd scale); when ``None`` a
+        browser_engine: A shared browser to reuse (crowd scale). When ``None`` a
             private engine is created for a web trial and closed on close.
         browser_config: Browser settings when a private engine is created.
         use_browser: ``None`` = use a real browser iff one is available (else
-            degrade to static); ``True`` = require a real browser (raise if it
-            cannot launch); ``False`` = force the static-HTTP client.
+            degrade to static). ``True`` = require a real browser (raise if it
+            cannot launch). ``False`` = force the static-HTTP client.
         env_map: ``{container_var: host_var}`` env mapping for the app (defaults
-            to the founder's ``DEFAULT_ENV_MAP``); container runs only.
+            to the founder's ``DEFAULT_ENV_MAP``). Container runs only.
         start_wait: How long to wait for a web app's port to come up.
         trace: An existing trace to append to (the toolkit shares one across
-            tool calls); a fresh trace is created when omitted.
+            tool calls). A fresh trace is created when omitted.
         undeliverable_app_type: App type to assume when the build has no usable
             manifest (from the idea's declared scope). Only used in that case.
 
@@ -130,7 +130,7 @@ async def open_trial(
         A ready :class:`~viral_bench.crowd.interaction.clients.AppClient`.
     """
     manifest = manifest_or_none(build_id)
-    # An undeliverable build still gets a trial -- the agent simply discovers
+    # An undeliverable build still gets a trial -- the agent discovers
     # there is nothing to launch, which is exactly what a real user would find.
     # ``app_type`` then comes from the idea's declared scope rather than from the
     # manifest the founder failed to write.
@@ -214,7 +214,7 @@ async def _open_web_trial(
         page = await engine.open_page()
     except Exception as exc:  # noqa: BLE001
         # Real browser requested-or-auto but could not launch. If the caller
-        # forced it, surface the error; otherwise degrade gracefully.
+        # forced it, surface the error, otherwise degrade gracefully.
         if owns_engine and engine is not None:
             await engine.close()
         if use_browser is True:

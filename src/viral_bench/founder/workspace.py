@@ -15,8 +15,8 @@
 """Per-build workspaces: fresh host directories for founder builds.
 
 A build never runs inside a container. The founder harness (opencode) runs on
-the *host* and writes the app into a fresh directory tree; this module owns that
-directory. Each build gets one clean ``builds/work/<build_id>/`` so no state
+the *host* and writes the app into a fresh directory tree, and this module owns
+that directory. Each build gets one clean ``builds/work/<build_id>/`` so no state
 leaks between runs (the design doc's Per-Run State Isolation requirement).
 
 This is *directory* isolation only -- a convention about where cooperative code
@@ -31,7 +31,7 @@ Directory layout (all under a gitignored ``builds/`` at the repo root)::
         app/           <- the app the founder writes (this is what ships)
         transcript/    <- opencode JSON transcripts
         build.json     <- build record
-      store/           <- single git repo; one orphan branch per build
+      store/           <- single git repo, one orphan branch per build
       runs/            <- ephemeral clones used to run/test built apps
       data/<build_id>/ <- an app's own mutable state (its database), which
                           OUTLIVES the ephemeral run dirs above
@@ -119,13 +119,13 @@ class BuildWorkspace:
 
         The build runs on the host (see the module docstring) with the workspace
         nested inside the ViralBench checkout, so a bare ``git`` run from the app
-        dir walks up the tree and resolves to *our* repo. Agents do run git --
+        dir walks up the tree and resolves to the ViralBench repo. Agents do run git --
         they are handed an unrestricted shell, and a built app may commit on
         purpose -- so without a nearer repo their commits, ``add -f`` and
         ``reset`` all land in ViralBench's own history.
 
         Owning a repo here makes the workspace the nearest worktree, so that
-        activity is captured by a directory we throw away.
+        activity is captured by a directory that gets thrown away.
 
         Placed at the workspace root, not in ``app_dir``, on two counts. It must
         sit above ``.opencode/skills`` (written by ``OpenCodeRunner.prepare``),

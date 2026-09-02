@@ -99,8 +99,8 @@ def _cmd_found(args: argparse.Namespace) -> int:
             min_rounds=args.min_rounds,
             max_turns=args.turns,
         )
-        # Validate the collaboration toolset early, before any build work
-        # and needs enough OTAs) so we fail before the long build.
+        # Validate the collaboration toolset early, before any build work, so a
+        # misconfigured toolset fails fast instead of after the long build.
         build_toolset(args.collab, n_agents=agents)
     except (StructureError, CollabError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -149,7 +149,7 @@ def _cmd_found(args: argparse.Namespace) -> int:
         )
     if record.collab != "local" and record.collab_meta:
         # A non-local toolset records whatever identifies its collaboration
-        # surface; print it generically rather than assuming a shape.
+        # surface, so print it generically instead of assuming a shape.
         detail = ", ".join(
             f"{k}={v}" for k, v in sorted(record.collab_meta.items()) if k != "collab"
         )
@@ -175,7 +175,7 @@ def _cmd_found(args: argparse.Namespace) -> int:
 
 
 def _cmd_models(args: argparse.Namespace) -> int:
-    """List providers and, with --check, prove one model is actually callable."""
+    """List providers and, with --check, prove one model is callable."""
     from viral_bench.founder.models import describe_models
 
     print(describe_models())
@@ -524,7 +524,7 @@ def _cmd_score(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 2
-        # Score every run for a build when asked; otherwise just the newest.
+        # Score every run for a build when asked, otherwise only the newest.
         runs = runs if args.all else runs[-1:]
     else:
         runs = [target]
@@ -538,7 +538,7 @@ def _cmd_score(args: argparse.Namespace) -> int:
 
             try:
                 autorating = rate_pack(build_evidence_pack(run_dir))
-            except Exception as exc:  # noqa: BLE001 - rate what we can
+            except Exception as exc:  # noqa: BLE001 - rate what can be rated
                 print(f"WARNING: autorater unavailable ({exc})", file=sys.stderr)
         if args.evidence:
             print(f"wrote {write_evidence_pack(run_dir)}")
@@ -673,7 +673,7 @@ def build_parser() -> argparse.ArgumentParser:
     # with the real defaults here.
     # `--agents` is a string, not an int, because one of the three founder
     # configurations is precisely the one whose agent count the MODEL decides.
-    # Spelling that as a number ("0"? "-1"?) would be a riddle; `dynamic` says it.
+    # Spelling that as a number ("0"? "-1"?) would be a riddle. `dynamic` says it.
     p_found.add_argument(
         "--agents",
         type=str,

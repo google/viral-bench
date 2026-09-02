@@ -27,7 +27,7 @@ What each column is, and why it is here:
   should be visible before any score is discussed.
 * **ViralScore** -- the headline, mean over that model's runs, with the spread
   across its 25 briefs. The score is defined in ``config/score.yaml``
-  (``v4_earned``); re-scoring is free and every model is re-scored together.
+  (``v4_earned``). Re-scoring is free and every model is re-scored together.
 * **vs Claude Opus 5** -- the paired per-brief difference against the strongest
   model, which cancels brief difficulty exactly. This is the only fair way to
   compare two models over a corpus where briefs differ wildly in difficulty.
@@ -85,8 +85,8 @@ STRUCTURES = ("solo", "team", "dynamic")
 PRETTY: dict[str, str] = {}
 
 #: The model every other is differenced against. Empty means "the first model
-#: found in the corpus", which is the right behaviour for a fleet we did not
-#: define.
+#: found in the corpus", which is the right behaviour for a fleet this script
+#: did not define.
 REFERENCE = ""
 
 
@@ -178,7 +178,7 @@ def _f(value, spec=".1f", missing="--"):
 def arm_spec(structure: str, replicate: int):
     """The fleet spec for one founder arm.
 
-    Only the arm selector moves; the model list stays exactly as CURRENT_FLEET
+    Only the arm selector moves, and the model list stays exactly as CURRENT_FLEET
     declares it, so two arms are always compared over the same ten models.
     """
     return replace(CURRENT_FLEET, structure=structure, replicate=replicate)
@@ -195,12 +195,12 @@ def resolve_arm(
     """Rows for an arm plus the replicate they came from.
 
     Arms do not all live at the same replicate. solo and team were built as
-    replicate 2; the dynamic arm was rebuilt as replicate 1 after its founder
+    replicate 2, while the dynamic arm was rebuilt as replicate 1 after its founder
     brief changed, because a brief change does NOT retire existing builds --
     ``brief_fingerprint`` hashes only ``design_prompt`` + ``build_prompt``, and
     the dynamic brief is a separate function outside that hash. Pinning the
     matrix to one replicate silently drops whichever arm is not on it, so each
-    arm reports the replicate it actually has runs for, and the caller is told
+    arm reports the replicate it has runs for, and the caller is told
     which one that was.
 
     ``strict`` turns that fallback off, and a sweep in flight is exactly when it
@@ -225,10 +225,10 @@ def resolve_arm(
 
 #: Build-level coverage a table must reach before it may be called complete.
 #:
-#: Not 100%: some builds are genuinely unscorable (a founder that shipped no
-#: manifest has nothing to run, and that is a result, not a gap). 99% is tight
-#: enough that the 26-build hole which the seed-0 pass reported as "complete"
-#: would have failed it loudly.
+#: Not 100%: some builds are unscorable (a founder that shipped no manifest has
+#: nothing to run, and that is a result, not a gap). 99% is tight enough that
+#: the coverage hole an early pass reported as "complete" would have failed it
+#: loudly.
 COVERAGE_FLOOR = 0.99
 
 
@@ -257,7 +257,7 @@ def _cohort_note(replicate: int) -> str:
     if tagged == len(at_rep):
         return f", cohort {label}"
     # Say so rather than implying the whole corpus is in it. Half-tagged is the
-    # normal mid-sweep state -- r4 tags the kept arms before the rebuilt ones
+    # normal mid-sweep state: a cohort tags the kept arms before the rebuilt ones
     # exist -- and a caption that hid it would be a completeness claim at the
     # wrong grain, which is the exact failure the coverage work exists to stop.
     return f", cohort {label} (PARTIAL: {tagged}/{len(at_rep)} builds tagged)"
@@ -301,7 +301,7 @@ def print_coverage_caveat(coverage: dict) -> None:
             else ""
         )
         print(
-            f"> - **{arm}**: {missing} of {cov.builds} unscored{extra} — {named}{more}"
+            f"> - **{arm}**: {missing} of {cov.builds} unscored{extra}: {named}{more}"
         )
 
 

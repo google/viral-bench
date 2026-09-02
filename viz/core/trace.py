@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Read what a founder build *thought*, not just what it emitted.
+"""Read what a founder build *thought*, not only what it emitted.
 
 The benchmark now records three things per turn that the stdout transcript never
 had: the model's chain of thought, the prompts it was given, and every subagent it
@@ -34,13 +34,13 @@ delegated to. This module turns those into one ordered event stream.
    figures, so the UI has to say so rather than render zeros as facts.
 
 **This mirrors ``viral_bench.founder.trajectory`` deliberately.** That module owns
-``SCHEMA_VERSION`` and the shapes; this is a reader for the same shapes that does
+``SCHEMA_VERSION`` and the shapes. This is a reader for the same shapes that does
 not import it, because the viewer has to open a build recorded by any revision of
 the benchmark without being pinned to the one currently checked out. The semantics
 copied here and worth not "improving": dedup by ``part_id`` keeping the first
-occurrence (each turn re-dumps the whole subtree, so parts repeat across files);
+occurrence (each turn re-dumps the whole subtree, so parts repeat across files),
 a single global sort by ``(time_created, part_id)`` across every session before
-``seq`` is assigned; and the reasoning tri-state below.
+``seq`` is assigned, and the reasoning tri-state below.
 
 **Reasoning is tri-state and the states mean different things.** Non-empty
 ``text`` is a readable thought. Empty ``text`` with ``redacted: true`` means the
@@ -59,7 +59,7 @@ from typing import Any
 
 from .paths import founder_paths, read_json
 
-#: The shape this reader emits. Matches ``viral_bench.founder.trajectory``; a
+#: The shape this reader emits. Matches ``viral_bench.founder.trajectory``. A
 #: bundle declaring anything else is surfaced to the UI rather than reinterpreted.
 SCHEMA_VERSION = 1
 
@@ -204,7 +204,7 @@ def _read_session_dumps(paths) -> tuple[dict[str, dict], list[dict]]:
             kind = record.get("record")
             if kind == "session":
                 session_id = str(record.get("session_id") or "")
-                # Each turn re-dumps the whole subtree; the first sighting wins.
+                # Each turn re-dumps the whole subtree, so the first sighting wins.
                 sessions.setdefault(
                     session_id,
                     {
@@ -232,7 +232,7 @@ def _read_session_dumps(paths) -> tuple[dict[str, dict], list[dict]]:
 
 
 def _events_from_transcripts(paths, phases: list[dict]) -> list[dict]:
-    """Fallback: rebuild what we can from the stdout NDJSON.
+    """Fallback: rebuild whatever the stdout NDJSON still carries.
 
     Everything here is the root agent's own output, so role is assistant and depth
     is 0 by construction. There are no prompts, no subagents and no patches to find.
@@ -323,7 +323,7 @@ def bundle_dir_for(builds_root: Path, build_id: str) -> Path:
 def load_trace(builds_root: Path, build_id: str, record: dict) -> dict:
     """Return ``{manifest, events}`` for one build, from the best source available.
 
-    ``record`` is the parsed ``build.json``; it supplies the arm description and
+    ``record`` is the parsed ``build.json``, which supplies the arm description and
     the harness's own capture counts, neither of which is in the event stream.
     Never raises -- a build with nothing recorded returns an empty stream with
     ``source: "transcript"``, which is the honest description of that state.
@@ -400,7 +400,7 @@ def load_trace(builds_root: Path, build_id: str, record: dict) -> dict:
                 "ok": phase.get("ok"),
                 "timed_out": phase.get("timed_out"),
                 "duration_s": phase.get("duration_s"),
-                # `_root` since the counts were split by source; the bare names
+                # `_root` since the counts were split by source. The bare names
                 # are what builds recorded between capture landing and the split.
                 "reasoning_parts_root": phase.get("reasoning_parts_root")
                 or phase.get("reasoning_parts")

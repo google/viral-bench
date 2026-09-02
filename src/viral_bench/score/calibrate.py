@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Measure whether the ViralScore is actually reliable and discriminating.
+"""Measure whether the ViralScore is reliable and discriminating.
 
 A benchmark metric is only worth publishing if you can show it is stable. This
 module computes, over a set of apps each scored several times:
@@ -20,8 +20,8 @@ module computes, over a set of apps each scored several times:
 * **within-app SD** -- score the same app twice, how far apart are the numbers?
   This is the noise floor, and it is what decides how big a gap between two
   models is real.
-* **between-app SD** -- how far apart do genuinely different apps land? This is
-  the signal.
+* **between-app SD** -- how far apart do different apps land? This is the
+  signal.
 * **reliability** ``rho = var_between / (var_between + var_within)`` -- the
   fraction of the score's variance that is real differences between apps.
   ``rho >= 0.8`` is the bar for ranking models on a leaderboard.
@@ -77,7 +77,7 @@ class Reliability:
 
     @property
     def between_sd(self) -> float | None:
-        """SD of the per-app means: the signal we are trying to measure."""
+        """SD of the per-app means: the signal the benchmark is after."""
         means = [a.mean for a in self.apps.values() if a.mean is not None]
         return round(statistics.stdev(means), 2) if len(means) > 1 else None
 
@@ -108,7 +108,7 @@ class Reliability:
 def score_dirs(
     dirs: list[str | Path], weights: ScoreWeights | None = None
 ) -> list[tuple[str, float]]:
-    """Score each crowd run directory; skip unscorable runs."""
+    """Score each crowd run directory, skipping unscorable runs."""
     out: list[tuple[str, float]] = []
     for d in dirs:
         try:
@@ -204,7 +204,7 @@ def compare_weightings(
 def group_runs_by_agents(
     runs_by_app: dict[str, list[str | Path]],
 ) -> dict[int, dict[str, list[str | Path]]]:
-    """Regroup runs by the crowd size each was actually run at."""
+    """Regroup runs by the crowd size each was run at."""
     grouped: dict[int, dict[str, list[str | Path]]] = {}
     for label, dirs in runs_by_app.items():
         for d in dirs:

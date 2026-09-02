@@ -14,7 +14,7 @@
 
 """Human-like app clients: one interface for using a running app.
 
-A crowd agent should not care how an app is wired -- it should just *use the
+A crowd agent should not care how an app is wired -- it should *use the
 thing* and see what happens. Each client here wraps one running app behind a
 small, human-shaped API and returns a uniform :class:`Observation` (what the
 agent now sees) for every action, while recording the action to the trial's
@@ -47,7 +47,7 @@ from viral_bench.crowd.interaction.browser import PageHandle, PageSnapshot
 from viral_bench.crowd.interaction.fixtures import FIXTURE_DESCRIPTIONS, fixture_path
 from viral_bench.crowd.interaction.trace import InteractionTrace
 
-# How much of the app an agent is allowed to actually see.
+# How much of the app an agent is allowed to see.
 #
 # These were far too tight. The rendered-text clip alone truncated 100% of
 # snapshots of the working app (688 of 688), so the crowd was judging a product
@@ -94,7 +94,7 @@ def live_feature_notice() -> str:
     credentials in the usage text keeps the crowd honest.
 
     Returns an empty string when the runtime injected no credentials (then the
-    offline path genuinely is the only thing to judge).
+    offline path is the only thing to judge).
     """
     from viral_bench.founder.appenv import resolve_app_env
 
@@ -114,8 +114,8 @@ def live_feature_notice() -> str:
 class Observation:
     """What an agent perceives after an action, uniform across app types.
 
-    ``summary`` is the LLM-facing rendering (what a tool returns to the agent);
-    the structured fields are kept for scoring and the trace.
+    ``summary`` is the LLM-facing rendering (what a tool returns to the agent).
+    The structured fields are kept for scoring and the trace.
     """
 
     ok: bool
@@ -171,7 +171,7 @@ class UndeliverableAppClient:
 
     A build whose ``viralbench.json`` is missing or malformed used to be dropped
     from the crowd stage entirely -- it was never simulated, so it never scored,
-    so a model that failed to ship a launch contract simply vanished from the
+    so a model that failed to ship a launch contract vanished from the
     denominator instead of being marked down. Seven of one model's 25 builds
     disappeared that way while the other model's *bad but runnable* apps stayed
     in and dragged its average down, which biased the comparison toward the model
@@ -189,9 +189,9 @@ class UndeliverableAppClient:
         self.build_id = build_id
         self.app_type = app_type
         self.trace = trace
-        # Not "we failed to establish that it works" -- we established that it
-        # cannot be started at all. Set before any action, so even a trial that
-        # calls nothing is correctly marked.
+        # Not "this could not be established to work" -- it has been
+        # established that the app cannot be started at all. Set before any
+        # action, so even a trial that calls nothing is correctly marked.
         self.trace.app_reachable = False
 
     def _report(self, action: str, args: dict | None = None) -> Observation:
@@ -260,7 +260,7 @@ def _unreachable_reason(snap: PageSnapshot, expected_url: str | None) -> str | N
     """Why this snapshot is an error page rather than the app, or ``None``.
 
     A failed ``goto`` raises and is handled directly, but a *subsequent* ``look``
-    or ``click`` happily snapshots whatever the browser is showing -- which, after
+    or ``click`` snapshots whatever the browser is showing -- which, after
     a failed navigation, is Chrome's "This site can't be reached" interstitial.
     That snapshot used to be recorded as a successful observation, so a trier
     could open nothing, look at nothing, and still file a four-facet craft
@@ -336,7 +336,7 @@ class WebAppClient:
         self._engine = engine
         self._owns_engine = owns_engine
         # A standalone web trial (no shared AppHost) owns the app server session
-        # it started and must tear it down; a shared instance is left running.
+        # it started and must tear it down. A shared instance is left running.
         self._session = session
 
     async def _snapshot_obs(
@@ -410,7 +410,7 @@ class WebAppClient:
         try:
             await self.page.goto(self.url)
         except Exception as exc:  # noqa: BLE001
-            # The app was never reached. Mark the whole trial, not just this
+            # The app was never reached. Mark the whole trial, not merely this
             # step: anything the agent says afterwards is about the source tree
             # or its imagination, never about a running product.
             self.trace.app_reachable = False

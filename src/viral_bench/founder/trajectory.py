@@ -28,7 +28,7 @@ what the *root* agent emitted, and with ``--thinking`` on it now includes the
 model's reasoning. But three things are missing from it by construction:
 
 * the prompt. It goes to opencode on stdin and is never echoed back as an event,
-  so the stdout transcript has the model's answers and not our questions.
+  so the stdout transcript has the model's answers and not the questions.
 * every subagent. opencode's printer drops any event whose ``sessionID`` is not
   the root session, so a dynamic founder's delegated work -- the thing that arm
   exists to measure -- leaves no trace in stdout at all.
@@ -38,7 +38,7 @@ All three are in opencode's own SQLite session store, which the harness dumps
 per turn to ``transcript/sessions/<session_id>.jsonl`` (see
 :func:`~viral_bench.founder.harness.dump_session_trace`). So the dump is the
 primary source here and the stdout transcript is the fallback: a build made
-before the dump existed still exports, just without prompts or subagents.
+before the dump existed still exports, only without prompts or subagents.
 
 **The output.** A directory (or zip) holding:
 
@@ -78,7 +78,7 @@ __all__ = [
 #: bundle it does not understand rather than misreading it.
 SCHEMA_VERSION = 1
 
-#: Part types we carry through, in the order they matter to a reader. Anything
+#: Part types carried through, in the order they matter to a reader. Anything
 #: else opencode invents later is passed through untouched rather than dropped --
 #: an unknown part is still evidence.
 _TEXTUAL_PARTS = ("reasoning", "text")
@@ -167,7 +167,7 @@ def _event_from_part(record: dict, *, depth: int, seq: int) -> dict | None:
         # Anthropic returns an encrypted thinking block when the request did not
         # ask for a summary: signature present, text empty. Flag it rather than
         # emitting a silently blank thought, so a consumer can tell "did not
-        # think" from "thought, but we could not read it".
+        # think" from "thought, but it could not be read".
         metadata = part.get("metadata")
         if kind == "reasoning" and not event["text"] and isinstance(metadata, dict):
             event["redacted"] = bool(metadata)
@@ -268,7 +268,7 @@ def _events_from_sessions(paths: list[Path]) -> tuple[list[dict], list[dict]]:
     for record in parts:
         part_id = str(record.get("part_id") or "")
         # Each turn re-dumps its whole subtree, so the same part legitimately
-        # appears in several files; keep the first.
+        # appears in several files, so keep the first.
         if part_id and part_id in seen:
             continue
         seen.add(part_id)
@@ -441,7 +441,7 @@ def build_trajectory(build_id: str, *, root: Path | None = None) -> Trajectory:
                 # `totals.reasoning_chars`, which counts every session: summing
                 # these to less than the total is correct, not a discrepancy.
                 # The unsuffixed fallback reads the handful of builds recorded
-                # after capture landed but before the suffix did; without it
+                # after capture landed but before the suffix did. Without it
                 # they would report a confident zero instead of what they have.
                 "reasoning_parts_root": p.get(
                     "reasoning_parts_root", p.get("reasoning_parts", 0)

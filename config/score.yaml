@@ -21,12 +21,11 @@
 # WHY THIS MATTERS: the benchmark exists to show a real difference between
 # founder models. Which factors you weigh decides how much of that difference is
 # visible, and different factors separate models by different amounts. Being
-# able to re-weight and re-score is how you find the factors that actually
-# discriminate.
+# able to re-weight and re-score is how you find the factors that discriminate.
 #
 # Re-scoring is FREE: scoring is a pure function of stored run artifacts, so
 # changing weights here and re-running `viral-bench score` costs nothing. Never
-# re-run a crowd simulation just to try a different weighting.
+# re-run a crowd simulation only to try a different weighting.
 #
 # HOW TO SEARCH THIS SURFACE: `scripts/discriminate.py --sweep-profiles`
 # re-scores the whole stored corpus under every profile below and ranks them by
@@ -121,7 +120,7 @@ profiles:
   #
   # `policy: evidence_graded` keeps the probe but demotes it from override to
   # tie-breaker: the floor is scaled up towards 1.0 by the fraction of the crowd
-  # that actually got the app working. Nobody could open it -> the full floor.
+  # that got the app working. Nobody could open it -> the full floor.
   # Everybody used it -> no penalty, whatever the probe thinks. With broken_app
   # at 0.0 the multiplier IS the witness rate, so no constant survives in the
   # gate at all.
@@ -268,7 +267,7 @@ profiles:
   v4_earned:
     description: >-
       Stated judgement (adoption, advocacy), hands-on craft, observed
-      amplification, and whether the app actually kept the user's work.
+      amplification, and whether the app kept the user's work.
     deterministic:
       adoption: 0.18       # fraction of the crowd who would use it
       advocacy: 0.18       # sqrt(influence)-weighted fraction who would share it
@@ -331,7 +330,7 @@ profiles:
   # ---------------------------------------------------------------------------
   v2_hybrid:
     description: >-
-      Deterministic metrics carry the score; the autorater adds the judgements a
+      Deterministic metrics carry the score, and the autorater adds judgements a
       formula cannot make. Deterministic weights are calibrated from measured
       per-component signal-to-noise (craft 15.4, adoption 3.5, amplification
       2.4, advocacy 2.2, cascade 0.4).
@@ -344,7 +343,7 @@ profiles:
     autorater:
       substance: 0.05      # is praise specific and earned, or reflexive?
       severity: 0.05       # how damaging is the strongest criticism?
-      word_of_mouth: 0.05  # did agents genuinely persuade each other?
+      word_of_mouth: 0.05  # did agents persuade each other?
     # Multiplied into the final score. Live per profile, and the strongest
     # single lever here: 0.6 is a 40% haircut, ~22 points on a 55-point build,
     # larger than any weight change below. Sweep it.
@@ -357,7 +356,7 @@ profiles:
   # be re-scored under the definition they were originally reported with.
   # ---------------------------------------------------------------------------
   v1_deterministic:
-    description: Deterministic only; no LLM involvement. Reproduces score_version 1.2.
+    description: Deterministic only, with no LLM involvement. Reproduces score_version 1.2.
     deterministic:
       adoption: 0.20
       advocacy: 0.20
@@ -375,7 +374,7 @@ profiles:
   # than the counts do. Validate reliability before trusting it for a ranking.
   # ---------------------------------------------------------------------------
   qualitative_heavy:
-    description: Leans on the autorater; for discrimination experiments, not ranking.
+    description: Leans on the autorater. For discrimination experiments, not ranking.
     deterministic:
       adoption: 0.15
       advocacy: 0.15
@@ -418,7 +417,7 @@ autorater:
 # calibrated_crowd_size read 50 here against 30 in the code. 30 is correct and is
 # what the code has always used: the 50 came from a reliability table whose n=50
 # bucket held no runs of the strong build at all (every one destroyed by the
-# recsys crash, docs/crowd_bugs.md T0.4). Re-measured on the fixed instrument,
+# recommender crash). Re-measured on the fixed instrument,
 # n=50 is worse on every axis at twice the cost -- separation/noise 4.8 vs 17.0.
 minimums:
   interviews: 1              # below this => unscorable (0 = no crowd verdicts)

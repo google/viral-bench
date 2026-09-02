@@ -17,7 +17,7 @@
 Every primitive takes a :class:`CheckContext` and keyword params drawn straight
 from the rubric's ``check`` block, and returns a :class:`CheckResult`. Nothing
 here asks a model anything. The grader model's job is to put the app into the
-state a check needs; the comparison is a string, byte or numeric equality in
+state a check needs. The comparison is a string, byte or numeric equality in
 Python, which is what keeps ~91% of the available points out of its hands.
 
 Three rules hold throughout:
@@ -30,7 +30,7 @@ Three rules hold throughout:
 * **Every result carries ``observed``**, so the report can show expected against
   actual rather than asserting a verdict.
 * **Primitives never raise.** A grader that dies on one malformed page loses the
-  whole build's grade; the failure belongs in the result.
+  whole build's grade, so the failure belongs in the result.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ from typing import Any
 #:
 #: Each entry is a tuple of acceptable leading byte sequences, because two of
 #: these formats have no single one. SVG is XML, so it may open with a
-#: declaration, a doctype, a comment or the root element itself; WebP is RIFF,
+#: declaration, a doctype, a comment or the root element itself. WebP is RIFF,
 #: whose fourcc sits at byte 8 and so is matched separately below.
 MAGIC: dict[str, tuple[bytes, ...]] = {
     "png": (b"\x89PNG\r\n\x1a\n",),
@@ -78,7 +78,7 @@ def magic_matches(data: bytes, kind: str) -> bool | None:
     if not any(head.startswith(p) for p in prefixes):
         return False
     if kind.lower() == "webp":
-        # RIFF alone is also WAV and AVI; the fourcc at byte 8 is the format.
+        # RIFF alone is also WAV and AVI, so the fourcc at byte 8 is the format.
         return data[8:12] == b"WEBP"
     if kind.lower() == "svg":
         # An XML declaration is shared with every other XML dialect, so a
@@ -145,13 +145,13 @@ class CheckContext:
     """
 
     url: str
-    page: Any = None  # PageHandle; None when the app never started
+    page: Any = None  # PageHandle, None when the app never started
     source: Any = None  # CodeInspectionToolkit
     scratch: Path = field(default_factory=lambda: Path("."))
     #: Downloads captured during the item's own navigation, newest last.
     #:
     #: Scoped by :func:`grade_item`, not session-wide, and that is load-bearing.
-    #: ``ctx.downloads[-1]`` is what every download primitive reads; if it could
+    #: ``ctx.downloads[-1]`` is what every download primitive reads. If it could
     #: see an earlier item's file, an item whose own export does nothing would
     #: silently pass on the previous item's output. Pinning ``extension`` or
     #: ``magic`` narrows that but does not close it -- two items exporting the
@@ -224,7 +224,7 @@ def _fetch(
         # than an exception: if the app's own URL refuses the connection, the
         # instrument worked perfectly and the app did not serve. Letting this
         # escape as `unknown` would report "could not tell" about the one thing
-        # we could tell for certain.
+        # that could be told for certain.
         return 0, str(getattr(exc, "reason", exc)).encode("utf-8"), {}
 
 
@@ -364,7 +364,7 @@ def request_payload_hash(
 
     Defeats sample-substitution, canned output and prompt-only calls in one
     assertion: it is not enough for the app to call a model, it must send the
-    image the user actually uploaded.
+    image the user uploaded.
     """
     if ctx.page is None:
         return CheckResult.unknown("no page")
@@ -382,7 +382,7 @@ def request_payload_hash(
         return CheckResult.no(
             "no request with a payload", f"looked for {url_matches!r}"
         )
-    # The bodies themselves are not retained (they can be megabytes); size and
+    # The bodies themselves are not retained (they can be megabytes). Size and
     # destination are, which is what the item can honestly assert.
     largest = max(request["body_size"] for request in candidates)
     return CheckResult.yes(
@@ -457,10 +457,10 @@ def _inflate_pdf(data: bytes) -> bytes:
 
     Load-bearing, not an optimisation. ``pdf-lib`` defaults to
     ``useObjectStreams: true``, which packs the page dictionaries into a
-    Flate-compressed ``/ObjStm``; 59 of 60 surveyed builds take that default. A
-    correct three-page merge therefore contains zero literal ``/Type /Page``
-    strings, and a page count taken from the raw bytes reads 0 on almost every
-    honest build. Content-stream text hides the same way.
+    Flate-compressed ``/ObjStm``, and 59 of 60 surveyed builds take that
+    default. A correct three-page merge therefore contains zero literal
+    ``/Type /Page`` strings, and a page count taken from the raw bytes reads 0
+    on almost every honest build. Content-stream text hides the same way.
     """
     parts = [data]
     for match in re.finditer(rb"stream\r?\n", data):
@@ -743,9 +743,9 @@ async def survives_reload(
     """A nonce the grader wrote is still present after a hard reload.
 
     The nonce is what makes this honest. Nearly every build seeds a demo
-    document, so "something is on screen after a reload" passes trivially; one
-    build was awarded 30/30 on persistence for preserving an em-dash placeholder.
-    Only the user's own text counts.
+    document, so "something is on screen after a reload" passes trivially, and
+    one build was awarded 30/30 on persistence for preserving an em-dash
+    placeholder. Only the user's own text counts.
     """
     if ctx.page is None:
         return CheckResult.unknown("no page")
@@ -900,8 +900,8 @@ async def controls_have_names(
     The universal form of :func:`is_real_control`: rather than checking one named
     target, it surveys everything on the page a person would try to operate. Two
     things fail it -- a ``div`` posing as a text field, and a control with no
-    accessible name at all. Both are invisible to a crowd agent, which simply
-    reports that it "could not find" the control and moves on.
+    accessible name at all. Both are invisible to a crowd agent, which reports
+    that it "could not find" the control and moves on.
     """
     if ctx.page is None:
         return CheckResult.unknown("no page")
@@ -937,7 +937,7 @@ async def no_mojibake(ctx: CheckContext, *, text: str, js: str = "") -> CheckRes
     """Text the grader entered comes back byte-identical, with no mojibake.
 
     ``js`` reads the value back where the visible DOM is not the right place to
-    look; by default the whole rendered text is searched. Accents and emoji are
+    look. By default the whole rendered text is searched. Accents and emoji are
     the cheapest possible probe for an encoding bug that silently corrupts every
     non-English user's content.
     """
@@ -972,8 +972,8 @@ SECRET_LITERAL_PATTERN = (
     r"""ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,})"""
 )
 
-#: Files a browser can fetch. A key in one of these is served to every visitor;
-#: the same key in a server module is ordinary configuration.
+#: Files a browser can fetch. A key in one of these is served to every visitor,
+#: while the same key in a server module is ordinary configuration.
 CLIENT_SUFFIXES = (".html", ".htm", ".js", ".mjs", ".jsx", ".ts", ".tsx", ".css")
 
 
@@ -989,7 +989,7 @@ def client_secret_present(ctx: CheckContext, *, pattern: str = "") -> CheckResul
     """A credential-shaped literal appears in a browser-served file.
 
     Scoped to client files on purpose. The same string in a server module is
-    configuration; in a ``.js`` bundle it is handed to every visitor. Grepping
+    configuration, but in a ``.js`` bundle it is handed to every visitor. Grepping
     the whole tree, as a naive check would, fires on both and so distinguishes
     nothing.
 
@@ -1012,7 +1012,7 @@ def client_secret_present(ctx: CheckContext, *, pattern: str = "") -> CheckResul
 def model_dependency(ctx: CheckContext) -> CheckResult:
     """The app reads a model API key, i.e. it depends on a third model.
 
-    Passing means the penalty FIRES. Ideas whose brief genuinely asks for a model
+    Passing means the penalty FIRES. Ideas whose brief asks for a model
     feature mark this not-applicable in their own file, so what is left is the
     bolted-on case -- once observed on all 25 builds at a time, including a
     typing-speed test.
@@ -1035,7 +1035,7 @@ def key_optional(ctx: CheckContext) -> CheckResult:
 
     Deliberately a source check rather than a second app start. Restarting every
     build with the key stripped would double the container cost of the whole
-    sweep for three points; the limitation is recorded rather than hidden.
+    sweep for three points, so the limitation is recorded rather than hidden.
     """
     if ctx.source is None:
         return CheckResult.unknown("no source tree")
@@ -1099,7 +1099,7 @@ async def text_matches(
     absent: list[str] | None = None,
     js: str = "",
 ) -> CheckResult:
-    """Every pattern appears in what the user can see; none of ``absent`` does.
+    """Every pattern appears in what the user can see, and none of ``absent`` does.
 
     The workhorse for per-idea items, and DOM-agnostic on purpose. Forty builds
     of one idea share no ids, classes or structure, so a check written against
@@ -1357,11 +1357,11 @@ def captures_monotonic(
 async def download_size_matches(
     ctx: CheckContext, *, pattern: str, tolerance: float = 0.02, js: str = ""
 ) -> CheckResult:
-    """The size the app reports equals the size of the file it actually produced.
+    """The size the app reports equals the size of the file it produced.
 
     Both halves come from the harness: the byte count from the downloaded file,
     the claimed figure by regex from the rendered text. A build can only pass by
-    telling the truth about a file it really wrote.
+    telling the truth about a file it wrote.
 
     ``tolerance`` is fractional, because apps legitimately round to KB.
     """
@@ -1401,7 +1401,7 @@ async def sql_executes(  # noqa: PLR0911
     tables: list[str] | None = None,
     foreign_keys: list[dict] | None = None,
 ) -> CheckResult:
-    """Exported SQL actually runs, and produces the schema it claims.
+    """Exported SQL executes, and produces the schema it claims.
 
     A text check can confirm the word ``REFERENCES`` appears. It cannot confirm
     the statement parses: a MySQL ``AUTO_INCREMENT ... ENGINE=InnoDB`` export
@@ -1650,7 +1650,7 @@ def console_errors_present(
 async def is_operable(
     ctx: CheckContext, *, selector: str, min_size: int = 4
 ) -> CheckResult:
-    """An element exists and a person could actually interact with it.
+    """An element exists and a person could interact with it.
 
     Stronger than :func:`is_real_control`, which checks only the tag. The
     dominant failure in the typing corpus is a genuine ``<input>`` rendered
@@ -1759,7 +1759,7 @@ async def canvas_changed(
 async def canvas_ink(
     ctx: CheckContext, *, label: str = "after", minimum: float = 0.01, index: int = 0
 ) -> CheckResult:
-    """The canvas holds content, not just its background.
+    """The canvas holds content, not merely its background.
 
     ``ink`` is the share of the downsampled grid that is *not* the single most
     common colour, so a blank canvas and a canvas painted one flat colour both
@@ -1831,7 +1831,7 @@ async def text_pattern_distinct(
     ``text_pattern_count`` counts occurrences, which over-credits: one theme
     named twice ("Fira Code" and "Font: Fira Code") reaches two occurrences of
     one name. Counting distinct captures is what an item like "at least three
-    selectable themes" actually claims.
+    selectable themes" claims.
     """
     if ctx.page is None:
         return CheckResult.unknown("the app never started")
@@ -1846,7 +1846,7 @@ async def text_pattern_distinct(
         found = re.findall(pattern, haystack, re.IGNORECASE)
     except re.error as exc:
         return CheckResult.unknown(f"bad pattern {pattern!r}: {exc}")
-    # A group-bearing pattern yields tuples; the whole match is the fallback.
+    # A group-bearing pattern yields tuples, and the whole match is the fallback.
     normalised = {
         (m if isinstance(m, str) else next((g for g in m if g), "")).strip().lower()
         for m in found

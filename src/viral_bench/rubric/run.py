@@ -66,7 +66,7 @@ from viral_bench.rubric.report import (
 from viral_bench.rubric.schema import Rubric, RubricItem, load_rubric
 from viral_bench.rubric.score import RubricResult, score_rubric
 
-#: Passes per build. Three, so an item can pass on a majority; the per-pass
+#: Passes per build. Three, so an item can pass on a majority. The per-pass
 #: answers are kept because the disagreement rate is the instrument's own noise
 #: floor.
 DEFAULT_PASSES = 3
@@ -145,8 +145,8 @@ async def run_gate(
         app = host.get(build_id, wait_timeout=START_TIMEOUT)
     except AppStartFailed as exc:
         # AppHost runs setup and start together, so a failure here is one of the
-        # two. The message distinguishes them for diagnosis; the gate does not
-        # need to.
+        # two. The message distinguishes them for diagnosis, but the gate does
+        # not need to.
         reason = str(exc)
         setup_died = "setup" in reason.lower()
         outcomes["G2"] = (
@@ -176,8 +176,8 @@ async def run_gate(
     page = await engine.open_page()
     try:
         context = CheckContext(url=url, page=page)
-        # G4: a 4xx landing page is legitimate for an auth-first app; a 5xx never
-        # is, so the check is "not 5xx" rather than "200".
+        # G4: a 4xx landing page is legitimate for an auth-first app, but a 5xx
+        # never is, so the check is "not 5xx" rather than "200".
         status = await run_check(
             "http_status", context, {"path": "/", "max_status": 499}
         )

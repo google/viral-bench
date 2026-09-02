@@ -215,7 +215,7 @@ def test_interview_verdicts_skips_unparseable_non_answers(tmp_path) -> None:
     con.close()
 
     d = interview_verdicts(str(db), _FakeCrowd())
-    assert d["n"] == 1  # only the agent that actually answered
+    assert d["n"] == 1  # only the agent that answered
     assert d["per_agent"][0]["agent_id"] == 1
 
 
@@ -406,12 +406,12 @@ def test_health_fails_when_too_many_model_turns_were_lost() -> None:
 
 
 def test_turns_cut_off_at_the_iteration_ceiling_fail_the_run() -> None:
-    """Budget exhaustion is silence that is ours, exactly like a skipped turn.
+    """Budget exhaustion is harness silence, exactly like a skipped turn.
 
     CAMEL enforces ``max_iteration`` by breaking out of its tool-call loop with
     no exception and no log line, so an agent cut off mid-turn is recorded as
     one that had nothing to say. The budget arithmetic is meant to make this
-    impossible; this is what notices when it has not.
+    impossible, and this is what notices when it has not.
     """
     from viral_bench.crowd.sim.verdicts import assess_run_health
 
@@ -457,7 +457,7 @@ def test_persistence_is_measured_over_agents_who_checked_not_all_agents():
     A trial that never reloaded says nothing about whether the app saved
     anything. Counting its silence as a failure would report the crowd's
     incuriosity as a defect in the app, so the denominator is agents who
-    actually looked -- and how many that was travels with the number.
+    looked, and how many that was travels with the number.
     """
     rows = [
         {"agent_id": 1, "work_survived": True, "saw_other_users": None},
@@ -494,7 +494,7 @@ class _FakeTrace:
 
 
 class _LateCrowd:
-    """22 triers is overkill for a test; two of each tier is the whole shape."""
+    """22 triers is overkill for a test, and two of each tier is the whole shape."""
 
     def __init__(self, late_opened: bool):
         self.trier_ids = [1]

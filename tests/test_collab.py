@@ -14,7 +14,7 @@
 
 """Tests for collaboration toolsets.
 
-One toolset ships today (``local``); these cover it plus the contract every
+One toolset ships today (``local``). These cover it plus the contract every
 toolset has to satisfy -- what ships from the working directory, and how a
 toolset is constructed by name.
 """

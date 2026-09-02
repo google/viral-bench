@@ -18,7 +18,7 @@ THE PROBLEM. ``materialize_build`` prefers a clean ``git clone`` of the shipped
 branch over copying the founder's work tree, and that is correct -- it is what the
 world would get. But it means the app arrives with only what the founder committed,
 while the founder built and tested against a host that had far more: a ``.venv`` its
-own ``.gitignore`` excludes, a ``node_modules`` likewise, or simply a ``pip install``
+own ``.gitignore`` excludes, a ``node_modules`` likewise, or a ``pip install``
 it ran in its shell and never wrote down. The container then starts an app whose
 imports cannot resolve, no agent can open it, and the run dies at the wall clock
 having produced nothing.
@@ -28,14 +28,14 @@ Three separate mechanisms produced that, and only one of them was ever diagnosed
 1. **Gitignored dependency directories.** The known one. The clone has no
    ``node_modules``/``.venv`` and the manifest declares no step to recreate them.
 2. **Undeclared dependencies.** The app imports ``fastapi`` or ``PIL`` and nothing
-   anywhere says so -- no ``requirements.txt``, no setup step. Measured on the r3
-   corpus, this was the single largest class.
+   anywhere says so -- no ``requirements.txt``, no setup step. Measured on the
+   build corpus, this was the single largest class.
 3. **`pip install` in a setup step being silently discarded.** ``ContainerRuntime``
    runs setup in ``podman run --rm``, where only ``/work`` and ``/data`` are bind
    mounts. ``npm install`` survives because it writes ``./node_modules`` under
-   ``/work``; ``pip install`` writes to the image's site-packages and vanishes with
-   the container. So a founder that *correctly declared its install* was punished
-   exactly as hard as one that declared nothing.
+   ``/work``, while ``pip install`` writes to the image's site-packages and
+   vanishes with the container. So a founder that *correctly declared its
+   install* was punished exactly as hard as one that declared nothing.
 
 THE FIX, in one sentence: give each build a dependency root that lives on the host,
 is bind-mounted at a FIXED absolute path into every container, and is populated once.
@@ -55,7 +55,8 @@ provisioning container and in every run container afterwards.
 Rejected alternatives, and why:
 
 * **Copy ``node_modules`` beside the clone.** Restores the ~188k-file-per-run copy
-  that commit ``3d36e2b`` removed; that cost took sweep throughput from ~90/h to ~2/h.
+  that commit ``3d36e2b`` removed, and that cost took sweep throughput from
+  ~90/h to ~2/h.
 * **Bind-mount the host's ``node_modules`` read-only.** O(1), but native modules are
   ABI-bound to the host that built them -- observed directly as ``better_sqlite3``
   built for ``NODE_MODULE_VERSION 127`` against a container wanting 115. Installing
@@ -105,7 +106,7 @@ __all__ = [
 #:
 #: BUMP IT WHEN YOU EDIT THE MAPPING TABLES, not only when you edit the planning
 #: code. Adding the framework extras below without bumping left a warm cache
-#: holding bare `fastapi`, so the very build the extras were added for kept
+#: holding bare `fastapi`, so the one build the extras were added for kept
 #: failing and looked like the fix had not worked.
 PROVISION_VERSION = "7"
 
@@ -142,7 +143,7 @@ _DEP_FILES = (
 )
 
 #: Import name -> distribution name, for the cases where they differ. Only the ones
-#: this corpus actually produces; an unknown import is installed under its own name,
+#: this corpus produces. An unknown import is installed under its own name,
 #: which is right far more often than it is wrong and costs one failed resolve when
 #: it is not.
 _IMPORT_TO_DIST = {
@@ -232,12 +233,12 @@ _COMMAND_TOOLS = {
     "alembic": "alembic",
 }
 
-#: ``python -m <module>`` names a dependency just as an import does.
+#: ``python -m <module>`` names a dependency as much as an import does.
 _DASH_M_RE = re.compile(r"python[0-9.]*\s+-m\s+([A-Za-z_][\w.]*)")
 
 
 #: Builds this PROCESS has already settled, so a sweep does not re-clone a build
-#: once per cell just to rediscover that its cache is warm.
+#: once per cell only to rediscover that its cache is warm.
 _PROVISIONED: set[str] = set()
 _MEMO_LOCK = threading.Lock()
 
@@ -278,8 +279,8 @@ def _slug(rel: str) -> str:
 def _package_dirs(app_dir: Path) -> list[str]:
     """Relative dirs holding a ``package.json``, app root first, depth <= 2.
 
-    Depth 2 covers the ``frontend/`` + ``backend/`` split the corpus actually
-    produces without walking into ``node_modules`` itself, which would find
+    Depth 2 covers the ``frontend/`` + ``backend/`` split the corpus produces
+    without walking into ``node_modules`` itself, which would find
     thousands of nested manifests and mount a cache over each one.
     """
     found: list[str] = []
@@ -376,13 +377,13 @@ def _command_dists(manifest: Manifest | None) -> set[str]:
 
 
 def neutralize_pruning(command: str) -> str:
-    """Stop a setup step from deleting what provisioning just installed.
+    """Stop a setup step from deleting what provisioning has installed.
 
     `uv sync` makes the environment EXACTLY the project's declared dependencies,
     removing anything else -- so an app whose pyproject.toml is thinner than its
-    requirements.txt (or than its actual imports) has its dependencies installed
-    and then taken away again, in that order, and fails at start with the very
-    module we provisioned. Observed on collaborative_table__...8f4e81: fastapi
+    requirements.txt (or than its real imports) has its dependencies installed
+    and then taken away again, in that order, and fails at start with the exact
+    module that was provisioned. Observed on collaborative_table__...8f4e81: fastapi
     installed from requirements.txt, then pruned by `uv sync`, then
     ModuleNotFoundError.
 
@@ -402,7 +403,7 @@ def is_install_command(command: str) -> bool:
 
     The distinction decides whether a failing setup step is fatal. An install
     command is redundant once provisioning has run, so its failure says nothing
-    about the app; a migration is real work, and its failure does.
+    about the app. A migration is real work, and its failure does.
     """
     return any(hint in str(command) for hint in _INSTALL_HINTS)
 
@@ -416,7 +417,7 @@ def _declares_install(manifest: Manifest | None) -> bool:
 def _load_manifest_quietly(app_dir: Path) -> Manifest | None:
     try:
         return load_manifest(app_dir / MANIFEST_FILENAME)
-    except Exception:  # noqa: BLE001 - an unusable manifest is just "no manifest"
+    except Exception:  # noqa: BLE001 - an unusable manifest is "no manifest"
         return None
 
 
@@ -436,8 +437,8 @@ def plan_for(build_id: str, app_dir: Path) -> ProvisionPlan:
 
     for rel in node_dirs:
         # Only when the clone lacks them. A build that committed node_modules --
-        # 236 of the r3 corpus did -- already ships what it needs, and mounting a
-        # cache over that directory would HIDE the very files that make it work.
+        # 236 builds in the corpus did -- already ships what it needs, and
+        # mounting a cache over that directory would HIDE the files that make it work.
         target = app_dir / rel / "node_modules"
         if target.is_dir() and any(target.iterdir()):
             continue
@@ -451,10 +452,10 @@ def plan_for(build_id: str, app_dir: Path) -> ProvisionPlan:
         # default and which was five of the thirteen remaining failures: a
         # transitive dep pinning react ^15||^16||^17 against the app's react 19.
         # The founder's tree resolved (its lockfile predates the conflict, or its
-        # npm was older), so refusing here is our toolchain judging a tree the
+        # npm was older), so refusing here is this toolchain judging a tree the
         # author never had to argue with. --legacy-peer-deps restores npm 6
-        # behaviour: install it and let the app tell us whether it works, which
-        # is the question actually being asked.
+        # behaviour: install it and let the app report whether it works, which
+        # is the question being asked.
         attempts = ["npm ci --no-audit --no-fund"] if lock else []
         attempts += [
             "npm install --no-audit --no-fund",
@@ -492,7 +493,7 @@ def plan_for(build_id: str, app_dir: Path) -> ProvisionPlan:
             # `aiosqlite` that exists nowhere on PyPI -- pip rejects the whole
             # file, and the app then died on a missing `fastapi` that was listed
             # right there and installs fine on its own. The typo is the app's
-            # fault; losing fastapi over it was ours.
+            # fault, but losing fastapi over it was the harness's.
             steps.append(
                 f"pip install --no-input -q -r {rel} || "
                 f"grep -vE '^[[:space:]]*(#|$)' {rel} | "
@@ -626,7 +627,7 @@ def _mounts_for(
     for rel in plan.node_dirs:
         target = app_dir / rel / "node_modules"
         if target.is_dir() and any(target.iterdir()):
-            continue  # the clone ships its own; never mount over it
+            continue  # the clone ships its own, so never mount over it
         host = plan.cache_dir / "node" / _slug(rel)
         if not writable and not (host.is_dir() and any(host.iterdir())):
             continue
@@ -729,11 +730,11 @@ def provision_build(
             return []
 
         # Populate under an inter-process lock. The stamp gate in cache_mounts
-        # stops a half-built cache being CONSUMED; this stops two writers
+        # stops a half-built cache being CONSUMED. This stops two writers
         # building it into each other in the first place.
         with _population_lock(plan.cache_dir):
-            # Re-check under the lock: whoever held it before us may have just
-            # finished the very cache we queued up to build.
+            # Re-check under the lock: whoever held it before may have already
+            # finished the exact cache this call queued up to build.
             if stamp.is_file() and not force:
                 with _MEMO_LOCK:
                     _PROVISIONED.add(build_id)
@@ -778,7 +779,7 @@ def provision_build(
                 # package discarded every install queued behind it -- two builds died
                 # on a missing framework a later step would have provided, because an
                 # earlier step hit a typo or a broken pyproject. Order is preserved,
-                # which is what matters (install before migrate); a migration that
+                # which is what matters (install before migrate). A migration that
                 # runs too early fails harmlessly and ContainerRuntime.setup runs it
                 # again at session start.
                 " ; ".join(f"({step})" for step in plan.steps),
@@ -812,7 +813,7 @@ def provision_build(
 
 
 #: Ways an app says a Python dependency is missing. The first group is the plain
-#: import failure; the second is a library telling you, in prose, which extra of
+#: import failure, and the second is a library telling you, in prose, which extra of
 #: itself you forgot -- FastAPI does this for python-multipart.
 _MISSING_MODULE_RES = (
     re.compile(r"No module named ['\"]([A-Za-z_][\w.]*)['\"]"),
@@ -826,7 +827,7 @@ _MISSING_MODULE_RES = (
     # Quotes and backticks are stripped: pydantic says
     #   email-validator is not installed, run `pip install 'pydantic[email]'`
     # and an unquoted-only pattern misses it, which left two builds failing on an
-    # extra the library had already named for us.
+    # extra the library had already named.
     re.compile(r"pip install ['\"`]?([A-Za-z0-9_.\[\]-]+)['\"`]?"),
     re.compile(r"Failed to spawn: `([A-Za-z0-9_.-]+)`"),
 )

@@ -14,12 +14,12 @@
 # limitations under the License.
 
 #
-# setup_crowd_env.sh — prepare a local machine for the crowd stage.
+# setup_crowd_env.sh: prepare a local machine for the crowd stage.
 #
 # The crowd has two halves:
-#   1. app interaction (viral_bench.crowd.interaction) — drive founder-built apps
+#   1. app interaction (viral_bench.crowd.interaction), which drives founder-built apps
 #      like a human (browser / CLI / bot). Runs in the MAIN env (Python 3.12).
-#   2. the social simulation (viral_bench.crowd.sim) — OASIS + CAMEL agents on a
+#   2. the social simulation (viral_bench.crowd.sim), OASIS + CAMEL agents on a
 #      mock social platform. OASIS needs Python <3.12 and heavy pinned deps, so it
 #      runs in a DEDICATED, isolated Python 3.11 venv (.venv-crowd).
 #
@@ -81,14 +81,14 @@ if $CHECK_ONLY; then
 else
   info "installing main-env dependencies (uv sync) ..."
   uv sync >/dev/null 2>&1 && ok "main-env deps installed (incl. Playwright)" \
-    || warn "'uv sync' failed — run it manually to see the error"
+    || warn "'uv sync' failed. Run it manually to see the error"
 fi
 
-# 4. Confirm a browser can actually be driven (main env).
+# 4. Confirm a browser can be driven (main env).
 if uv run python -c "from viral_bench.crowd.interaction import browser_available; import sys; sys.exit(0 if browser_available() else 1)" >/dev/null 2>&1; then
   ok "Playwright can drive a browser (single-page-app trials at full fidelity)"
 else
-  warn "no driveable browser yet — web trials will run in degraded static-HTTP mode"
+  warn "no driveable browser yet. Web trials will run in degraded static-HTTP mode"
 fi
 
 # 5. podman (the crowd runs untrusted apps in a rootless container by default).
@@ -119,7 +119,7 @@ if [[ -x "$CROWD_PY" ]]; then
     info "installing OASIS into the crowd venv (pulls torch; may take a while) ..."
     uv pip install --python "$CROWD_VENV" -r config/crowd-requirements.txt >/dev/null 2>&1 \
       && ok "installed crowd requirements (camel-oasis, playwright, google-genai)" \
-      || warn "crowd requirements install failed — run it manually to see the error"
+      || warn "crowd requirements install failed. Run it manually to see the error"
   fi
 fi
 

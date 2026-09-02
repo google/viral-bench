@@ -20,11 +20,11 @@ and the observation it produced -- is appended to an
 jobs at once:
 
 * **evidence for scoring**: the delight/adoption signal the scoring stage derives
-  starts from what the agent actually did and saw (:meth:`InteractionTrace.render`
-  feeds a compact version back to the deciding LLM);
-* **an audit trail**: it proves the agent genuinely ran the app rather than
+  starts from what the agent did and saw (:meth:`InteractionTrace.render`
+  feeds a compact version back to the deciding LLM).
+* **an audit trail**: it proves the agent ran the app rather than
   hallucinating a verdict (the crowd analogue of the founder's ``qa_verified``
-  ship-evidence gate);
+  ship-evidence gate).
 * **a replayable log**: :meth:`InteractionTrace.jsonl_lines` emits one JSON object
   per step (round/action/args/result/success), the append-only action-log shape
   the design doc reuses from MiroFish for dashboards and post-hoc metrics.
@@ -64,7 +64,7 @@ class InteractionStep:
         args: The action's arguments (target, text, command, ...), JSON-able.
         summary: A short, LLM-readable description of what happened / was seen.
         ok: Whether the action itself completed (a command running to a non-zero
-            exit still ``ok=True``; a driver error / timeout is ``ok=False``).
+            exit still ``ok=True``, while a driver error / timeout is ``ok=False``).
         errors: Runtime errors observed as a side effect (browser console errors,
             page errors, stderr), each clipped for logging.
         screenshot: Path to a screenshot captured for this step, if any.
@@ -94,11 +94,11 @@ class TrialVerdict:
     """The agent's own self-report at the end of a trial.
 
     This is the natural handoff into the scoring stage: rather than scoring the
-    raw trace blind, the deciding agent states, having actually used the app,
+    raw trace blind, the deciding agent states, having used the app,
     whether it would use and share it and how delightful it was.
 
     The facet ratings turn this from a single-item judgement into a short scale.
-    One item is a noisy instrument; averaging several facets of the same
+    One item is a noisy instrument. Averaging several facets of the same
     underlying "is this any good" judgement raises reliability substantially
     (Spearman-Brown), and the facets double as diagnostics -- they say *why* an
     app scored badly, which a lone delight number cannot. They are optional, so
@@ -110,7 +110,7 @@ class TrialVerdict:
         would_share: Would this agent share/repost it to others?
         delight: Subjective delight, ``0`` (bad) .. ``10`` (loved it).
         notes: Free-text justification grounded in what the agent observed.
-        functionality: Does it actually work and do what it claims, ``0``..``10``.
+        functionality: Does it work and do what it claims, ``0``..``10``.
         usability: Could you figure it out and get the job done, ``0``..``10``.
         design: Visual and interaction craft, ``0``..``10``.
         simplicity: Focused and friction-free vs bloated, ``0``..``10``.
@@ -126,7 +126,7 @@ class TrialVerdict:
     simplicity: int | None = None
     #: Did the agent's own work survive a page reload? ``None`` = never checked.
     #: Recorded and reported, deliberately NOT scored yet: the honest order is to
-    #: find out how often an app really keeps anything before deciding what that
+    #: find out how often an app keeps anything before deciding what that
     #: is worth. Until arch v10 no agent could even ask -- there was no reload
     #: verb -- so a page that forgets everything on refresh and a database-backed
     #: one were indistinguishable to this benchmark.
@@ -181,9 +181,9 @@ class InteractionTrace:
             navigation that never reached the app. A degraded trace is still
             useful but must not be treated as a real hands-on verification.
         app_reachable: Did the agent ever get the app to WORK? ``True`` once a
-            page genuinely loaded (web), the app's own entrypoint exited 0 (cli),
-            or the bot answered (bot); ``False`` once contact was attempted and
-            failed; ``None`` before any attempt. Separate from ``degraded``
+            page loaded (web), the app's own entrypoint exited 0 (cli),
+            or the bot answered (bot). ``False`` once contact was attempted and
+            failed, ``None`` before any attempt. Separate from ``degraded``
             because "I saw the app through a narrow window" and "I never saw the
             app at all" are different claims, and only the second voids a verdict.
 
@@ -193,8 +193,9 @@ class InteractionTrace:
             with a traceback, and 7 of 8 of them still filed craft 8.0-8.8 and
             "I would use and share this", describing features -- "grounded
             citations", "Privacy Audit Cards" -- reconstructed from reading the
-            source and narrated as first-hand use. That is docs/crowd_bugs.md
-            T0.1 happening again in the half of the corpus that was not watched.
+            source and narrated as first-hand use, which is a harness fault
+            scored as a model fault, happening again in the half of the corpus
+            that was not watched.
         target_url: For web apps, the URL that was driven.
         verdict: The agent's self-report, if it finished the trial.
     """
@@ -228,7 +229,7 @@ class InteractionTrace:
         ``ok`` answers "did this action do what it was asked to do", and
         ``errors`` collects everything observed to be wrong -- action failures
         *and* page-level noise like console errors. A step with ``ok=False``
-        must therefore always carry at least one entry in ``errors``; callers
+        must therefore always carry at least one entry in ``errors``, and callers
         that omit it get a generic one synthesised from ``summary`` rather than
         an empty tuple. Previously every failed step had an empty ``errors``
         while every populated ``errors`` sat on a successful step, so filtering
@@ -274,7 +275,7 @@ class InteractionTrace:
         """True if at least one non-observational action succeeded.
 
         Distinguishes a real hands-on trial (clicked/typed/ran/chatted) from one
-        that only opened and looked -- used to tell "genuinely exercised" from
+        that only opened and looked -- used to tell "exercised" from
         "merely loaded", the crowd analogue of the ship-evidence gate.
         """
         passive = {"open", "look", "observe", "screenshot", "finish"}

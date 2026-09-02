@@ -18,7 +18,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ViralBench — trajectory viewers</title>
+<title>ViralBench trajectory viewers</title>
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body class="app">
@@ -39,9 +39,9 @@
 <div class="landing">
   <h1>Trajectory viewers</h1>
   <p class="lede">
-    Three views of the same benchmark. The founder pipeline builds an app; the crowd pipeline
-    decides whether anyone would use it; the rubric track grades that same app against what its
-    brief actually asked for. The first two replay over time, so you can watch what happened
+    Three views of the same benchmark. The founder pipeline builds an app. The crowd pipeline
+    decides whether anyone would use it. The rubric track grades that same app against what its
+    brief asked for. The first two replay over time, so you can watch what happened
     rather than read what was logged. The third is a verdict you can audit line by line.
   </p>
 
@@ -50,10 +50,10 @@
       <h3>Founder trajectory viewer</h3>
       <p>Replay any build by id: every turn, tool call, file edit and browser action on a scrubbable timeline.</p>
       <ul>
-        <li><b>All three run structures</b> — single agent, 4-agent local, dynamic orchestrator</li>
+        <li><b>All three run structures</b>: single agent, 4-agent local, dynamic orchestrator</li>
         <li>Swimlane per specialist, with the session ids that prove each one resumes its own memory</li>
-        <li>Dynamic mode gets a spawn gantt showing subagents genuinely running in parallel</li>
-        <li><b>Chain of thought, prompts, patches and subagent sessions</b> — everything the session store keeps</li>
+        <li>Dynamic mode gets a spawn gantt showing subagents running in parallel</li>
+        <li><b>Chain of thought, prompts, patches and subagent sessions</b>: everything the session store keeps</li>
         <li>Rendered diffs, Playwright page states, accessibility snapshots and screenshots</li>
         <li>Download the whole trajectory as one JSON, or the raw artifacts as a zip</li>
       </ul>
@@ -64,10 +64,10 @@
       <h3>Crowd trajectory viewer</h3>
       <p>Replay any crowd simulation: the social graph forming, the launch post spreading, and each agent's hands-on trial of the app.</p>
       <ul>
-        <li><b>Social architecture</b> — a live follow graph that lights up as agents post, repost, quote and comment</li>
+        <li><b>Social architecture</b>: a live follow graph that lights up as agents post, repost, quote and comment</li>
         <li>Timeline playback over the simulation clock, round by round</li>
         <li>Per-agent feed, verdict, and the agent's own recorded reasoning</li>
-        <li><b>App-trial replay</b> — every click and keystroke, with the real screenshots</li>
+        <li><b>App-trial replay</b>: every click and keystroke, with the real screenshots</li>
         <li><b>Run the app yourself</b>, side by side with the replay</li>
       </ul>
       <div class="go"><a href="/crowd"><button class="primary">Open the crowd viewer →</button></a></div>
@@ -77,9 +77,9 @@
       <h3>Rubric grade viewer</h3>
       <p>The second scoring track: the same app graded against its brief, item by item, with the evidence for every verdict.</p>
       <ul>
-        <li><b>Every item, every tier</b> — what was claimed, what was observed, and which of the two the score used</li>
-        <li>Decided by code or by the model, labelled — most points never pass through a model at all</li>
-        <li><b>The arithmetic, shown</b> — base, penalties, the −25 cap, and why a gate failure means 0</li>
+        <li><b>Every item, every tier</b>: what was claimed, what was observed, and which of the two the score used</li>
+        <li>Decided by code or by the model, labelled, so it is clear that most points never pass through a model at all</li>
+        <li><b>The arithmetic, shown</b>: base, penalties, the −25 cap, and why a gate failure means 0</li>
         <li>Per-pass verdicts, so an item the three passes disagreed on says so</li>
         <li><b>Side by side with the ViralScore</b>, which is the whole reason this track exists</li>
         <li>The grader's own tool log, so a verdict can be checked rather than believed</li>
@@ -89,8 +89,8 @@
   </div>
 
   <div class="note">
-    <b>On thinking traces.</b> Founder builds now record the model's actual chain of thought,
-    read from opencode's session store — along with the prompts we sent it, every subagent it
+    <b>On thinking traces.</b> Founder builds now record the model's chain of thought,
+    read from opencode's session store, along with the prompts it was given, every subagent it
     delegated to, and the file patches it wrote, none of which ever reached the stdout transcript.
     The founder viewer shows all four, and distinguishes a thought the provider
     <i>encrypted</i> from one that was never had. Builds recorded before the capture existed

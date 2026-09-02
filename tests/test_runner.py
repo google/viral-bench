@@ -125,9 +125,9 @@ def test_open_session_container_injects_the_apps_own_llm_credential(
         APP_MODEL_VAR,
     )
 
-    # Constructing the container session needs no runtime; only run/start do.
+    # Constructing the container session needs no runtime. Only run/start do.
     # Point the .env resolver at a nonexistent file so the real repo .env is not
-    # read; drive inputs purely via the environment for determinism.
+    # read, and drive inputs purely via the environment for determinism.
     monkeypatch.setenv("VIRAL_BENCH_ENV_FILE", str(builds_dir / "none.env"))
     monkeypatch.setattr(
         config,
@@ -170,11 +170,11 @@ def test_open_session_container_env_map_override(builds_dir, monkeypatch) -> Non
 
 
 def test_sweep_run_dirs_removes_stale_leaves_fresh(monkeypatch, tmp_path) -> None:
-    """Leaked clones get collected; a concurrent run's live clone does not.
+    """Leaked clones get collected, and a concurrent run's live clone does not.
 
     Sessions delete their own run dir on close, but a crash or a start that
-    raised leaks it. This checkout had 1,412 such directories (36 GB) before a
-    sweeper existed.
+    raised leaks it. One checkout had over a thousand such directories (36 GB)
+    before a sweeper existed.
     """
     import os
     import time as _time

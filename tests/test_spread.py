@@ -58,7 +58,7 @@ def _run(
     """Build a minimal crowd run on disk.
 
     ``posts`` rows are ``(post_id, user_id, original_post_id, quote_content,
-    num_likes)``; ``comments`` rows are ``(comment_id, post_id, user_id)``.
+    num_likes)``, and ``comments`` rows are ``(comment_id, post_id, user_id)``.
     """
     con = sqlite3.connect(tmp_path / "simulation.db")
     con.executescript(_SCHEMA)
@@ -155,8 +155,8 @@ def test_peer_repost_and_quote_are_counted_separately(tmp_path) -> None:
 def test_only_agents_who_would_share_count_as_advocacy(tmp_path) -> None:
     """The finding that shapes the module: raw peer volume is a complaint signal.
 
-    Two agents amplify a peer; only one of them would put their name behind the
-    app. Raw participation sees two, advocacy sees one.
+    Two agents amplify a peer, but only one of them would put their name behind
+    the app. Raw participation sees two, advocacy sees one.
     """
     run = _run(
         tmp_path,
@@ -174,7 +174,7 @@ def test_only_agents_who_would_share_count_as_advocacy(tmp_path) -> None:
 
 
 def test_commenting_on_the_founder_is_not_peer_conversation(tmp_path) -> None:
-    """76.3% of stored comments hang off the launch post; none of them is spread."""
+    """Most stored comments hang off the launch post, and none of them is spread."""
     run = _run(
         tmp_path,
         posts=[(1, 0, None, None, 0), (2, 1, None, None, 0)],
@@ -254,7 +254,7 @@ def test_spread_score_is_none_without_an_exposed_audience() -> None:
     assert spread_score(sig) is None
 
 
-# -- the v5 wiring: does the profile actually reach the database? ------------ #
+# -- the v5 wiring: does the profile reach the database? -------------------- #
 
 
 def test_advocate_amplification_reaches_the_score_from_the_database(tmp_path) -> None:
@@ -296,7 +296,7 @@ def test_advocate_amplification_reaches_the_score_from_the_database(tmp_path) ->
         encoding="utf-8",
     )
     sig = extract_signals(run)
-    # The old field sees everyone; the new one sees the single real advocate.
+    # The old field sees everyone, while the new one sees the single real advocate.
     assert sig.repost_participation == 1.0
     assert sig.advocate_amplification == 0.25
 

@@ -23,7 +23,7 @@ The design decision that makes this a benchmark rather than a second opinion is
 **the model gathers, the code judges**. An item either carries a ``check``
 block, in which case a deterministic primitive in :mod:`~viral_bench.rubric.checks`
 decides pass/fail and the grader model's only job is navigating the app into the
-state the check needs; or it does not, in which case the model judges and must
+state the check needs. Or it does not, in which case the model judges and must
 cite the id of a tool call, and the harness reads the value out of *its own*
 record of that call rather than out of the model's prose. Across the 25 shipped
 rubrics that puts ~91% of the available points beyond the model's discretion.

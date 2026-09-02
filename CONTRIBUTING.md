@@ -63,17 +63,17 @@ broken checkout. Several stages drive real infrastructure, so their tests are
 gated on that infrastructure actually being present:
 
 - browser tests (`tests/crowd/`, `tests/rubric/`) need Playwright plus a system
-  Chrome/Chromium — see `browser_available()` in
-  `src/viral_bench/crowd/interaction/browser.py`;
+  Chrome/Chromium (see `browser_available()` in
+  `src/viral_bench/crowd/interaction/browser.py`)
 - `tests/test_container_runtime.py` needs a container runtime (Podman or
   Docker) and a locally built `viralbench-runtime` image
-  (`docker/Containerfile`);
+  (`docker/Containerfile`)
 - `tests/crowd/test_crowd_env_smoke.py` needs the separate crowd virtualenv
   (`.venv-crowd`), created by `scripts/setup_crowd_env.sh`.
 
 `scripts/setup_founder_env.sh --check` and `scripts/setup_crowd_env.sh --check`
 report what your machine is missing, installing nothing. If you are changing one
-of those subsystems, set it up rather than relying on the skip — a skipped test
+of those subsystems, set it up rather than relying on the skip. A skipped test
 proves nothing.
 
 ### What we look for

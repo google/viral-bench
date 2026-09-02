@@ -24,9 +24,9 @@ the right environment, not writing an agent loop.
 Three shapes come out of :func:`opencode_provider`:
 
 * a provider opencode knows and that authenticates with a key -- name it and set
-  its key variable;
+  its key variable.
 * a provider opencode knows that uses ambient cloud credentials (Vertex) -- name
-  it and set the cloud environment;
+  it and set the cloud environment.
 * anything else -- synthesise an OpenAI-compatible provider block pointing at the
   configured base URL, which is how a local Ollama or a private gateway works
   with no opencode support at all.
@@ -60,9 +60,9 @@ OPENCODE_KEY_ENV: dict[str, str] = {
 class OpencodeTarget:
     """Everything the harness needs to point opencode at one model."""
 
-    #: The ``provider/model`` string opencode itself uses. Not necessarily ours:
-    #: opencode calls Together "togetherai", and a synthesised provider keeps our
-    #: own id.
+    #: The ``provider/model`` string opencode itself uses. Not necessarily the
+    #: one ViralBench uses: opencode calls Together "togetherai", and a
+    #: synthesised provider keeps the ViralBench id.
     model: str
     #: The ``provider`` section to merge into the per-build opencode config.
     provider_block: dict
@@ -112,8 +112,8 @@ def opencode_provider(
         if key_env and credential.api_key:
             env[key_env] = credential.api_key
         options: dict = {}
-        # Only override the base URL when the user actually set one; otherwise
-        # let opencode use the provider's own default, which it keeps current.
+        # Only override the base URL when the user set one. Otherwise let
+        # opencode use the provider's own default, which it keeps current.
         if credential.base_url and credential.base_url != provider.base_url:
             options["baseURL"] = credential.base_url
         entry: dict = {"models": {spec.model: model_entry}}

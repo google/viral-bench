@@ -16,7 +16,7 @@
 """Read a crowd sweep end to end: trials, feed, verdicts, and what separates.
 
 ``loop_status.py`` answers "may the loop stop?". This answers the question that
-actually drives the loop: **what did the crowd DO, and which of it discriminates
+drives the loop: **what did the crowd DO, and which of it discriminates
 between two apps?** Everything comes from artifacts already on disk -- the run
 summaries, each trier's interaction trace, and the OASIS database -- so it is
 free to re-run and never touches a model.
@@ -24,7 +24,7 @@ free to re-run and never touches a model.
 Sections, each independently selectable with ``--section``:
 
 * ``health``   -- did the runs complete, and what did they lose on the way.
-* ``trials``   -- what a hands-on trial actually consists of: depth, which verbs
+* ``trials``   -- what a hands-on trial consists of: depth, which verbs
   succeed, how many agents ever operate the app rather than reading it.
 * ``social``   -- the feed: actions per round, where comments attach, whether
   agents name each other, whether exposure is earned or uniform.

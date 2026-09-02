@@ -56,7 +56,7 @@ TIER3_POINTS = 35
 #: driving an otherwise-working app to zero.
 PENALTY_CAP = -25
 
-#: How an item is decided. Ordered most-deterministic first; ``checks.py``
+#: How an item is decided, ordered most-deterministic first. ``checks.py``
 #: implements the first two, the grader model resolves ``agent``, and ``source``
 #: is a read over the built source tree.
 METHODS = ("probe", "assert", "agent", "source")
@@ -78,10 +78,10 @@ class RubricError(ValueError):
 class Check:
     """A deterministic check: which primitive decides this item, and with what.
 
-    ``name`` selects a function in :mod:`viral_bench.rubric.checks`; ``params``
-    is passed to it as keyword arguments. Keeping the params as data rather than
-    as code is what lets the rubric stay declarative and auditable -- a reader
-    can see exactly what was asserted without reading Python.
+    ``name`` selects a function in :mod:`viral_bench.rubric.checks`, and
+    ``params`` is passed to it as keyword arguments. Keeping the params as data
+    rather than as code is what lets the rubric stay declarative and auditable
+    -- a reader can see exactly what was asserted without reading Python.
     """
 
     name: str
@@ -106,9 +106,10 @@ class RubricItem:
     """One scored line of a rubric.
 
     ``points`` is positive for tier items and negative for penalties. ``expect``
-    is human-readable prose describing the expected value; the machine-readable
-    form lives in ``check.params``. Both are kept: the prose is what the grader
-    model reads and what the viewer renders, the params are what the code runs.
+    is human-readable prose describing the expected value, while the
+    machine-readable form lives in ``check.params``. Both are kept: the prose is
+    what the grader model reads and what the viewer renders, the params are what
+    the code runs.
     """
 
     id: str
@@ -153,7 +154,7 @@ class Universal:
     def overridable(self) -> dict[str, RubricItem]:
         """Universal items an idea may mark not-applicable.
 
-        Penalties are included, not just Tier 3. P5 penalises depending on a
+        Penalties are included, not only Tier 3. P5 penalises depending on a
         model API the brief never asked for -- which is exactly right for a
         typing test that bolted on a chatbot, and exactly wrong for the ideas
         whose brief *does* ask for a model feature. Without a way to say so,

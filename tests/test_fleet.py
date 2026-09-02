@@ -193,7 +193,7 @@ def test_self_separation_skips_single_seed_cells():
 
 def test_within_cell_sd_is_the_pooled_seed_noise():
     corpus = _corpus({("i1", A): [48.0, 52.0], ("i2", A): [48.0, 52.0]})
-    # variance of [48, 52] is 8.0; pooled sd = sqrt(8)
+    # variance of [48, 52] is 8.0, so pooled sd = sqrt(8)
     assert within_cell_sd(corpus) == pytest.approx(8.0**0.5, abs=0.01)
 
 
@@ -581,11 +581,11 @@ def test_control_gate_passes_with_a_wide_margin():
 
 
 def test_control_gate_tolerates_a_few_real_builds_worse_than_the_corpse():
-    """Some real apps genuinely are worse than a page that at least renders.
+    """Some real apps are worse than a page that at least renders.
 
-    One build could not be reached by a single trier and scores 7.4, below the
-    control's 11.2. That is the score being right. What must not happen is the
-    *bulk* of real builds sitting near the control.
+    A build no trier could reach scores below the control, and that is the score
+    being right. What must not happen is the *bulk* of real builds sitting near
+    the control.
     """
     ls = _loop_status()
     spec = {(f"i{i}", ls.MODEL_A): [50.0 + i] for i in range(19)}
@@ -604,7 +604,7 @@ def test_control_gate_tolerates_a_few_real_builds_worse_than_the_corpse():
 def test_control_gate_fails_a_profile_that_compresses_the_scale():
     """Squeezing every score toward the middle must not look like separation.
 
-    A profile can shrink Cohen's d's denominator by compressing scores; the
+    A profile can shrink Cohen's d's denominator by compressing scores, and the
     median-margin clause is what stops the same trick working here.
     """
     ls = _loop_status()
@@ -662,8 +662,8 @@ def test_runs_from_an_older_crowd_architecture_are_excluded(tmp_path):
 def test_control_separation_ignores_real_builds_that_are_themselves_broken():
     """A real build that fails its validity gate is a corpse too, not a floor.
 
-    One model shipped an app that does not run; it correctly scores next to the
-    broken control. Comparing the control against the *weakest* real cell would
+    One model shipped an app that does not run, and it correctly scores next to
+    the broken control. Comparing the control against the *weakest* real cell would
     read that as the instrument failing, when it is the instrument being right.
     """
     corpus = _corpus(
@@ -722,7 +722,7 @@ def test_control_gate_fails_when_a_dead_build_outscores_a_working_one():
 
 
 def test_a_failed_self_check_is_not_a_corpse():
-    """0.2x and 0.6x exist because they are different failures; keep them apart.
+    """0.2x and 0.6x exist because they are different failures. Keep them apart.
 
     An app that runs but whose author wrote the wrong smoke command is an app the
     crowd used successfully. Lumping it in with apps that do not start flagged a
@@ -827,14 +827,14 @@ def test_short_model_matches_a_cell_however_the_model_was_named():
         ("gemini-test", "gemini-test"),
     ]:
         assert bf._short_model(cell_name) == bf._short_model(record_name), cell_name
-    # ...but genuinely different models must still not collide.
+    # ...but different models must still not collide.
     assert bf._short_model("google-vertex/gemini-test") != bf._short_model(
         "google-vertex-anthropic/claude-test@default"
     )
 
 
 def test_a_second_replicate_is_pending_even_when_the_first_is_built():
-    """Replicate 2 re-builds the same brief; it is a second draw, not a cache hit."""
+    """Replicate 2 re-builds the same brief, so it is a second draw, not a cache hit."""
     bf = _build_fleet()
     fleet = {"entries": {}}
     models = [bf.MODEL_A]
@@ -850,11 +850,11 @@ def test_status_counts_the_queue_the_same_retry_would_actually_build():
     """--status must answer for the --retry it was given, or it answers nothing.
 
     ``report`` used to call ``pending_cells`` with no retry set, so previewing
-    the r4 team rebuild printed 236 while the build it previewed would run 250 --
-    the 14 ``manifest_*`` cells that only a named retry reaches. An operator
-    cannot confirm a queue before committing hours to it if the preview counts a
+    a team rebuild printed 236 while the build it previewed would run 250: the
+    14 ``manifest_*`` cells that only a named retry reaches. An operator cannot
+    confirm a queue before committing hours to it if the preview counts a
     different queue, and a parallel-arm driver derives its stop condition from
-    this very line, so it would call an arm COMPLETE with those cells unbuilt.
+    this line, so it would call an arm COMPLETE with those cells unbuilt.
     """
     bf = _build_fleet()
     ideas = sorted(i.idea_id for i in bf.load_ideas())
@@ -932,7 +932,7 @@ def test_a_whole_arm_rebuild_gives_each_stale_cell_one_fresh_draw_not_two():
 def test_our_own_failures_are_retried_regardless_of_the_redraw_cutoff():
     """``--retry-before`` must not strand a harness failure.
 
-    The always-ours statuses hold no evidence about any model, so re-running one
+    The always-harness statuses hold no evidence about any model, so re-running one
     hands nobody an extra draw. If the cutoff bounded them too, a harness crash
     during the rebuild would be frozen in as that cell's result.
     """
@@ -965,7 +965,7 @@ def test_two_arms_writing_disjoint_cells_do_not_revert_each_other(
 
     THE BUG. ``persist`` re-read the index under an exclusive lock and then
     layered the writer's whole STARTUP SNAPSHOT of the index over it. The lock
-    made the write atomic; it did nothing about the payload being stale, so
+    made the write atomic, but it did nothing about the payload being stale, so
     every write faithfully restored the peer arm's keys to their startup values.
     Caught by polling two keys every 10s while two arms ran together: one
     persist put ``form_builder[.../team]`` back by days while restoring
@@ -1047,7 +1047,7 @@ def test_launches_are_spaced_so_a_shared_sqlite_lock_cannot_decide_a_build():
 def test_build_counts_are_per_build_not_per_idea_across_replicates():
     """Two replicates is 50 builds over 25 ideas, not "ok 50/25".
 
-    The gate counts distinct IDEAS attempted; the report counts BUILDS. Dividing
+    The gate counts distinct IDEAS attempted, while the report counts BUILDS. Dividing
     one by the other printed a denominator that could not be right.
     """
     ls = _loop_status()
@@ -1134,7 +1134,7 @@ def test_variance_components_separates_crowd_noise_from_build_noise():
     """Build noise is only visible once a brief has been built twice."""
     from viral_bench.score.fleet import variance_components
 
-    # Seeds agree perfectly within a build; the two builds differ by 20 points.
+    # Seeds agree perfectly within a build, and the two builds differ by 20 points.
     corpus = _replicated(
         {
             **{(f"i{i}", A, 1): [40.0, 40.0, 40.0] for i in range(6)},
@@ -1207,7 +1207,7 @@ def test_wilson_interval_is_sane_at_zero_failures():
 
     lo, hi = wilson_interval(0, 50)
     assert lo == 0.0
-    assert 0.0 < hi < 0.10  # "we saw none" is not "it never happens"
+    assert 0.0 < hi < 0.10  # "none observed" is not "it never happens"
     lo, hi = wilson_interval(8, 50)
     assert lo < 8 / 50 < hi
     assert wilson_interval(0, 0) == (0.0, 0.0)
@@ -1232,7 +1232,7 @@ def test_delivery_stats_counts_manifest_failures_per_replicate():
 
 
 def test_harness_failures_are_not_counted_as_the_models_fault():
-    """A timeout is ours; a malformed manifest is the model's. Only one counts."""
+    """A timeout is the harness's, a malformed manifest the model's. Only one counts."""
     from viral_bench.score.fleet import delivery_stats
 
     corpus = _replicated({("i1", B, 1): [10.0]})
@@ -1308,7 +1308,7 @@ def test_a_positive_control_never_enters_the_broken_control_floor(tmp_path):
 
     Both controls carry a ``control/`` model prefix, so before this the working
     full-stack control would have been pooled into ``control_runs()`` and its
-    high score would have lifted the very floor G3 measures against.
+    high score would have lifted the floor G3 measures against.
     """
     root = tmp_path / "builds"
     _write_build(root, "bad", model="control/broken", idea_id="quick_notes_app")
@@ -1378,12 +1378,12 @@ def test_dynamic_config_match_ignores_outcomes():
     assert bf.config_matches(record, "dynamic") is True
     # A build that ran under a different turn cap is a different experiment.
     assert bf.config_matches({**record, "max_turns": 99}, "dynamic") is False
-    # A solo build must not satisfy the dynamic arm just by being one agent.
+    # A solo build must not satisfy the dynamic arm merely by being one agent.
     assert bf.config_matches({**record, "structure": "solo"}, "dynamic") is False
 
 
 def test_dynamic_cell_passes_turns_not_rounds():
-    """--rounds/--min-rounds are team knobs; the CLI rejects them here."""
+    """--rounds/--min-rounds are team knobs, and the CLI rejects them here."""
     bf = _build_fleet()
     cfg = bf.STRUCTURES["dynamic"]
     assert cfg["agents"] == "dynamic"
@@ -1403,7 +1403,7 @@ def test_dynamic_arm_has_its_own_wall_clock():
     assert "timeout_s" not in bf.STRUCTURES["solo"]
     # The team arm has since earned its own cap too, so asserting it has none
     # (as this test originally did) went stale the moment that landed. The
-    # invariant that actually matters is the ORDERING: a dynamic turn can hold a
+    # invariant that matters is the ORDERING: a dynamic turn can hold a
     # whole fan-out AND the brief now invites a second turn, so its cap has to
     # stay above the fixed team arm, not merely above the 90-minute default.
     assert bf.STRUCTURES["dynamic"]["timeout_s"] > bf.STRUCTURES["team"]["timeout_s"]
@@ -1441,11 +1441,11 @@ def test_coverage_is_complete_only_when_every_build_scored():
 
 
 def test_an_unstartable_app_is_excluded_from_scoring_and_reported():
-    """Our packaging bug must not be scored as the model's failure.
+    """A harness packaging bug must not be scored as the model's failure.
 
     A build whose app the harness could not start produced no evidence about the
-    model at all -- one such app, served by hand, returned HTTP 200 in 55 ms and
-    rendered 1,216 DOM nodes. It leaves the mean and is reported as a coverage
+    model at all: one such app, served by hand, returned HTTP 200 and rendered a
+    full page. It leaves the mean and is reported as a coverage
     caveat, the same treatment ``harness_failed`` gets on the build side.
     """
     corpus = _corpus({("i1", A): [50.0], ("i2", A): [12.0]})
@@ -1464,7 +1464,7 @@ def test_an_unstartable_app_is_excluded_from_scoring_and_reported():
 
 
 # --------------------------------------------------------------------------- #
-# A refusal is excluded; a missing manifest is floored
+# A refusal is excluded, a missing manifest is floored
 # --------------------------------------------------------------------------- #
 
 
@@ -1509,7 +1509,7 @@ def test_refused_builds_leave_the_denominator_and_are_named():
 def test_the_index_verdict_overrides_the_build_record(tmp_path):
     """A refusal is only recognisable once its error text is classified.
 
-    build.json carries what the harness assigned while running; fleet.json carries
+    build.json carries what the harness assigned while running. fleet.json carries
     the cell verdict, which --reclassify-infra can revise afterwards. Where they
     disagree the index is the later and better-informed of the two -- and without
     this overlay the scoring layer keeps reading the stale build.json and the
@@ -1563,10 +1563,10 @@ def test_the_overlay_only_touches_unscorable_statuses(tmp_path):
 
 
 def test_an_app_that_cannot_start_through_its_own_fault_is_floored_not_dropped():
-    """The crowd did everything right; nobody could use the thing. That is a result.
+    """The crowd did everything right and nobody could use the thing. That is a result.
 
-    Only a HARNESS fault is excluded -- there the number would describe our
-    packaging rather than the model. An app whose own source has a syntax error,
+    Only a HARNESS fault is excluded: there the number would describe the
+    harness packaging rather than the model. An app whose own source has a syntax error,
     or whose manifest names a file never committed, stays in and takes the floor.
     """
     corpus = _corpus({("i1", A): [50.0], ("i2", A): [0.1], ("i3", A): [0.1]})

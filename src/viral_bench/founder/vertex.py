@@ -25,11 +25,12 @@ Authentication is Application Default Credentials (ADC) -- no API key. Two thing
 make this safe to run alongside Cloud Code (which itself reaches Vertex via the
 ambient ``GOOGLE_CLOUD_PROJECT`` + ADC):
 
-* We NEVER mutate this process's environment, the gcloud default project, or the
-  ADC file. Instead we scope our project + quota project to *our own* google-genai
-  client (via explicit credentials) and to the *opencode child process* env only.
+* This process's environment, the gcloud default project and the ADC file are
+  NEVER mutated. The project + quota project are scoped to a dedicated
+  google-genai client (via explicit credentials) and to the *opencode child
+  process* env only.
 * This machine's ADC has no quota project set, and Vertex needs one, so every
-  client/subprocess we create sets the quota project explicitly.
+  client and subprocess created here sets the quota project explicitly.
 
 Override the project/location by exporting ``VERTEX_PROJECT`` / ``VERTEX_LOCATION``
 (or adding them to the repo ``.env``).
@@ -43,10 +44,10 @@ from viral_bench.env import read_key
 #: No default project: Vertex bills a project you own, and guessing one would
 #: either fail confusingly or spend someone else's budget. Set VERTEX_PROJECT
 #: (env or .env) or `vertex.project` in config/founder.yaml. Only needed if you
-#: actually name a `google-vertex/...` model -- every other provider ignores it.
+#: name a `google-vertex/...` model -- every other provider ignores it.
 DEFAULT_VERTEX_PROJECT = ""
 
-#: Vertex location. ``global`` maximises availability at no extra cost; use a
+#: Vertex location. ``global`` maximises availability at no extra cost, so use a
 #: region (e.g. ``us-central1``) only for data-residency needs.
 DEFAULT_VERTEX_LOCATION = "global"
 
@@ -67,10 +68,10 @@ def vertex_location() -> str:
 
 
 def vertex_subprocess_env() -> dict[str, str]:
-    """Env overrides that point a CHILD process (opencode) at our Vertex project.
+    """Env overrides that point a CHILD process (opencode) at the Vertex project.
 
     These are merged into the opencode subprocess env only (see
-    :meth:`viral_bench.founder.harness.OpenCodeRunner._build_env`); they override
+    :meth:`viral_bench.founder.harness.OpenCodeRunner._build_env`). They override
     the inherited ``GOOGLE_CLOUD_PROJECT`` (which Cloud Code sets to *its* project)
     for the child alone, so Cloud Code's own process is never affected.
 
@@ -82,7 +83,7 @@ def vertex_subprocess_env() -> dict[str, str]:
       VERTEX_LOCATION -> "us-central1"``. That last fallback is the dangerous
       one: no Claude 5 model is served in ``us-central1``, so an unset location
       would fail as a confusing not-found rather than an obvious misconfiguration.
-      We therefore set every name explicitly rather than trusting the chain.
+      Every name is therefore set explicitly rather than trusting the chain.
 
     ``GOOGLE_CLOUD_QUOTA_PROJECT`` covers the no-quota-project ADC, and
     ``GOOGLE_API_USE_CLIENT_CERTIFICATE=false`` avoids a context-aware mTLS path
@@ -102,7 +103,7 @@ def vertex_subprocess_env() -> dict[str, str]:
 
 
 def vertex_genai_client():
-    """Build a google-genai ``Client`` for Vertex, scoped to our project.
+    """Build a google-genai ``Client`` for Vertex, scoped to the chosen project.
 
     Uses ADC but sets the quota project on the credentials object (not globally),
     so it neither warns nor borrows Cloud Code's ambient project. Used for the
@@ -128,14 +129,14 @@ def vertex_genai_client():
 
     # Force plain TLS (skip the context-aware device client certificate) for THIS
     # process. On corp machines the mTLS path can fail the first Vertex call with a
-    # missing-pyOpenSSL error; plain TLS + the OAuth bearer token is accepted for
-    # Vertex here. This is the viral-bench process, not Cloud Code, and it changes
-    # only our TLS transport -- never the project, billing, or ADC.
+    # missing-pyOpenSSL error, while plain TLS + the OAuth bearer token is accepted
+    # for Vertex here. This is the viral-bench process, not Cloud Code, and it
+    # changes only this process's TLS transport -- never the project, billing, or ADC.
     os.environ.setdefault("GOOGLE_API_USE_CLIENT_CERTIFICATE", "false")
 
     project = vertex_project()
     try:
-        # ADC here has no quota project; we set it on the creds below, so silence
+        # ADC here has no quota project. It is set on the creds below, so silence
         # the (correct-but-noisy) warning emitted during default().
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -149,10 +150,10 @@ def vertex_genai_client():
             "GOOGLE_APPLICATION_CREDENTIALS)."
         ) from exc
 
-    # Scope the quota project to THIS client only; ADC here has none set.
+    # Scope the quota project to THIS client only, since ADC here has none set.
     try:
         creds = creds.with_quota_project(project)
-    except Exception:  # noqa: BLE001 - some credential types lack this; harmless
+    except Exception:  # noqa: BLE001 - some credential types lack this, harmlessly
         pass
 
     # A REQUEST TIMEOUT, because without one a dead connection hangs the caller
@@ -217,7 +218,7 @@ def vertex_genai_client():
 #
 # google-genai speaks only the Gemini API surface, so it cannot reach a partner
 # model like Claude. Those live behind Vertex's `rawPredict` passthrough, which
-# is a plain REST call -- so we make it with google-auth + urllib rather than
+# is a plain REST call -- so it is made with google-auth + urllib rather than
 # adding an `anthropic[vertex]` dependency for one health check. That also keeps
 # the crowd's isolated .venv-crowd unaffected.
 
@@ -261,8 +262,8 @@ def vertex_access_token() -> str:
 
     try:
         with warnings.catch_warnings():
-            # ADC here has no quota project; we pass the project on the URL path,
-            # so the (correct-but-noisy) warning is not actionable.
+            # ADC here has no quota project, and the project is passed on the
+            # URL path, so the (correct-but-noisy) warning is not actionable.
             warnings.simplefilter("ignore")
             creds, _ = google.auth.default(
                 scopes=["https://www.googleapis.com/auth/cloud-platform"]
@@ -281,7 +282,7 @@ def vertex_access_token() -> str:
 
 
 def anthropic_ping(model_id: str, *, timeout_s: float = 30.0) -> None:
-    """Prove a Claude model is actually callable on our Vertex project.
+    """Prove a Claude model is callable on the configured Vertex project.
 
     Sends a one-token ``rawPredict``. That costs a fraction of a cent, and it is
     deliberately not the free ``count-tokens`` endpoint: count-tokens answers 200

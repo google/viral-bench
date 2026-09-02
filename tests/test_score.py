@@ -40,7 +40,7 @@ from viral_bench.score.viralscore import (
 
 
 def _signals(**over) -> RunSignals:
-    """A healthy, fully-measured run; override individual fields per test."""
+    """A healthy, fully-measured run. Override individual fields per test."""
     base = dict(
         build_id="demo__1",
         crowd_dir="/tmp/demo",
@@ -494,7 +494,7 @@ def test_a_trial_that_never_proved_it_reached_the_app_is_not_evidence(
 
 def test_gate_is_graded_between_a_dead_app_and_a_bad_self_check() -> None:
     # "app is dead" and "app works but its self-written smoke check is wrong"
-    # are different failures; calibration hit the second on a real build.
+    # are different failures, and calibration hit the second on a real build.
     dead = score_run(_signals(does_what_it_claims=False, builds=True, runs=False))
     bad_check = score_run(_signals(does_what_it_claims=False, builds=True, runs=True))
     working = score_run(_signals())
@@ -743,11 +743,11 @@ def test_a_malformed_profile_is_reported_not_fatal(tmp_path) -> None:
 
 
 def test_a_crashed_validity_gate_is_unverified_not_broken(tmp_path) -> None:
-    """Our harness failing is not evidence about the app.
+    """The harness failing is not evidence about the app.
 
     The gate's error path used to return builds/runs/does_what_it_claims=False,
     which fires the 0.2x broken-app multiplier and prints "app failed to build
-    or start" -- a verdict about the founder model, caused by our own crash.
+    or start": a verdict about the founder model, caused by a harness crash.
     """
     summary = {
         "build_id": "demo__1",
@@ -769,7 +769,7 @@ def test_a_crashed_validity_gate_is_unverified_not_broken(tmp_path) -> None:
     sig = extract_signals(tmp_path)
 
     assert sig.does_what_it_claims is None
-    assert validity_gate(sig) == 1.0  # no discount for our own crash
+    assert validity_gate(sig) == 1.0  # no discount for a harness crash
 
     warnings = _confidence_warnings(sig, compute_components(sig))
     assert any("never verified" in w for w in warnings)
@@ -777,7 +777,7 @@ def test_a_crashed_validity_gate_is_unverified_not_broken(tmp_path) -> None:
 
 
 def test_the_gate_is_reachable_from_the_profile() -> None:
-    """Editing gates in score.yaml must actually change the score.
+    """Editing gates in score.yaml must change the score.
 
     The multipliers were module constants, so the `gates:` block in every
     profile was decoration: changing broken_app from 0.2 to 0.1 altered nothing
@@ -812,16 +812,17 @@ def test_a_failed_self_check_is_not_treated_as_a_dead_app() -> None:
     assert validity_gate(sig, w) == 0.6
 
 
-# -- undeliverable is a verdict; a harness fault is not ----------------------
+# -- undeliverable is a verdict, a harness fault is not ---------------------
 
 
 def test_undeliverable_build_takes_the_broken_app_multiplier() -> None:
-    """No manifest means we CHECKED and it cannot run -- not that we failed to check.
+    """No manifest means the app WAS CHECKED and cannot run, not that the check
+    never happened.
 
-    The distinction is the whole point. `None` means our harness could not
-    verify the app and carries no penalty; `False` means the app does not run.
+    The distinction is the whole point. `None` means the harness could not verify
+    the app and carries no penalty, while `False` means the app does not run.
     A build with no `viralbench.json` is the second thing: there is no command
-    to try, and that omission is the founder's, not ours.
+    to try, and that omission is the founder's.
     """
     from viral_bench.crowd.sim.verdicts import undeliverable_validity
 
@@ -867,7 +868,7 @@ def test_persistence_is_scored_when_measured_and_dropped_when_not() -> None:
     """Nobody checking is missing evidence, not a failure to persist.
 
     Scoring an unchecked run as 0 would charge the crowd's incuriosity to the
-    app; scoring it as 1 would reward an app for not being examined. Both are
+    app, and scoring it as 1 would reward an app for not being examined. Both are
     wrong, so the component is re-weighted out and the run says so.
     """
     from viral_bench.score.viralscore import ScoreWeights
@@ -1071,7 +1072,7 @@ def test_graded_gate_never_touches_a_verified_or_unverified_app() -> None:
     """The gate only ever fires on a run the probe actively failed."""
     w = _graded(gate_broken_app=0.0)
     # Unverified: no evidence either way, and no penalty. Zero witnesses must
-    # NOT drag it to zero -- that would punish our own harness failing to check.
+    # NOT drag it to zero, which would punish the harness for failing to check.
     unverified = _signals(does_what_it_claims=None, n_valid_trials=0, exposed_agents=30)
     assert validity_gate(unverified, w) == 1.0
     assert validity_gate(_signals(), w) == 1.0
@@ -1132,7 +1133,7 @@ def test_active_profile_weights_every_component_equally() -> None:
     """The shipped score is six equal parts, with the autorater as one part.
 
     The point of v7_equal is that no weight needs defending, so the guard is
-    that the weights really are flat rather than merely close: five
+    that the weights are flat rather than merely close: five
     deterministic components at 1/6 and an autorater whose dimensions sum to
     the same 1/6. A future profile that quietly re-tunes one of them should
     fail here rather than in a meeting.

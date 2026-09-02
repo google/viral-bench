@@ -142,7 +142,7 @@ class GoogleAdapter(Adapter):
             "tools": [types.Tool(function_declarations=declarations)]
             if declarations
             else None,
-            # The caller owns the tool loop; see the module docstring.
+            # The caller owns the tool loop. See the module docstring.
             "automatic_function_calling": types.AutomaticFunctionCallingConfig(
                 disable=True
             ),

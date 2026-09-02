@@ -18,7 +18,7 @@ ViralBench calls a model from four places -- the founder that builds the app, th
 crowd that uses it, the rubric grader, and the autorater -- and each of them used
 to reach a different SDK a different way. This module is the single place that
 knows what providers exist, how to authenticate to each, and which of them can do
-the things the benchmark actually needs.
+the things the benchmark needs.
 
 There is deliberately **no default provider**. ViralBench ships no model and
 presumes no account: you bring a key, name it once, and every stage uses it. See
@@ -29,8 +29,8 @@ Adding a provider
 -----------------
 Most providers speak the OpenAI wire format, so adding one is usually a single
 entry in :data:`PROVIDERS` naming its base URL and key variable -- no new code.
-Only a provider with a genuinely different wire format (or a different auth
-model) needs an adapter of its own.
+Only a provider with a different wire format (or a different auth model) needs
+an adapter of its own.
 """
 
 from __future__ import annotations
@@ -49,16 +49,16 @@ class Capability(Flag):
     """
 
     #: Multi-turn function/tool calling. The crowd drives a real browser through
-    #: tools and the grader runs an 18-tool inspection loop; neither degrades to
-    #: a plain-text model.
+    #: tools and the grader runs an 18-tool inspection loop, and neither degrades
+    #: to a plain-text model.
     TOOLS = auto()
     #: Image (PNG) input. Design is a scored dimension and the grader takes
     #: screenshots -- a model that cannot see cannot judge it.
     IMAGES = auto()
     #: Constrained JSON output. The autorater parses its own replies.
     JSON_MODE = auto()
-    #: A reasoning/thinking budget knob. Optional everywhere; absence just means
-    #: the knob is ignored.
+    #: A reasoning/thinking budget knob. Optional everywhere, and absence means
+    #: only that the knob is ignored.
     THINKING = auto()
 
     NONE = 0
@@ -84,11 +84,11 @@ class ProviderSpec:
     #: Default API base URL. May be overridden per provider by ``<ID>_BASE_URL``.
     base_url: str = ""
     #: The provider id opencode knows this provider by, for the founder stage.
-    #: Empty means opencode has no built-in for it and we must synthesise an
-    #: OpenAI-compatible provider block instead.
+    #: Empty means opencode has no built-in for it, so the harness must
+    #: synthesise an OpenAI-compatible provider block instead.
     opencode_id: str = ""
     #: What models from this provider can generally do. A specific model may do
-    #: less; this is the ceiling used for up-front checking.
+    #: less, so this is the ceiling used for up-front checking.
     capabilities: Capability = FULL
     #: True when authentication is ambient (cloud application-default
     #: credentials) rather than an API key.
@@ -132,8 +132,8 @@ PROVIDERS: dict[str, ProviderSpec] = {
             name="Google Gemini API",
             transport="google",
             key_env="GEMINI_API_KEY",
-            # Used only for the OpenAI-compatible view handed to built apps;
-            # the adapter itself goes through google-genai.
+            # Used only for the OpenAI-compatible view handed to built apps.
+            # The adapter itself goes through google-genai.
             base_url="https://generativelanguage.googleapis.com/v1beta/openai",
             opencode_id="google",
             capabilities=FULL | Capability.THINKING,
@@ -252,7 +252,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
 
 
 class UnknownProviderError(ValueError):
-    """Raised when a model string names a provider we have no entry for."""
+    """Raised when a model string names a provider with no entry here."""
 
 
 @dataclass(frozen=True)

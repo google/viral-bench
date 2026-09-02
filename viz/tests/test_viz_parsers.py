@@ -76,7 +76,7 @@ def test_damaged_transcripts_do_not_break_the_reader(builds):
     """A 0-byte file and a truncated final line are normal, not exceptional."""
     trajectory = founder_mod.load_trajectory(builds, "idea__legacy")
     assert trajectory["phases"][0]["transcript_bytes"] == 0
-    # The intact line survives; the truncated one is skipped rather than fatal.
+    # The intact line survives. The truncated one is skipped rather than fatal.
     assert trajectory["totals"]["tools"] == 1
 
 
@@ -96,7 +96,7 @@ def test_a_build_with_no_dump_reports_no_thinking(builds):
     assert trajectory["trace"]["source"] == "transcript"
     assert trajectory["totals"]["reasoning_chars"] == 0
     assert not any(e["kind"] == "reasoning" for e in trajectory["events"])
-    # The token counter still reads non-zero; it must never be the headline.
+    # The token counter still reads non-zero, so it must never be the headline.
     assert trajectory["totals"]["tokens_reasoning"] == 56  # 8 turns x 7
 
 

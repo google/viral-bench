@@ -15,8 +15,8 @@
 
 """Grade a build cohort against its rubrics: ~1,000 builds, resumable.
 
-Defaults to cohort **r4** (``builds/cohorts/r4.json``). r3 used a suffix on the
-fleet key instead and is still reachable with ``--generation r3``; see
+Defaults to cohort **r4** (``builds/cohorts/r4.json``). Earlier cohorts used a
+suffix on the fleet key instead and stay reachable with ``--generation``. See
 :mod:`viral_bench.rubric.corpus` for why the mechanism changed.
 
 The RubricScore side of the comparison. Follows ``crowd_sweep.py``'s conventions
@@ -27,13 +27,13 @@ cannot take the sweep down with it.
 What it is careful about:
 
 * **Undeliverables are graded, not skipped.** Some builds never produced a
-  working app (53 of the 1,000 in r3). They land on the Tier 0 gate and score
+  working app, a few percent of any cohort. They land on the Tier 0 gate and score
   0, which is the point of having a gate: a benchmark that drops the builds
   that failed hardest reports the average of the survivors and calls it the
   average. They are also nearly free -- G1 fails before a single model call.
 * **The skip key includes the source hash.** ``(build_id, rubric_version,
   source_hash)``, all three already recorded in ``grade.json``. An edited app or
-  a bumped rubric re-grades; an untouched one does not, however many times the
+  a bumped rubric re-grades, while an untouched one does not, however many times the
   sweep is re-run.
 * **One process per build.** ``grade_build`` drives a container and three browser
   contexts. In-process concurrency would share an event loop across all of them
@@ -53,8 +53,8 @@ Usage::
     scripts/rubric_sweep.py -m anthropic/claude-... --ideas image_compressor --limit 4
     scripts/rubric_sweep.py -m anthropic/claude-... --concurrency 24 --passes 3
 
-Sized on r3: a full 3-pass grade takes ~45 min, ~15% of builds fail the Tier 0
-gate in under 2 min, and 24 workers sustain ~31 builds/hour. Keep 3 passes --
+Sized on a full cohort: a 3-pass grade takes ~45 min, ~15% of builds fail the
+Tier 0 gate in under 2 min, and 24 workers sustain ~31 builds/hour. Keep 3 passes --
 measured code-judged pass-to-pass disagreement is 5.5%, so a single pass would
 put that straight into every score.
 """
@@ -84,7 +84,7 @@ TIMEOUT_LEDGER = RUBRIC_DIR / ".timeouts.json"
 GRADE_FILENAME = "grade.json"
 
 #: Wall clock for one build. 31 items x 3 passes x ~3-4 model calls, plus a
-#: container start and three browser contexts. Measured on the golden set;
+#: container start and three browser contexts. Measured on the golden set, so
 #: raise it there rather than guessing here.
 #: Per-build grading cap. 5400, NOT 2700 -- the old value sat on the MEDIAN of
 #: the distribution it was meant to bound, and silently censored it.
@@ -110,8 +110,8 @@ DEFAULT_TIMEOUT_S = 5400
 def corpus_cells(cohort: str, generation: str) -> list[CorpusBuild]:
     """Every build in scope, in a stable order.
 
-    r4 and later are cohorts (``builds/cohorts/<name>.json``); r3 was a suffix on
-    the fleet key. See :mod:`viral_bench.rubric.corpus` for why the mechanism
+    Named cohorts live in ``builds/cohorts/<name>.json``. Earlier ones were a
+    suffix on the fleet key. See :mod:`viral_bench.rubric.corpus` for why the mechanism
     changed. An untagged cohort yields nothing, so a sweep launched before the
     cohort is filled stops instead of grading some other corpus.
 

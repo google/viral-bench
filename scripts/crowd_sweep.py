@@ -15,7 +15,7 @@
 
 """Run the crowd over the frozen fleet: every healthy build, several seeds.
 
-This is the loop's inner cycle. The fleet is capital spent once; this is the
+This is the loop's inner cycle. The fleet is capital spent once. This is the
 part that is cheap enough to redo whenever the architecture changes -- a run is
 1-3 minutes and re-scoring afterwards is free.
 
@@ -28,16 +28,17 @@ What it is careful about:
   architecture are detected and skipped, so widening a sweep only pays for the
   cells it adds.
 * **Failures are recorded, not retried into existence.** A run that fails is
-  reported; the scoring stage counts it as unscorable rather than dropping it.
+  reported, and the scoring stage counts it as unscorable rather than dropping
+  it.
 * **A cell killed at the wall clock is remembered.** It writes no
   ``run_summary.json``, so nothing else on disk distinguishes it from a cell
   never tried, and every later pass used to buy it another slot-hour. The
   ledger under ``builds/crowd/.timeouts.json`` closes that hole. Only rc=124 is
-  suppressed, and only after ``--max-timeout-attempts``; every other failure
-  stays retryable, because those are the ones a retry actually recovers.
+  suppressed, and only after ``--max-timeout-attempts``. Every other failure
+  stays retryable, because those are the ones a retry recovers.
 * **The autorater runs here, not later.** Its three dimensions carry 15% of the
-  active profile, and NOT ONE of the 1,000 stored runs had an ``autorating.json``
-  -- so that 15% was being silently renormalised away and the "hybrid" score was
+  active profile, and NOT ONE stored run had an ``autorating.json``,
+  so that 15% was being silently renormalised away and the "hybrid" score was
   deterministic in every number ever reported. Rating is 3 cheap LLM calls per
   run against artifacts already on disk, so it belongs in the sweep that
   produces them.
@@ -122,8 +123,8 @@ def existing_runs() -> dict[tuple[str, int], list[Path]]:
     A run that failed its health check is not coverage: it produced no usable
     verdicts, so the cell still needs measuring. Re-running writes a new
     timestamped directory and deletes nothing, so the failure stays on disk and
-    stays counted in the scorable-run fraction -- the loop is told what it cost,
-    not just what it got.
+    stays counted in the scorable-run fraction: the loop is told what it cost,
+    not only what it got.
     """
     out: dict[tuple[str, int], list[Path]] = {}
     if not CROWD_DIR.is_dir():
@@ -155,7 +156,7 @@ def failed_attempts() -> dict[tuple[str, int], int]:
     disk, and it survives a ledger that has been cleared by hand.
 
     This is a *scheduling* signal, not a suppression one. Nothing is skipped
-    because of it; see ``plan_cells`` for what it is used for.
+    because of it. See ``plan_cells`` for what it is used for.
     """
     out: dict[tuple[str, int], int] = {}
     if not CROWD_DIR.is_dir():
@@ -246,10 +247,10 @@ def plan_cells(
     name, so the natural order is alphabetical -- and the apps that hang the
     browser harness cluster at the top of the alphabet (``ai_room_redesign``,
     ``browser_api_client``, ``collaborative_table``, ``image_compressor``). That
-    put the worst cells at the head of every pass: on 2026-08-26 at concurrency
+    put the worst cells at the head of every pass: in one pass at concurrency
     10, five of the ten slots were held by ``image_compressor`` runs that had
     written nothing for 36 minutes, and the pass produced ZERO completions in its
-    first 39 minutes while ~740 healthy cells waited behind them.
+    first 39 minutes while hundreds of healthy cells waited behind them.
 
     Ordering costs nothing and drops nothing -- the same cells run either way. It
     only stops a known-bad cell from holding a slot in front of a healthy one, so
@@ -282,9 +283,9 @@ def run_cell(cell: Cell, opts: argparse.Namespace) -> dict:
     #
     # A build is materialized by `git clone` of its shipped branch, so it
     # legitimately arrives without the node_modules/.venv its own .gitignore
-    # excludes. Without this the crowd is simply the first thing to discover that
-    # the app cannot start -- which is how 26 of 1,000 builds produced nothing at
-    # all on the last sweep, each after holding a slot for the full wall clock.
+    # excludes. Without this the crowd is the first thing to discover that the
+    # app cannot start, which is how dozens of builds produced nothing at all on
+    # an earlier sweep, each after holding a slot for the full wall clock.
     #
     # Outside the subprocess on purpose: an install must not be charged against
     # --timeout. Idempotent and memoized per process, so it costs one container
@@ -367,7 +368,7 @@ def autorate_missing(runs: list[Path], *, concurrency: int) -> tuple[int, int]:
     Separate from the run loop so a resumed sweep repairs earlier runs too: a
     cell whose simulation succeeded but whose rating failed would otherwise be
     skipped forever by the (build, seed) resume check, and the run would be
-    scored under a profile it does not actually satisfy.
+    scored under a profile it does not satisfy.
     """
     from viral_bench.score.autorater import rate_pack
     from viral_bench.score.evidence import build_evidence_pack
@@ -421,12 +422,11 @@ def build_coverage_line(
 ) -> str:
     """One line of BUILD-level coverage: how many builds, at what depth.
 
-    The grain matters more than the number. A sweep reporting "1,000 builds x 2
-    seeds, 1,942 runs on disk" sounds complete and is consistent with 29 builds
-    having nothing at all -- which is what happened, and what let a results
-    document claim "complete, all 10 models x 4 pipelines" while 26 builds had
-    never scored. Runs-on-disk cannot see a hole; builds-covered can only see
-    holes.
+    The grain matters more than the number. A sweep reporting "N builds x 2
+    seeds, ~2N runs on disk" sounds complete while dozens of builds have nothing
+    at all, and that is what happened: a results document claimed "complete, all
+    models x all pipelines" while a whole tail of builds had never scored.
+    Runs-on-disk cannot see a hole. Builds-covered can only see holes.
     """
     depths = [
         len({s for (b, s) in have if b == bid and have[(b, s)]}) for bid in build_ids
@@ -442,7 +442,7 @@ def build_coverage_line(
         line += f"; NO runs for {len(zero)}"
         # Named only once the list is short enough to act on. At the start of a
         # sweep every build is uncovered and printing 250 ids each poll buries the
-        # rest of the status; near the end the names ARE the actionable content,
+        # rest of the status. Near the end the names ARE the actionable content,
         # and "99.2% covered" is not.
         if len(zero) <= 25:
             line += ": " + ", ".join(zero)
@@ -533,7 +533,7 @@ def main(argv: list[str] | None = None) -> int:
     # i.e. editing scoring code in order to run a sweep, which is an easy way to
     # redefine "the fleet" by accident while meaning to do something else. These
     # flags make the choice explicit and per-invocation. They only ever select a
-    # different named arm; they cannot pool two.
+    # different named arm, and they cannot pool two.
     parser.add_argument(
         "--fleet-structure",
         default=CURRENT_FLEET.structure,
@@ -598,8 +598,8 @@ def main(argv: list[str] | None = None) -> int:
     # EVERY build in the fleet, including ones whose manifest is missing or
     # malformed. Those used to be skipped, so a model that failed to ship a
     # launch contract vanished from the denominator instead of being marked
-    # down. They are simulated like anything else now; the crowd finds nothing
-    # to run and scores them at the floor.
+    # down. They are simulated like anything else now, and the crowd finds
+    # nothing to run and scores them at the floor.
     #
     # The ONE exception is a build a provider refused to produce, which is
     # excluded rather than floored -- see FleetBuild.UNSCORABLE_STATUSES. Running
@@ -693,10 +693,11 @@ def main(argv: list[str] | None = None) -> int:
             # Every app restart clones the whole app tree, and only the CURRENT
             # clone is retired when a session closes -- a crash, a kill, or a
             # start that raised before the session was cached leaks one. They are
-            # ~188,600 files apiece. Unattended, 1,674 accumulated on 2026-08-26
-            # and crowd throughput fell from 102 runs/hour to about 2.
+            # ~188,600 files apiece. Left unattended they pile up in the
+            # thousands, and crowd throughput collapsed from ~100 runs/hour to
+            # roughly 2.
             #
-            # `sweep_run_dirs` has existed for months with NO callers, which is
+            # `sweep_run_dirs` existed for a long time with NO callers, which is
             # exactly why that happened. Both calls are cheap: retiring is a
             # rename, and reclaiming is explicitly time-budgeted so a long delete
             # never stalls the sweep. Every 25 cells keeps `builds/runs` flat

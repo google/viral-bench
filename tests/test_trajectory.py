@@ -162,7 +162,7 @@ def test_bundle_carries_prompts_reasoning_and_subagents(tmp_path) -> None:
     prompt = next(e for e in trajectory.events if e.get("text") == "THE PROMPT")
     assert prompt["role"] == "user"
 
-    # The subagent is one level down; the founder is the root.
+    # The subagent is one level down, and the founder is the root.
     subagent = next(e for e in trajectory.events if e.get("text") == "SUBAGENT OUTPUT")
     assert subagent["depth"] == 1
     assert trajectory.manifest["totals"]["max_depth"] == 1
@@ -199,7 +199,7 @@ def test_totals_roll_up_tokens_and_cost(tmp_path) -> None:
 def test_redacted_thinking_is_flagged_not_silently_blank(tmp_path) -> None:
     """Claude returns an encrypted thinking block when the request did not ask
     for a summary. A reader must be able to tell that apart from a model that
-    simply did not think."""
+    never thought at all."""
     work = _build(tmp_path)
     _jsonl(
         work / "transcript" / "sessions" / "root.jsonl",

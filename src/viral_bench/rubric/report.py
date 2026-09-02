@@ -49,7 +49,7 @@ TRANSCRIPT_FILENAME = "transcript.jsonl"
 SHOTS_DIRNAME = "shots"
 
 #: Crowd-shaped sets that may hold a ``score.json`` for the same build. Mirrors
-#: ``viz.core.paths.CROWD_SETS``; duplicated rather than imported because
+#: ``viz.core.paths.CROWD_SETS``, duplicated rather than imported because
 #: ``viral_bench`` must not depend on the viewer.
 CROWD_SETS = ("crowd", "ablation", "calibration", "smoke")
 
@@ -99,8 +99,8 @@ def rubric_runs_for_build(build_id: str, root: Path | None = None) -> list[Path]
 def _read_json(path: Path, default=None):
     """Read JSON, returning *default* on any failure.
 
-    Grades are written by long jobs that get killed; a truncated or absent file
-    is normal and must never take a sweep down with it.
+    Grades are written by long jobs that get killed, so a truncated or absent
+    file is normal and must never take a sweep down with it.
     """
     try:
         with path.open("r", encoding="utf-8") as handle:
@@ -320,7 +320,7 @@ def build_grade_document(
 
 
 def write_grade(document: dict, run_dir: Path) -> Path:
-    """Persist ``grade.json`` into *run_dir*; return its path.
+    """Persist ``grade.json`` into *run_dir* and return its path.
 
     Write-once by convention: the sweep skips a build that already has a grade
     for the current rubric and source hash, so re-running is cheap and safe.
@@ -353,7 +353,7 @@ def _mark(passed: bool, *, unresolved: bool = False) -> str:
 def render_grade(document: dict) -> str:
     """A readable breakdown of one graded build.
 
-    Shows the arithmetic rather than just the number: which tier lost the points,
+    Shows the arithmetic rather than the bare number: which tier lost the points,
     which items disagreed across passes, and how often the harness had to overrule
     the model. A grade nobody can audit is a grade nobody should trust.
     """

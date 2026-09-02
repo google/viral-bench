@@ -16,15 +16,15 @@
 
 The deterministic components count things -- how many adopted, how many
 reposted, what the facet means were. They cannot read. Three questions decide
-whether an app really landed, and all of them require reading:
+whether an app landed, and all of them require reading:
 
 * **substance** -- was the praise specific and earned, or reflexive? "Clean and
   useful" and "the zero-backend share link is the reason I'd switch" are the
-  same +1 adoption and very different evidence.
-* **severity** -- how damaging is the strongest criticism actually raised? A
-  crowd can be mildly positive about an app with one fatal flaw.
-* **word_of_mouth** -- did agents genuinely persuade each other, or did fifty
-  agents independently form fifty opinions? Only the first is virality.
+  same +1 adoption and wildly different evidence.
+* **severity** -- how damaging is the strongest criticism raised? A crowd can be
+  mildly positive about an app with one fatal flaw.
+* **word_of_mouth** -- did agents persuade each other, or did fifty agents
+  independently form fifty opinions? Only the first is virality.
 
 These sit *alongside* the deterministic metrics rather than replacing them: the
 counts measured far better signal-to-noise than an LLM judgement will, so they
@@ -357,7 +357,7 @@ def _default_client(model: str, temperature: float):
 
     The injection seam. Everything about *how* to reach a model -- credentials,
     base URL, retries, error classification -- belongs to
-    :mod:`viral_bench.providers`; what belongs here is the two things the rater
+    :mod:`viral_bench.providers`. What belongs here is the two things the rater
     itself requires of whatever it is pointed at.
 
     **JSON mode**, because the rater parses its own replies and unconstrained

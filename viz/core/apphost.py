@@ -16,7 +16,7 @@
 
 Watching a replay of an agent clicking through an app answers "what did it do".
 Standing the app up next to the replay answers "was it right", and that is the
-question a reviewer actually has. This module is a self-contained port of the
+question a reviewer has. This module is a self-contained port of the
 benchmark's ``serve-build`` command, carrying over the two problems it exists to
 solve, because both bite immediately otherwise.
 
@@ -33,7 +33,7 @@ revalidation story out of every response.
 side by side as written. :func:`rebind_command` moves the app to a private port and
 leaves the public one to the proxy, so any number of builds can be open at once.
 
-The app runs from a throwaway copy under ``viz/cache/runs``; the original build
+The app runs from a throwaway copy under ``viz/cache/runs``, and the original build
 tree is never written to, and never executed in place.
 """
 
@@ -86,7 +86,7 @@ _DROP_RESPONSE = {
     # The viewer shows the app in a pane beside its replay, and the app is served
     # on its own port, so any framing restriction the app declares would block
     # exactly the thing this proxy exists to enable. Dropped here rather than
-    # rewritten; the app is a throwaway local copy on loopback.
+    # rewritten, since the app is a throwaway local copy on loopback.
     "x-frame-options",
 }
 
@@ -111,7 +111,7 @@ def rebind_command(command: str, declared: int | None, port: int) -> str:
 
     Matched on digit boundaries so ``8000`` in ``--port 8000`` moves while ``8000``
     inside an unrelated number does not. Apps that read ``$PORT`` instead are
-    covered by the caller exporting it; between the two, every stack in the corpus
+    covered by the caller exporting it, and between the two, every stack in the corpus
     lands on the right port.
     """
     if not declared or declared == port:
@@ -183,7 +183,7 @@ class _Handler(BaseHTTPRequestHandler):
             if low == "content-security-policy":
                 # Same reason as x-frame-options: a frame-ancestors directive
                 # would stop the app rendering in the viewer's pane. Only that
-                # directive is removed; the rest of the policy still applies.
+                # directive is removed, and the rest of the policy still applies.
                 value = _strip_frame_ancestors(value)
                 if not value:
                     continue
@@ -194,8 +194,8 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", declared)
             self.end_headers()
         else:
-            # No upstream length means a streaming response; relay verbatim and
-            # close at the end rather than re-chunking it.
+            # No upstream length means a streaming response, so relay verbatim
+            # and close at the end rather than re-chunking it.
             self.send_header("Connection", "close")
             self.close_connection = True
             self.end_headers()
@@ -230,7 +230,7 @@ class _Handler(BaseHTTPRequestHandler):
 class NoCacheProxy:
     """Threaded front end that forbids the browser to cache anything.
 
-    Threaded because a browser opens several connections at once; single-threaded
+    Threaded because a browser opens several connections at once. Single-threaded
     would serialise every asset behind the slowest request.
     """
 
@@ -273,7 +273,7 @@ class AppInstance:
     app_type: str
     title: str
     started_at: float
-    #: Set when the app ignored the port we gave it and bound its own.
+    #: Set when the app ignored the port it was given and bound its own.
     claimed_port: int | None = None
     process: subprocess.Popen | None = None
     proxy: NoCacheProxy | None = None
@@ -372,8 +372,8 @@ class AppLauncher:
         run_dir = cache_dir("runs", session_id)
         app_dst = run_dir / "app"
         try:
-            # Copy rather than run in place: the build tree is read-only to us, and
-            # an app that writes next to its source would dirty it.
+            # Copy rather than run in place: the build tree is read-only here,
+            # and an app that writes next to its source would dirty it.
             shutil.copytree(paths.app_dir, app_dst, symlinks=True, dirs_exist_ok=True)
         except OSError as exc:
             return {"ok": False, "error": f"could not materialise app: {exc}"}
@@ -384,10 +384,10 @@ class AppLauncher:
         cwd = app_dst / (run.get("cwd") or ".")
         bound = rebind_command(command, declared, internal)
 
-        # Whether an app honours the port we give it cannot be read off its run
+        # Whether an app honours the port it is given cannot be read off its run
         # command: the port may be rewritten in the command, taken from $PORT
         # inside the app's own source, or hard-coded and ignored. So do not
-        # guess -- start it, then see which port it actually opened.
+        # guess -- start it, then see which port it opened.
         #
         # `declared` is only accepted as that port when no other live instance is
         # already using it. Two apps that both hard-code 8000 would otherwise
@@ -403,7 +403,7 @@ class AppLauncher:
         env = dict(os.environ)
         env["PORT"] = str(internal)
         # State the app owns lives outside the throwaway copy, so a restart does
-        # not silently wipe a database the user just populated.
+        # not silently wipe a database the user had populated.
         data_dir = cache_dir("appdata", build_id)
         env["VIRALBENCH_DATA_DIR"] = str(data_dir)
 
@@ -452,7 +452,7 @@ class AppLauncher:
                 "setup_log": setup_log,
             }
 
-        # Wait for whichever port it really opened: the one we asked for, or the
+        # Wait for whichever port it opened: the one requested, or the
         # one it insisted on.
         candidates = [internal] + ([declared] if declared_free else [])
         deadline = time.time() + START_TIMEOUT
@@ -548,7 +548,7 @@ def _kill_process(process: subprocess.Popen | None) -> None:
     if process and process.poll() is None:
         try:
             # The app was started in its own session so a shell wrapper's children
-            # die with it; killing only the shell would leave the server holding
+            # die with it. Killing only the shell would leave the server holding
             # the port.
             os.killpg(os.getpgid(process.pid), 15)
         except (ProcessLookupError, PermissionError, OSError):

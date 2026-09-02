@@ -16,14 +16,15 @@
 
 Two eras of selection exist and both have to keep working.
 
-**r3** was identified by a suffix on the fleet key -- ``<idea>::<model>::<arm>::r3``
--- so the generation was a property of the index entry.
+The older era used a **generation**, identified by a suffix on the fleet key --
+``<idea>::<model>::<arm>::<generation>`` -- so the generation was a property of
+the index entry.
 
-**r4** is a cohort: ``builds/cohorts/r4.json`` lists its members explicitly and
-each ``build.json`` carries ``"cohort": "r4"``. That is the better mechanism,
-because a cohort can span two build eras -- some arms kept from the previous
-generation, others rebuilt -- so no single property of a fleet key can describe
-it. A label over an explicit member list can.
+The current era uses a **cohort**: ``builds/cohorts/<name>.json`` lists its
+members explicitly and each ``build.json`` carries its own ``"cohort"`` key.
+That is the better mechanism, because a cohort can span two build eras -- some
+arms kept from the previous generation, others rebuilt -- so no single property
+of a fleet key can describe it. A label over an explicit member list can.
 
 Selecting by cohort also makes the sweep safe against a cohort still being
 filled: it grades exactly the builds the manifest names today, and grading it
@@ -97,7 +98,8 @@ def select_builds(
 ) -> list[CorpusBuild]:
     """The builds a sweep should grade, in a stable order.
 
-    Pass ``cohort`` for r4 and later, ``generation`` for the r3 fleet-key era.
+    Pass ``cohort`` for a manifest-tagged sweep, ``generation`` for the older
+    fleet-key era.
     Passing neither, or a cohort with no manifest yet, yields an empty list --
     deliberately, so a sweep launched against a cohort that has not been tagged
     stops rather than silently grading some other corpus.

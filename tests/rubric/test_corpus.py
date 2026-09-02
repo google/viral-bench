@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Which builds a rubric sweep is about, across the r3 and r4 selection eras."""
+"""Which builds a rubric sweep is about, across both selection eras."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _cohort(tmp_path, name, members):
 
 
 def test_r4_is_selected_from_its_cohort_manifest(tmp_path):
-    """r4 spans two build eras -- solo/dynamic kept, team rebuilt -- so no
+    """A cohort spans two build eras (solo/dynamic kept, team rebuilt), so no
     property of a fleet key describes it. The manifest is the definition."""
     _fleet(
         tmp_path,
@@ -63,8 +63,8 @@ def test_r4_is_selected_from_its_cohort_manifest(tmp_path):
 
 
 def test_an_untagged_cohort_selects_nothing_rather_than_some_other_corpus(tmp_path):
-    """The dangerous failure is grading the wrong 1,000 builds and reporting it
-    as the right ones. Empty stops the sweep; a fallback would not."""
+    """The dangerous failure is grading the wrong corpus and reporting it as the
+    right one. Empty stops the sweep, and a fallback would not."""
     _fleet(
         tmp_path,
         {"notes::m1::solo::r3": {"build_id": "notes__1", "idea_id": "notes"}},

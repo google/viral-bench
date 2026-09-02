@@ -82,7 +82,7 @@ def test_each_specialist_has_a_persona_and_temperature() -> None:
 
 def test_web_research_is_role_specific() -> None:
     by_key = {r.key: r for r in roles_for(TEAM_SIZE)}
-    # Architect + Designer research the web; Implementer + QA stay focused (no web).
+    # Architect + Designer research the web. Implementer + QA stay focused (no web).
     assert by_key["architect"].permissions.get("webfetch") == "allow"
     assert by_key["designer"].permissions.get("webfetch") == "allow"
     assert by_key["implementer"].permissions.get("webfetch") == "deny"
@@ -116,4 +116,4 @@ def test_every_specialist_has_at_least_one_skill() -> None:
 def test_qa_has_live_app_testing_and_release_checklist() -> None:
     qa = {r.key: r for r in roles_for(TEAM_SIZE)}["qa_finisher"]
     assert "release-checklist" in qa.skills
-    assert "live-app-testing" in qa.skills  # can actually run + drive the app
+    assert "live-app-testing" in qa.skills  # can run + drive the app

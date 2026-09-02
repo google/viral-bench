@@ -16,7 +16,7 @@
 
 The crowd is the dominant compute cost of the whole benchmark -- many agents,
 several rounds, per app -- so its model wants to be cheap and fast. Which model
-that is, is not ours to decide: ViralBench ships no model and presumes no
+that is, is not for ViralBench to decide: it ships no model and presumes no
 account. You name one as ``provider/model`` and every stage uses it, the crowd
 included. See :mod:`viral_bench.providers` for the registry.
 
@@ -36,11 +36,11 @@ There is no default model and no default provider. There used to be
 (``gemini-2.0-flash``), and with it a ``CROWD_USE_VERTEX`` flag that
 defaulted ON -- so a new user with a perfectly good ``GEMINI_API_KEY`` got an
 application-default-credentials failure naming a Google cloud project, from a
-flag they had no way to know existed. Vertex is now simply a provider id you
+flag they had no way to know existed. Vertex is now a provider id you
 choose (``google-vertex/...``) rather than a hidden default you must opt out of.
 
 The crowd still reads its OWN Gemini key first (``GEMINI_API_KEY_CROWD``, then
-``GEMINI_API_KEY``) so its spend can be budgeted apart from the founder's; both
+``GEMINI_API_KEY``) so its spend can be budgeted apart from the founder's. Both
 are resolved from the environment or the repo ``.env`` via the shared
 :mod:`viral_bench.founder.appenv` reader.
 """
@@ -58,7 +58,7 @@ from viral_bench.providers import (
 )
 
 #: Output-token cap for crowd calls. ``None`` means no cap is sent, so the
-#: model's own maximum applies; set ``simulation.model.max_tokens`` in
+#: model's own maximum applies. Set ``simulation.model.max_tokens`` in
 #: config/crowd.yaml to impose one deliberately.
 #:
 #: History: 2048 -> 8192 -> uncapped. Neither number was ever chosen from
@@ -133,7 +133,7 @@ def crowd_transport(model_id: str) -> str:
     ``"unresolved"`` when the run never got as far as building a model.
 
     Runs recorded before the provider layer landed carry ``"vertex"`` or
-    ``"developer_api"`` here instead; those are the same distinction under the
+    ``"developer_api"`` here instead. Those are the same distinction under the
     older two-surface vocabulary, and map to ``google-vertex`` and ``google``.
     """
     try:
@@ -157,7 +157,7 @@ def crowd_model(
             ``google-vertex/gemini-2.0-flash``. Required: there is no
             default model and a bare model id is rejected, because guessing the
             provider would silently bill an account nobody chose.
-        api_key: Explicit key for the Gemini Developer API path; when omitted,
+        api_key: Explicit key for the Gemini Developer API path. When omitted,
             resolved from ``GEMINI_API_KEY_CROWD`` then ``GEMINI_API_KEY``.
             Every other provider resolves its own key through
             :mod:`viral_bench.providers.credentials`, and the Vertex path needs
@@ -237,7 +237,7 @@ def dummy_model(model_id: str = "no-llm-placeholder"):
 
     OASIS ``SocialAgent`` needs a model to construct, but the ``--no-llm`` wiring
     smoke drives everything with scripted ``ManualAction``s and never invokes the
-    LLM, so a placeholder key is fine (and avoids requiring a real key just to
+    LLM, so a placeholder key is fine (and avoids requiring a real key merely to
     validate the platform wiring). The model id is a placeholder for the same
     reason -- it names no real model, and naming one here would reintroduce
     exactly the default this module exists without.

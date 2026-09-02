@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Can every shipped build actually be started the way the crowd starts it?
+"""Can every shipped build be started the way the crowd starts it?
 
-WHY THIS EXISTS. On the 2026-08 sweep, 26 of 1,000 builds never produced a single
+WHY THIS EXISTS. On an early sweep, dozens of builds never produced a single
 scored run, and nothing on disk said why. A build whose app cannot start writes no
 ``run_summary.json``, so ``existing_runs()`` cannot tell "tried and died" from "never
-tried"; the cell was re-offered on every pass, held a slot for the full wall clock, and
+tried". The cell was re-offered on every pass, held a slot for the full wall clock, and
 leaked one ~188k-file app clone per restart attempt (15-34 of them per build). The
 reason survived only inside the disposable clone, which is deleted.
 
@@ -31,14 +31,15 @@ Run it BEFORE and AFTER a harness change to prove the change did something. Run 
 before a sweep to warm the per-build dependency cache, so no crowd slot ever pays an
 install and no crowd run is the first thing to discover an app is unstartable.
 
-The verdict carries a REASON CLASS, not just a boolean, because "our packaging dropped
-the dependencies" and "the app segfaults" are the same symptom and opposite
-attributions -- the first is a harness bug that must be excluded from a model's score,
-the second is a real model failure that belongs at the broken-app floor.
+The verdict carries a REASON CLASS, not merely a boolean, because "the harness
+packaging dropped the dependencies" and "the app segfaults" are the same symptom
+and opposite attributions -- the first is a harness bug that must be excluded
+from a model's score, the second is a real model failure that belongs at the
+broken-app floor.
 
 Usage::
 
-    scripts/preflight_apps.py --replicate 3                  # every r3 build
+    scripts/preflight_apps.py --replicate 3                  # a whole replicate
     scripts/preflight_apps.py --replicate 3 --no-provision   # baseline, pre-fix
     scripts/preflight_apps.py --builds a,b,c --verbose       # a named set
     scripts/preflight_apps.py --status                       # read the last report
@@ -201,7 +202,7 @@ def check_build(
 ) -> Verdict:
     """Materialize, provision, start and probe one build. Never raises.
 
-    On a dependency failure it does not simply record the verdict: it reads what
+    On a dependency failure it does not merely record the verdict: it reads what
     the app said was missing, installs that into the build's cache, and tries
     again. A static plan is a guess and will never be complete -- an app reaches
     jinja2 through ``Jinja2Templates`` and python-multipart through ``Form(...)``
@@ -373,7 +374,7 @@ def summarize(entries: dict[str, dict]) -> str:
 def compare(before_path: Path, after_path: Path) -> str:
     """Two passes side by side: what the harness change was worth, in builds.
 
-    A pass on its own says how many apps start; only a pair says whether that is
+    A pass on its own says how many apps start, and only a pair says whether that is
     the fix working or the corpus being easy. Reported per reason class as well
     as in total, because "63 harness-attributable failures became 4" is the claim
     that can be checked, while a single percentage is the claim that cannot.
@@ -594,7 +595,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if done % 10 == 0:
                 save_report(entries, meta)
-            # Each check materializes a clone; retiring is O(1) but the bytes still
+            # Each check materializes a clone, and retiring is O(1), but the bytes still
             # have to go back. Same time-budgeted reclaim the crowd sweep uses.
             if done % 25 == 0:
                 reclaim_trash(budget_s=15.0)

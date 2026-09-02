@@ -145,7 +145,7 @@ def _build_config(argv: list[str] | None = None) -> SimulationConfig:
         seed=args.seed,
         container=not args.host,
         # The YAML default is honoured as well as the flag, so
-        # `simulation.interview: false` in crowd.yaml actually turns the
+        # `simulation.interview: false` in crowd.yaml turns the
         # interview off instead of being a knob that does nothing.
         interview=DEFAULT_INTERVIEW and not args.no_interview,
         no_llm=args.no_llm,
@@ -169,9 +169,9 @@ def setup_logging(out_dir: str) -> Path:
     """Give the harness somewhere to record what went wrong.
 
     Every ``viral_bench.*`` logger was handler-less, so a 147 MB log directory
-    contained exactly zero WARNING lines from our own code -- swallowed rounds,
-    skipped turns and unreachable apps all left no trace. That is why the bugs
-    in docs/crowd_bugs.md survived as long as they did.
+    contained exactly zero WARNING lines from this harness's own code --
+    swallowed rounds, skipped turns and unreachable apps all left no trace. That
+    is why these bugs survived as long as they did.
 
     OASIS is separately noisy: it echoes every prompt and observation at INFO to
     a hard-coded ``./log``, which is ~7000:1 noise to signal. Cap it at WARNING
@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         result.to_json(), encoding="utf-8"
     )
     # A run can fail without raising -- lost rounds, or a crowd that never
-    # answered -- so report the health failures, not just the exception channel.
+    # answered -- so report the health failures, not only the exception channel.
     reasons = (result.health or {}).get("failures") or (
         [result.error] if result.error else ["unknown"]
     )
