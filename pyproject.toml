@@ -32,6 +32,12 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
+    # The model SDKs the provider layer needs. `openai` is not optional: ten of
+    # the fourteen registered providers speak the OpenAI wire format and go
+    # through it, including OpenAI itself, OpenRouter, Groq, a local Ollama and
+    # any custom endpoint. Anthropic needs no SDK, because that adapter posts
+    # the Messages API over urllib.
+    "openai>=1.109.1",
     "google-genai>=2.10.0",
     "python-dotenv>=1.2.2",
     "pyyaml>=6.0",

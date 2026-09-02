@@ -261,7 +261,8 @@ def _tool_checks() -> list[Check]:
             "opencode",
             bool(opencode),
             opencode or "not found",
-            "npm i -g opencode-ai   (or run scripts/setup_founder_env.sh)",
+            "scripts/setup_founder_env.sh   (installs the release binary; "
+            "no npm needed), or `npm i -g opencode-ai` if you prefer npm",
         )
     )
 

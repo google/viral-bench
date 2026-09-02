@@ -50,18 +50,18 @@ Python dependencies
 -------------------
 
 The direct dependencies in `pyproject.toml` are permissively licensed:
-Apache-2.0 (google-genai, playwright, python-multipart, bcrypt), BSD-3-Clause
-(python-dotenv, uvicorn, starlette, httpx, jinja2, flask, markdown, reportlab,
-passlib), MIT (pyyaml, fastapi, pydantic, python-jose, pyjwt, alembic,
-sqlalchemy, gunicorn), HPND (pillow) and Unlicense (email-validator).
+Apache-2.0 (openai, google-genai, playwright, python-multipart, bcrypt),
+BSD-3-Clause (python-dotenv, uvicorn, starlette, httpx, jinja2, flask, markdown,
+reportlab, passlib), MIT (pyyaml, fastapi, pydantic, python-jose, pyjwt,
+alembic, sqlalchemy, gunicorn), HPND (pillow) and Unlicense (email-validator).
 
 Two transitive dependencies are weak-copyleft, and are noted here because that
 is worth knowing before redistributing an environment built from this project:
 
   certifi (MPL-2.0). Pulled in by httpx and requests, unavoidable, and present
     in nearly every Python HTTP stack. Used unmodified.
-  tqdm (MPL-2.0 AND MIT). Reached only through the optional `crowd` extra
-    (camel-ai -> openai -> tqdm), so it is not part of the base install.
+  tqdm (MPL-2.0 AND MIT). Pulled in by the openai SDK, so it is part of the
+    base install. Used unmodified.
 
 Optional crowd simulation extra
 -------------------------------

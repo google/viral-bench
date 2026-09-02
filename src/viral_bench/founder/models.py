@@ -119,7 +119,7 @@ def describe_models() -> str:
     ]
     for provider in PROVIDERS.values():
         if provider.ambient_auth:
-            state = "ambient"
+            state = "cloud auth"
         elif not provider.key_env:
             state = "none needed"
         else:
