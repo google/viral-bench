@@ -1,0 +1,88 @@
+# ViralBench app runtime image.
+#
+# This is the base image the container runtime (viral_bench.founder.runtime.
+# ContainerRuntime) runs founder-built apps inside, for the human "serve" path
+# and the OASIS crowd's verify_code / try_app tools. It carries the toolchains
+# the app "allowed_scope" types typically need -- Python (+ uv) and Node (+ npm)
+# -- so most apps run with no in-container installs; anything extra is installed
+# at run time via the app manifest's `setup` step.
+#
+# It is a plain OCI image: build it with Podman or Docker, and it runs under
+# either. Build once, then the runtime reuses the cached image:
+#
+#     podman build -t viralbench-runtime:latest -f docker/Containerfile docker
+#     # or: docker build -t viralbench-runtime:latest -f docker/Containerfile docker
+#
+# The runtime looks for `localhost/viralbench-runtime:latest` by default
+# (override via config/runtime.yaml or the `image=` argument).
+
+FROM python:3.12-slim
+
+LABEL org.opencontainers.image.title="viralbench-runtime"
+LABEL org.opencontainers.image.description="ViralBench app runtime: python+uv+node"
+
+# uv: fast Python package manager, copied from the official static image.
+#
+# Pinned, not `:latest`. This image is the environment generated apps are scored
+# in, so it has to be the same environment from one run to the next -- a floating
+# tag silently re-bases the comparison the day upstream cuts a release, and a
+# result that moved because the toolchain moved is indistinguishable from one
+# that moved because the model did. Bump it deliberately, and rebuild.
+COPY --from=ghcr.io/astral-sh/uv:0.11.27 /uv /uvx /usr/local/bin/
+
+# Node.js + npm for JS/TS single-page apps and tooling; git for cloning; curl/ca
+# for apps that fetch at setup time (network is on by default when testing).
+#
+# NODE MUST MATCH THE BUILD HOST, and Debian's own `nodejs` package does not. The
+# founder writes and self-tests its app on the host, which runs Node 22; bookworm
+# ships Node 20. Anything the founder legitimately used from the newer runtime then
+# fails only here, in the container the crowd scores it in. Measured on the r3
+# corpus: `ERR_UNKNOWN_BUILTIN_MODULE: node:sqlite` (a Node 22 builtin) on a build
+# that ran perfectly for its author, and `unsupported engine` aborting `npm install`
+# for packages whose package.json declares a floor the image could not meet. That is
+# OUR toolchain being recorded as a model that cannot ship.
+#
+# Keep this in step with the sweep host: `node --version` there is the reference.
+# A skew in either direction produces failures nothing else explains.
+ARG NODE_MAJOR=22
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" \
+        > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && node --version && npm --version
+
+# A C toolchain, because npm packages are not all pure JavaScript.
+#
+# node-gyp builds native addons from source whenever no prebuilt binary matches
+# the runtime, and `better-sqlite3` -- the obvious choice for a local-first app,
+# so a recurring one in this corpus -- always does. Without `make` and a compiler
+# it fails at `which`, which surfaces as an opaque `npm error gyp ERR! stack at
+# which` and takes the whole `npm install` down with it. The founder's host has
+# these; the image did not, which is the same host-vs-container skew as the node
+# major above and produces the same artifact: our toolchain recorded as a model
+# that cannot ship.
+#
+# Deliberately not `build-essential`, which pulls ~200 MB of documentation and
+# dpkg-dev for no benefit here.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        g++ \
+        make \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Apps are bind-mounted here by the runtime.
+WORKDIR /work
+
+# Sensible default; the runtime always overrides this with `sh -c "<command>"`.
+CMD ["python3", "--version"]

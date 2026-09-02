@@ -1,0 +1,76 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI
+
+# Run on every push to main and on every pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a branch makes the previous run's result irrelevant.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Report both interpreters. Failing fast hides a 3.13-only break behind a
+      # 3.12 one, which is the failure most worth seeing.
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        # Base install plus the dev group (uv installs it by default);
+        # deliberately NOT `--all-extras`. The `crowd` extra only brings the
+        # camel-ai adapter, and the tests that need it skip themselves without
+        # it; the simulation engine proper lives in its own Python 3.11
+        # virtualenv, which CI does not build. So the extra buys no coverage here.
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Format check (ruff)
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        # Parts of the suite drive real infrastructure and gate themselves on it
+        # with `pytest.mark.skipif`, so this runs whatever the runner can
+        # actually support instead of failing on what it cannot:
+        #   - browser tests (tests/crowd/, tests/rubric/) need Playwright plus a
+        #     system Chrome/Chromium -- `browser_available()`;
+        #   - tests/test_container_runtime.py needs a container runtime AND a
+        #     locally built viralbench-runtime image, which CI does not build;
+        #   - tests/crowd/test_crowd_env_smoke.py needs the .venv-crowd
+        #     environment from scripts/setup_crowd_env.sh.
+        # Everything else -- scoring, config, the founder harness, the CLI, the
+        # trajectory viewer -- is hermetic and runs here.
+        run: uv run pytest

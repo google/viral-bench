@@ -1,0 +1,507 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for uptime_monitor (StatusWatch). Never shown to the founder.
+#
+# Two harness realities shape this rubric. Agents never wait for a check
+# interval, so every crowd verdict is formed on the very first check; and agents
+# cannot navigate to an arbitrary URL or drop their session, so the anonymous
+# public status page — which the spec calls "the multi-user flow here" — is 100%
+# unverified by the crowd across all 13 recent runs.
+#
+# Grading must target the app's OWN origin or an unresolvable host, never a
+# public site: the spec's runtime note warns that otherwise the same build
+# passes or fails with the weather.
+#
+# FIXTURES USED BY THE SETUP PROSE. Every item below is written against the same
+# three constants, and each setup restates them because the grader sees one item
+# at a time with no memory of the last:
+#   SELF_URL  the app's own origin AS THE APP SEES IT FROM THE INSIDE — the
+#             `run.url` in its own `viralbench.json`, typically
+#             http://localhost:8000/. NOT the address in the browser's bar: the
+#             container publishes its port on a random host port that nothing
+#             inside the container's network namespace can reach, so a monitor
+#             pointed at the browser's URL would report DOWN on every build with
+#             a server-side prober and the rubric would be grading the port map.
+#   VBSELF    a monitor on SELF_URL, 10-second interval. The reachable one.
+#   VBGONE    a monitor on http://vbgone.invalid/, 10-second interval. `.invalid`
+#             is reserved as unresolvable (RFC 2606), so it fails by DNS
+#             everywhere and never by the weather.
+# The operator account is `vbops` / `VbOps!2026`. State accumulates across items
+# within a pass and across all three passes — the app's data directory is reset
+# once, before grading — so every setup is written to reuse what is already
+# there rather than to add a duplicate.
+rubric_version: 1
+idea_id: uptime_monitor
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief requires the up/down history to be recorded durably, which is
+      tested in F2 (survives a restart) rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: "An operator signs in and adds a monitor with a configurable check interval."
+    points: 5
+    method: probe
+    setup: >-
+      First `read_file` on `viralbench.json` and note its `run.url` — call that
+      SELF_URL (typically http://localhost:8000/). It is the origin the app sees
+      itself at from the inside; do NOT use the address in the browser's bar.
+      Sign in as operator `vbops` with password `VbOps!2026`, registering that
+      account first if the app has a sign-up and the account does not exist yet.
+      Then add one monitor named exactly VBSELF pointing at SELF_URL, with a
+      check interval of 10 seconds — or the smallest interval the app allows, if
+      it refuses 10. Leave the dashboard showing that monitor. If a monitor named
+      VBSELF is already there from an earlier pass, keep it and do not add a
+      second one.
+    note: >-
+      Only the operator-visible half is asserted: the monitor the operator named
+      is listed, and the interval they chose is reflected somewhere on screen.
+      The sign-in half is deliberately not asserted here — a build may put its
+      sign-out control behind an avatar menu, and matching on chrome would grade
+      the shape of a header. The auth boundary itself is measured where it can be
+      decided without guessing, by F4's cookie-free request to the operator API.
+    check:
+      name: text_matches
+      patterns:
+        - "VBSELF"
+        - "interval.{0,40}?\\b10\\b|\\b10\\s*(?:s\\b|sec|second)"
+  - id: S2
+    text: >-
+      A monitor pointing at a URL the grader has independently confirmed returns
+      200 is shown as UP, with a plausible response time.
+    points: 10
+    method: assert
+    note: >-
+      The best-scoring build (delight 7.60, would_use 28/30) reports its OWN
+      live origin as DOWN with `ConnectError: All connection attempts failed` —
+      the server-side prober cannot reach the externally published host:port.
+      Everything around the wrong answer is impeccable, which is why not one of
+      30 verdicts mentions that the monitor is simply wrong.
+
+      The 200 is independently confirmed by the Tier 0 gate: SELF_URL is the same
+      server the gate reached before any item ran. The monitor is pointed at the
+      app's INTERNAL origin rather than the published host port on purpose — see
+      the file header; the published port is unreachable from inside the
+      container, so using it would fail every server-side prober alike and
+      measure the harness.
+
+      Decided on the response time plus the absence of a CONNECT-level error
+      string, not on the absence of the word "down": a dashboard legitimately
+      renders a "Down 0" counter, and from pass two onward VBGONE is genuinely
+      down on the same screen. A build that never reached SELF_URL has no
+      milliseconds to show, and `0 ms` is excluded by the pattern. The DNS
+      strings VBGONE produces (`getaddrinfo`, `ENOTFOUND`, name resolution) are
+      deliberately NOT in `absent`, so a build with no per-monitor view — 22 of
+      122 archived builds — is not failed for VBGONE's error text sitting in the
+      next row.
+    setup: >-
+      SELF_URL is the `run.url` in the app's own `viralbench.json` (typically
+      http://localhost:8000/) — `read_file` it if you need it. With the monitor
+      named VBSELF pointing at SELF_URL already added (add it if it is missing,
+      10-second interval), give it time for one real check: call `evaluate` with
+      `async () => { await new Promise(r => setTimeout(r, 15000)); return 'ok'; }`
+      and then reload the page. Open VBSELF's own detail view if the app has one,
+      so its state and its latest response time are on screen; if it has none,
+      use the app's search or filter to show VBSELF alone; if it has neither,
+      leave the dashboard as it is.
+    check:
+      name: text_matches
+      patterns:
+        - "(?<!sign )(?<!set )\\b(up|online|operational|healthy|reachable)\\b"
+        - "\\b[1-9]\\d{0,3}\\s*ms\\b"
+      absent:
+        - "All connection attempts failed|connection attempts failed|ECONNREFUSED|Connection refused"
+  - id: S3
+    text: >-
+      A monitor pointing at an unresolvable host is shown as DOWN, with a
+      timestamped incident carrying a non-empty error detail.
+    points: 9
+    method: assert
+    setup: >-
+      Add a second monitor named exactly VBGONE pointing at
+      http://vbgone.invalid/ with a 10-second check interval (reuse it if an
+      earlier pass already created it). Wait for its first check with `evaluate`:
+      `async () => { await new Promise(r => setTimeout(r, 20000)); return 'ok'; }`
+      then reload and open VBGONE's own detail or incident view, so its state,
+      the incident's timestamp and the error text the prober recorded are all on
+      screen at once.
+    note: >-
+      `.invalid` is reserved as permanently unresolvable, so every build fails it
+      the same way and no build fails it because of the network.
+
+      The error-detail pattern lists the strings a DNS failure actually produces
+      through httpx, requests, fetch and curl. That is what "non-empty error
+      detail" has to mean in code: a bare red DOWN badge with no recorded reason
+      is exactly the build this item exists to separate out, and it would pass a
+      check that merely looked for the word "error" somewhere on the page.
+    check:
+      name: text_matches
+      patterns:
+        - "VBGONE|vbgone\\.invalid"
+        - "\\b(down|offline|unreachable|failed|failing|error|critical)\\b"
+        - "resol(?:v|ut)|\\bdns\\b|getaddrinfo|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ConnectError|connection (?:refused|error|failed|attempts failed)|name or service not known|nodename nor servname|timed? ?out|unreachable"
+        - "\\d{1,2}:\\d{2}|\\d{4}-\\d{2}-\\d{2}|\\b(?:just now|\\d+\\s*(?:s|sec|secs|seconds|m|min|mins|minutes|h|hours?)\\s+ago)\\b"
+  - id: S4
+    text: >-
+      The uptime percentage equals round(100 * successes / checks, 2), and the
+      zero-check case renders a placeholder rather than a number.
+    points: 8
+    method: assert
+    setup: >-
+      With the monitor named VBGONE (pointing at http://vbgone.invalid/) having
+      had at least one check, open its own detail view so its uptime percentage
+      is on screen. Do not switch it to a different time window if the app
+      offers one; leave whatever it shows by default.
+    note: >-
+      Read off the monitor that has never had a single successful check, because
+      that is where the arithmetic is falsifiable: every check for VBGONE failed,
+      so round(100 * 0 / n, 2) is exactly 0.00, and a build that hardcodes an
+      uptime, counts a failed check as a success, or renders the placeholder it
+      owes an unchecked monitor cannot land on it. Reading VBSELF instead would
+      test nothing — 100% is also what a build prints when it is not computing
+      anything at all (see A2).
+
+      Two costs, recorded rather than hidden. A build labelling the figure
+      "availability" or "health" rather than "uptime" is not read, and cannot be
+      credited here. And the zero-check placeholder half of the text is priced in
+      A2, not here: reaching a monitor that has been created but never checked is
+      a race the grader cannot reliably win at a 10-second interval.
+    check:
+      name: text_number_equals
+      pattern: "uptime[^%]{0,40}?(\\d+(?:[.,]\\d+)?)\\s*%"
+      expect: 0
+      tolerance: 0.05
+  - id: S5
+    text: >-
+      An anonymous client with no cookie opens the public status page and sees
+      both monitors' states.
+    points: 8
+    method: assert
+    expect: "HTTP 200; body contains both monitor names and states; contains no operator username and no sign-out control"
+    note: >-
+      The item the crowd structurally cannot reach: no agent can drop its
+      session, so this is 100% unverified across all 13 recent runs. `http_status`
+      issues the request itself, with no cookie jar at all.
+
+      TWO LIMITATIONS, both material, both recorded rather than hidden.
+
+      (1) It is settled in the harness's deterministic pre-pass, BEFORE the
+      grader model signs in, so the app has no monitors yet and the "sees both
+      monitors' states" half cannot be asserted — only that the public route is
+      served to a caller with no session. `body_excludes: password` is what makes
+      that non-trivial: a build whose /status quietly redirects to a login form
+      would otherwise answer 200 and pass. Deciding the full claim needs a
+      primitive that fetches, cookie-free, the URL the grader actually navigated
+      to after publishing — an anonymous re-fetch of `page.url` — which would
+      also fix (2).
+
+      (2) The path is a convention, and the corpus does not share it: of 122
+      archived builds, 52 route a literal `/status`, 32 publish under
+      `/status/<slug>` or `/status/<username>`, and 20 elsewhere (`/s/<slug>`,
+      `/public-status`). Redirects are followed, so a `/status` that forwards to
+      a default slug still counts; a build that publishes only under a slug is
+      recorded as failing an item its page may well satisfy. `http_status` takes
+      one fixed path, and no list of candidates.
+    check:
+      name: http_status
+      path: /status
+      expect: 200
+      anonymous: true
+      body_excludes: password
+
+tier2:
+  - id: F1
+    text: >-
+      Checks run on a schedule in the background: with a 10-second interval and
+      no interaction, the recorded check count grows by 3 (+/-1) over 35 seconds.
+    points: 8
+    method: assert
+    note: >-
+      The single check that separates a real scheduler from probe-on-page-load.
+
+      PARTIAL, recorded rather than hidden: the +3 (+/-1) delta itself is not
+      asserted, only that something the user can see moved during 35 seconds in
+      which the grader touched nothing. That is the necessary condition — a
+      probe-on-page-load build's dashboard is frozen between loads — but a build
+      that merely re-renders a relative "12 seconds ago" label passes it without
+      a scheduler behind it. Deciding the delta needs
+      `captures_delta(before, after, pattern, low, high)`: the number the app
+      displays for a label, differenced across two harness snapshots. The two
+      alternatives available today are both worse. `captures_monotonic` cannot
+      express growth — it passes an unchanged count, which is the exact build
+      this item exists to catch — and reading a check COUNT out of the text
+      would fail the 60% of archived builds that never render one.
+    setup: >-
+      With the monitors VBSELF and VBGONE already added at a 10-second interval,
+      leave the dashboard showing them and call `capture(label="t0")`. Then wait
+      out three intervals WITHOUT touching the app: call `evaluate` three times
+      with `async () => { await new Promise(r => setTimeout(r, 12000)); return
+      Date.now(); }`. Do not click, type, reload or navigate between the two
+      captures. When the third wait returns, call `capture(label="t35")` and
+      report. The wall-clock cost is deliberate — there is no way to observe a
+      scheduler without letting it run.
+    check:
+      name: value_changes
+      before: t0
+      after: t35
+      should_change: true
+  - id: F2
+    text: "History and incidents survive a restart of the app process."
+    points: 5
+    method: probe
+    note: >-
+      LIMITATION, recorded rather than hidden: the harness never restarts the app
+      while grading, so this is decided from source, exactly as R7 decides the
+      model-key item and for the same reason — a second start per build would
+      buy five points at the price of doubling the sweep's container cost. What
+      would decide it properly is a `restart_app` primitive: stop the process,
+      start it again, re-navigate, and re-read the history.
+
+      What the source read does assert is the thing that actually loses history
+      here. The app's code lives in a throwaway clone and only `VIRALBENCH_DATA_DIR`
+      (mounted at /data) survives a restart, so a build whose store is anywhere
+      else — the app directory, /tmp, or memory — loses everything. 117 of 122
+      archived builds mention that variable and 113 read it from the environment
+      in code, which is what this pattern requires. What it cannot see is a build
+      that puts its users and monitors in /data while keeping check history in a
+      list, or one that recreates its schema at startup.
+    check:
+      name: source_present
+      pattern: "(getenv|environ|process\\.env|env\\[|env\\.get)[^\\n]{0,40}VIRALBENCH_DATA_DIR"
+  - id: F3
+    text: >-
+      A state transition creates exactly one new incident, and recovery closes
+      the existing one with an end timestamp rather than adding a row per check.
+    points: 5
+    method: assert
+    note: >-
+      NO CHECK — the primitive needed does not exist, and a wrong one here would
+      be worse than none. Deciding this means counting how many incident rows a
+      continuously-down monitor accumulates over several checks, and comparing
+      that to one. No primitive counts occurrences of a pattern in rendered text:
+      `dom_count` counts a CSS selector, which forty builds share no convention
+      for; `captures_monotonic` reads one number per snapshot, so it only works
+      on the minority of builds that render an incident COUNT rather than a list;
+      and `value_changes(should_change: false)` compares the whole visible text,
+      which a ticking "last checked" label changes on every honest build.
+
+      What is needed is `text_pattern_count(pattern, op, n)` — count the matches
+      of a regex in the rendered text and compare — with a capture-taking variant
+      for the before/after form. Until then the item falls back to the model,
+      which can at least count rows and read the end timestamp.
+    setup: >-
+      The monitor named VBGONE (http://vbgone.invalid/) has been failing at a
+      10-second interval for several minutes by now, so establish and cite three
+      things about it. How many checks it has recorded; how many incident rows it
+      shows; and whether the newest incident is open (no end time) rather than
+      one row having been appended per failed check. Then, if the app lets you
+      edit a monitor's URL, point VBGONE at the app's own origin — the `run.url`
+      in `viralbench.json`, typically http://localhost:8000/ — wait 20 seconds
+      with `evaluate`, and cite whether recovery CLOSED the open incident with an
+      end timestamp instead of opening a second one. Fail this if the incident
+      count tracks the check count.
+    check:
+      name: text_pattern_count
+      pattern: "incident|outage|went down|recovered"
+      minimum: 1
+      maximum: 4
+  - id: F4
+    text: >-
+      A monitor marked not-public is absent from the anonymous status page, and
+      the authenticated API returns 401 without a cookie.
+    points: 4
+    method: probe
+    note: >-
+      Only the second half is asserted, and only that half CAN be: `http_status`
+      is settled in the harness's pre-pass, before the grader has signed in or
+      created anything, so there is no not-public monitor in existence yet to
+      look for on the public page. The cookie-free 401 is the half that survives
+      that ordering, and it is still something no crowd agent can do — the
+      toolkit has no way to drop a session.
+
+      Two costs. The operator API path is a convention: 69 of 122 archived builds
+      route `/api/monitors`, the rest use `/api/dashboard`, `/monitors` or a
+      GraphQL-ish single endpoint, and a build that denies anonymous access
+      elsewhere is recorded as failing. And a build that answers an
+      unauthenticated API call with a 302 to its login form is recorded as
+      failing too, because urllib follows the redirect and the final status is
+      200 — even though it did deny access. Both would be fixed by the same
+      primitive S5 needs: an anonymous fetch aimed at a route the grader
+      discovered rather than one the rubric guessed.
+    check:
+      name: http_status
+      path: /api/monitors
+      expect: [401, 403]
+      anonymous: true
+  - id: F5
+    text: "Recorded response times have at least 2 distinct values across 5 checks."
+    points: 3
+    method: assert
+    note: >-
+      Three builds record only the single value 2500 ms — a timeout constant,
+      never a measurement.
+
+      NO CHECK — the primitive needed does not exist. This is a distinctness
+      claim over numbers in rendered text, and the two distinctness primitives
+      that exist are both DOM surveys: `distinct_sources` maps img/canvas
+      elements to their sources, `computed_style_distinct` maps elements to a CSS
+      property. Neither reads text. `text_number_in_range` would pass a build
+      whose five identical values are all plausible, which is precisely the
+      failure being looked for, and matching the literal 2500 would overfit to
+      the three builds that happened to produce it.
+
+      What is needed is `text_numbers_distinct(pattern, min_distinct)` — pull
+      every number matching a pattern out of the rendered text and count the
+      distinct values. A3 is the same primitive with the comparison inverted.
+    setup: >-
+      Open the detail or history view of the monitor named VBSELF (the one
+      pointing at the app's own origin) so the response times of its last several
+      checks are listed, not just the latest one. If fewer than five checks are
+      recorded, wait with `evaluate`
+      (`async () => { await new Promise(r => setTimeout(r, 20000)); return 'ok'; }`)
+      and reload until there are. Then cite the individual millisecond figures
+      and judge whether at least two of them differ.
+    check:
+      name: text_numbers_distinct
+      pattern: "(\\d+)\\s*ms"
+      minimum: 2
+penalties:
+  - id: A1
+    text: "The app reports its own reachable origin as DOWN."
+    points: -8
+    method: assert
+    note: >-
+      This idea's known crowd/rubric divergence, and the reason S2 exists: the
+      top build of the corpus (delight 7.60, would_use 28/30) shows its own live
+      origin as DOWN with `ConnectError: All connection attempts failed`, and not
+      one of 30 verdicts says the monitor is wrong.
+
+      Fires only on a view that shows VBSELF and NOT VBGONE, because VBGONE is
+      legitimately down on the same dashboard and a penalty that could not tell
+      them apart would fire on every honest build. `absent` carries that guard,
+      so a grader left on the dashboard under-fires rather than accusing a
+      working app — the safe direction for a -8. The second `absent` entry drops
+      the other false positive: a "Down 0" statistic is a counter, not a state.
+
+      It fires on a monitor that was down at any point in the window the detail
+      view shows, not only on one that is down right now. That is deliberate: the
+      app's own origin has been up since before the monitor existed, so a
+      recorded failure against it is a wrong answer whenever it happened.
+    setup: >-
+      Sign in as `vbops` / `VbOps!2026` if you are not signed in as them (an
+      earlier item may have left you in a throwaway account). Open the detail
+      view of the monitor named VBSELF — the one pointing at the app's own origin,
+      the `run.url` in `viralbench.json`, typically http://localhost:8000/ — so
+      that monitor's state and recent checks are on screen and no other monitor's
+      row is. If the app has no per-monitor view, leave the dashboard as it is and
+      report; do not delete or pause anything to isolate it.
+    check:
+      name: text_matches
+      patterns:
+        - "VBSELF"
+        - "\\b(down|offline|unreachable)\\b|ConnectError|All connection attempts failed|ECONNREFUSED|Connection refused|Max retries exceeded"
+      absent:
+        - "VBGONE"
+        - "\\bdown\\s*[:\\-]?\\s*0\\b|\\b0\\s*down\\b"
+  - id: A2
+    text: "An uptime percentage of 100% is displayed with zero monitors or zero checks."
+    points: -6
+    method: assert
+    note: >-
+      One build shows `TOTAL MONITORS 0 ... AVG UPTIME 100.00%` beside
+      `No monitors configured`.
+
+      Reached through a second, empty operator account rather than by deleting
+      the first one's monitors, which the items after this one still need. The
+      `absent` guard is what makes that sound: if VBSELF or VBGONE is anywhere on
+      screen the grader is not looking at an empty dashboard, and the penalty
+      does not fire. A build with no sign-up at all cannot be put into this state
+      and so never fires it — an under-fire, which is the right direction.
+    setup: >-
+      Sign out, then register a SECOND operator account — username `vbfresh`,
+      password `VbFresh!2026` — and sign in as it (just sign in if an earlier
+      pass already created it). Add nothing. Leave its empty dashboard on screen,
+      including any summary or overview panel it renders there. If the app has no
+      sign-up, or will not let you reach an empty dashboard, report `unknown`
+      and leave the app alone.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b100(?:[.,]0+)?\\s*%"
+        - "no monitors|add (?:your )?first monitor|\\b0\\s*monitors\\b|monitors\\D{0,12}?\\b0\\b|nothing to monitor|no checks"
+      absent:
+        - "VBSELF"
+        - "VBGONE"
+  - id: A3
+    text: "Recorded response times are a single constant value."
+    points: -6
+    method: assert
+    note: >-
+      NO CHECK — the same missing primitive as F5, with the comparison inverted:
+      this fires when the distinct count is exactly 1, F5 passes when it is at
+      least 2. `text_numbers_distinct(pattern, max_distinct)` would decide both.
+
+      Two substitutes were considered and rejected. Matching the literal `2500\s*ms`
+      fits the three builds observed and excuses every other constant, while
+      accusing a build whose real latency happens to round there.
+      `value_changes(should_change: false)` compares the whole visible text, which
+      a clock or a "last checked" label changes on every build, so it would never
+      fire at all.
+    setup: >-
+      Same state as F5: the detail or history view of the monitor named VBSELF
+      (pointing at the app's own origin), with the response times of at least
+      five recorded checks listed. Cite the individual figures. Fire this only if
+      every one of them is identical — a single repeated number, typically a
+      round constant such as 0, 100 or 2500 — and not merely if they are close
+      together.
+    check:
+      name: text_numbers_distinct
+      pattern: "(\\d+)\\s*ms"
+      maximum: 1
+  - id: A4
+    text: >-
+      The publish or public-page control is a no-op: it neither navigates nor
+      yields a URL that resolves.
+    points: -5
+    method: assert
+    note: >-
+      NO CHECK — the primitive needed does not exist, and every near miss is
+      actively dangerous at -5. `http_status` cannot be used: the public path is
+      not a shared convention (of 122 archived builds, 52 route a literal
+      `/status`, 32 publish under a slug and 20 elsewhere), so a 404 at a guessed
+      path would fire this penalty on builds whose page works perfectly.
+      `text_matches` with `absent` on a URL-shaped string fires on the honest
+      build that renders its link as anchor TEXT — "View public page" — with the
+      URL only in the href, which `innerText` does not report.
+
+      What is needed is a primitive that resolves the control's own destination:
+      follow the publish/public-page control, then re-fetch the URL the browser
+      ended up at with no cookies, and assert it answers. That is the same
+      anonymous-re-fetch-of-`page.url` primitive S5 and F4 both want, which is the
+      strongest argument for building it.
+    setup: >-
+      Signed in as `vbops` / `VbOps!2026`, use the app's publish or
+      make-public control for the monitor named VBSELF, then establish and cite
+      three things. Whether the app gave you a public URL at all (read the href
+      with `evaluate` if it is only a link, do not rely on the visible text);
+      whether following it navigates somewhere that renders; and whether that
+      page is served to a caller with no session — check that last one with
+      `evaluate`:
+      `async () => { const r = await fetch(location.href, {credentials: 'omit', cache: 'no-store'}); return r.status; }`
+      run while you are ON the public page. Fire this only if the control exists
+      and yields nothing that resolves.

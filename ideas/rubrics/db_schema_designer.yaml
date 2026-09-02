@@ -1,0 +1,438 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for db_schema_designer (SchemaSketch). Never shown to the founder.
+#
+# Every item below is graded against ONE fixed design, so that the export items
+# can be decided by regex over the rendered SQL rather than by a model reading
+# it. The names are chosen to match S5's `expect` and are referenced by name
+# throughout:
+#
+#   table users   id      INTEGER, primary key
+#                 email   TEXT
+#   table posts   id      INTEGER, primary key
+#                 user_id INTEGER, related to users.id
+#                 title   TEXT
+#
+#   nonce table   vbnonce7391  -- F2/A2 only; nothing else in the app says this
+#
+# Items run in file order in one browser session and STATE CARRIES OVER, so the
+# later setups build on the earlier ones rather than starting clean. Two
+# consequences are deliberate. F1's edit/delete pass is scoped to a field rename
+# and a field deletion, never a table deletion, because dropping `users` or
+# `posts` would take the schema out from under F3, F4 and A1. And A3 -- "demo
+# schema on a clean first load" -- can only be reached by clearing storage and
+# reloading, since by the time penalties are graded the grader's own design is
+# in localStorage; its setup says exactly that.
+#
+# The crowd never reaches most of this. Zero of 990 recent trier-agents created
+# a relationship and only one clicked "Add Table" twice, so relationships,
+# export correctness and the foreign key are code-driven or not measured at all.
+rubric_version: 1
+idea_id: db_schema_designer
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes "work survives a refresh with no account" a core feature, so it is tested at Tier 2 weight in F2 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      A table can be added and fields added to it with a name, a type, and
+      primary-key / nullable flags.
+    points: 6
+    method: assert
+    note: >-
+      The two flags are decided as *affordances*, not as set values. A checkbox's
+      checked state is not text, and the harness reads rendered text, so
+      "Primary key" matches whether the box is ticked or not. What that does
+      catch is the build with no flag controls anywhere -- a field editor
+      offering only a name and a type -- which is the failure the item names.
+      Whether the PK flag actually reaches the SQL is decided by S3's
+      `PRIMARY KEY` pattern instead, where it is unambiguous.
+    setup: >-
+      Create a table named `users`. Give it a field `id` of an integer type
+      marked as the primary key, and a field `email` of a text type, leaving the
+      nullable setting at its default. Then leave the app on a screen where the
+      `users` fields are listed with their types AND the primary-key / nullable
+      controls are visible -- the field editor or the table's detail panel, not
+      just a collapsed diagram box.
+    check:
+      name: text_matches
+      patterns:
+        - "\\busers\\b"
+        - "\\bemail\\b"
+        - "\\b(INTEGER|INT[248]?|TINYINT|SMALLINT|MEDIUMINT|BIGINT|BIGSERIAL|SERIAL|NUMBER|NUMERIC|DECIMAL)\\b"
+        - "\\b(TEXT|MEDIUMTEXT|LONGTEXT|NTEXT|N?VARCHAR2?|N?CHAR|STRING|CLOB|CITEXT)\\b"
+        - "\\bPK\\b|primary[\\s_-]*key"
+        - "\\bnullable\\b|\\bnull\\b|\\bNN\\b|\\brequired\\b|\\boptional\\b"
+  - id: S2
+    text: >-
+      A second table can be created and a relationship defined between them,
+      drawn between the boxes in the diagram.
+    points: 8
+    method: assert
+    note: >-
+      Zero of 990 recent trier-agents ever created a relationship, and only one
+      ever clicked "Add Table" twice — so this half of the brief has never been
+      exercised by the crowd at all. It has to be code-driven.
+
+      The "drawn between the boxes" half is NOT decided, and no primitive can
+      decide it today. A connector is an SVG `path`, `line` or `polyline`, and so
+      is every lucide/heroicons glyph in the toolbar, so a `dom_count` over those
+      selectors fires on a build with a delete icon and no diagram at all --
+      grading the icon set rather than the diagram. What would decide it is
+      `connector_between(text_a, text_b)`: find the two elements whose text
+      contains each table name, then look for an SVG geometry element whose
+      bounding box spans the gap between them. Until then the drawn edge is left
+      to the model, and what is asserted here is that both tables exist, that the
+      relationship column exists, and that the app has a relationship surface at
+      all.
+    setup: >-
+      With `users` already created, create a second table named `posts` with
+      fields `id` (integer, primary key), `user_id` (integer) and `title`
+      (text). Then use the app's own relationship control to define a
+      relationship from `posts.user_id` to `users.id`. Leave the diagram on
+      screen with both table boxes and any relationship list or label visible.
+    check:
+      name: text_matches
+      patterns:
+        - "\\busers\\b"
+        - "\\bposts\\b"
+        - "\\buser_id\\b"
+        - "relationship|foreign[\\s_-]*key|\\bFK\\b|references|one[\\s_-]*to[\\s_-]*many|1\\s*:\\s*[nm\\*]|\u2192"
+  - id: S3
+    text: "The export contains correct `CREATE TABLE` statements for both tables."
+    points: 10
+    method: assert
+    note: >-
+      Read from the rendered export text, which is where the export lives -- the
+      brief asks for it "shown as copyable text", so there is no file to inspect
+      and no DOM convention to rely on.
+
+      Each table name is required on the same line as its own `CREATE TABLE`
+      (the patterns cannot cross a newline or an opening paren), so a build that
+      emits one table and mentions the other only inside a `REFERENCES` clause
+      does not pass. The type patterns are per-column for the same reason: a
+      build that emits every column as `TEXT`, which is the common shortcut,
+      fails on `user_id`.
+
+      The type alternations span dialects on purpose -- `NVARCHAR`, `INT4`,
+      `SERIAL`, and backtick or bracket quoting all match -- because emitting
+      Postgres or MySQL rather than SQLite is a legitimate choice for a schema
+      designer and is not what this item measures. S5 is where the dialect
+      matters, and S5 is the item that cannot be run.
+    setup: >-
+      With `users` and `posts` created and related as in S2, open the app's SQL
+      export or preview so the generated `CREATE TABLE` statements are on screen
+      in full. Scroll so both statements are rendered; do not edit the SQL.
+    check:
+      name: text_matches
+      patterns:
+        - "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[^\\n(;]{0,40}\\busers\\b"
+        - "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[^\\n(;]{0,40}\\bposts\\b"
+        - "\\bemail\\b[^\\n,;)]{0,24}\\b(TEXT|MEDIUMTEXT|LONGTEXT|NTEXT|N?VARCHAR2?|N?CHAR|STRING|CLOB|CITEXT)\\b"
+        - "\\buser_id\\b[^\\n,;)]{0,24}\\b(INTEGER|INT[248]?|TINYINT|SMALLINT|MEDIUMINT|BIGINT|BIGSERIAL|SERIAL|NUMBER|NUMERIC|DECIMAL)\\b"
+        - "PRIMARY\\s+KEY"
+  - id: S4
+    text: >-
+      The export contains a FOREIGN KEY (or inline REFERENCES) expressing the
+      relationship.
+    points: 10
+    method: assert
+    note: >-
+      Four builds in the top third of recent scores have zero occurrences of
+      FOREIGN KEY or REFERENCES anywhere in 30 traces.
+
+      Both spellings are accepted in one alternation -- the table constraint and
+      the inline column reference -- because either satisfies the brief and
+      picking one would grade a dialect preference. The referenced column is not
+      required: `REFERENCES users` with the target implied is legal SQLite and
+      means the same thing. `CREATE TABLE` is required alongside, so a
+      relationship panel that prints "Foreign key: user_id -> users.id" as a UI
+      label cannot satisfy an item about the export.
+    setup: >-
+      Same state as S3: the SQL export on screen in full, with the
+      `posts`/`users` relationship already defined. If the export is paginated or
+      collapsed, expand it so the `posts` statement and anything following it are
+      both rendered.
+    check:
+      name: text_matches
+      patterns:
+        - "CREATE\\s+TABLE"
+        - "FOREIGN\\s+KEY\\s*\\([^)\\n]{0,40}\\buser_id\\b[^)\\n]{0,40}\\)\\s*REFERENCES\\s+[^\\n(;]{0,30}\\busers\\b|\\buser_id\\b[^\\n;]{0,80}\\bREFERENCES\\s+[^\\n(;]{0,30}\\busers\\b"
+  - id: S5
+    text: >-
+      The exported SQL executes without error in sqlite3, and the resulting
+      schema has both tables with the declared column types and the foreign key.
+    points: 6
+    method: probe
+    expect: "sqlite3 exit 0; sqlite_master lists posts,users; PRAGMA foreign_key_list(posts) -> table=users from=user_id to=id"
+    note: >-
+      NO CHECK, deliberately. Nothing in the catalogue executes SQL. S3 and S4
+      decide that the export *reads* correctly, which is a strictly weaker claim:
+      a build that emits `CREATE TABLE users (id INTEGER PRIMARY KEY,)` with a
+      trailing comma, or duplicates a column, or emits MySQL's
+      `AUTO_INCREMENT ... ENGINE=InnoDB`, matches every pattern in S3 and S4 and
+      still will not run. That gap is the whole point of this item, and no
+      combination of regexes closes it.
+
+      What would decide it is a `sql_executes` primitive:
+
+        name: sql_executes
+        params:
+          js: ""                  # optional; defaults to the page's visible text
+          pattern: ""             # optional; regex carving the DDL out of that
+                                  #   text, default from the first CREATE TABLE
+                                  #   to the last statement terminator
+          tables: [users, posts]  # must all appear in sqlite_master
+          columns:                # table -> column -> expected declared type,
+            users: {id: INTEGER, email: TEXT}   # compared case-insensitively
+            posts: {id: INTEGER, user_id: INTEGER, title: TEXT}
+          foreign_keys:
+            - {table: posts, from: user_id, references: users, to: id}
+
+      It would read the export text off the page, carve out the DDL, and run it
+      with `executescript` against a fresh `:memory:` database using the stdlib
+      `sqlite3` module -- no subprocess, no new dependency, and no filesystem
+      write. Then: `no` with the sqlite error message in `observed` if any
+      statement raises; otherwise compare `sqlite_master` against `tables`,
+      `PRAGMA table_info(t)` against `columns`, and `PRAGMA foreign_key_list(t)`
+      against `foreign_keys`, reporting the actual schema in `observed` either
+      way. `unknown` only when no DDL could be found on the page at all, so that
+      "the export view never opened" stays distinct from "the SQL is broken".
+
+      One judgement call belongs to whoever writes it: a valid Postgres or MySQL
+      export fails under SQLite. That is the correct reading of THIS item, whose
+      text names sqlite3 explicitly, but the primitive should carry a `dialect`
+      note so a future rubric does not silently penalise a build for targeting
+      another database.
+    setup: >-
+      Open the SQL export with `users` and `posts` created and related, and read
+      the whole statement text with `look` or `evaluate` so it is on the record.
+      You cannot execute SQL with these tools. Report `pass` only if you can show
+      from the text itself that every statement is syntactically complete and
+      SQLite-compatible -- no trailing commas, no duplicate columns, no
+      `AUTO_INCREMENT`, no `ENGINE=`, no unbalanced parentheses. Report `unknown`
+      rather than guessing.
+    check:
+      name: sql_executes
+      tables: ["users", "posts"]
+      foreign_keys:
+        - table: posts
+          references: users
+tier2:
+  - id: F1
+    text: "Tables and fields can be edited and deleted, and the diagram updates live."
+    points: 7
+    method: assert
+    note: >-
+      Scoped to fields on purpose. Deleting a table would satisfy the item's
+      other half but would destroy the schema F3, F4, A1 and A2 are graded
+      against, and a deleted table is indistinguishable from a table the grader
+      never managed to create -- so the table half is recorded as unmeasured
+      rather than bought at that price.
+
+      "Updates live" is what the `absent` half decides: the harness reads the
+      page with no reload in between, so a build that only drops the field from
+      its model while the diagram keeps rendering `email` fails here.
+    setup: >-
+      With `users` and `posts` in place, make two edits using the app's own
+      controls: rename the `posts` field `title` to `headline`, and delete the
+      `email` field from `users`. Do not reload. Leave the diagram on screen with
+      both tables' fields visible so the change is rendered.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bheadline\\b"
+        - "\\busers\\b"
+        - "\\bposts\\b"
+      absent:
+        - "\\bemail\\b"
+  - id: F2
+    text: "A user-authored design survives a refresh with no account."
+    points: 8
+    method: assert
+    note: >-
+      Explicit in the brief's core_features. One build showed a `Design saved
+      locally!` toast and lost everything on reload — 0/30 work_survived, gate
+      passed. See A2.
+
+      The harness performs the reload, and the nonce is a table the grader
+      itself named, so neither half can be earned by reporting a refresh that
+      never happened or by a build restoring its own demo schema. The read is
+      lower-cased before the nonce is looked for, because several builds
+      normalise identifiers to upper case for display and a case-sensitive
+      substring test would score that as data loss.
+    setup: >-
+      With the existing design in place, add one more table named exactly
+      `vbnonce7391` (a single integer field `id` is enough). If the app has a
+      save control, use it. Then stop — the harness performs the hard reload
+      itself. Do not reload the page yourself.
+    check:
+      name: survives_reload
+      nonce: vbnonce7391
+      js: |-
+        () => {const p=[document.body?document.body.innerText:''];for(const e of document.querySelectorAll('input,textarea,select'))if(e.value)p.push(e.value);for(const e of document.querySelectorAll('[contenteditable=""],[contenteditable="true"]'))p.push(e.innerText||'');return p.join(' ').toLowerCase();}
+  - id: F3
+    text: "Both one-to-many and many-to-many relationships can be defined."
+    points: 6
+    method: assert
+    note: >-
+      Decided from the cardinality vocabulary the app renders — a relationship
+      list, a connector label, or the value of a cardinality `select`, all three
+      of which the harness reads.
+
+      The known false negative is a build that expresses cardinality purely in
+      crow's-foot or Chen notation, with the multiplicity drawn as SVG and no
+      text anywhere. That build loses this item unfairly, and closing it needs
+      the same `connector_between` primitive S2 wants, extended to read a
+      marker's shape. Recorded rather than papered over: broadening the pattern
+      to anything that merely mentions "relationship" would pass every build
+      with a relationship button and measure nothing.
+    setup: >-
+      With `users` and `posts` related one-to-many, create a third table `tags`
+      with a single integer field `id`, then use the app's relationship control
+      to define a MANY-TO-MANY relationship between `posts` and `tags`, choosing
+      that cardinality explicitly if the app offers the choice. Leave the
+      relationship list or the labelled diagram on screen so both relationships
+      and their cardinalities are visible at once.
+    check:
+      name: text_matches
+      patterns:
+        - "one[\\s_-]*to[\\s_-]*many|\\bo2m\\b|\\b1\\s*:\\s*[nm\\*]|\\b1\\s*-\\s*[nm\\*]|has[\\s_-]*many"
+        - "many[\\s_-]*to[\\s_-]*many|\\bm2m\\b|\\b[nm]\\s*:\\s*[nm]\\b|\\*\\s*:\\s*\\*"
+  - id: F4
+    text: "The exported SQL is presented as copyable text in a real selectable element."
+    points: 4
+    method: assert
+    note: >-
+      Counted structurally rather than by name: the export container has no
+      cross-build id or class, so the question asked is whether ANY
+      `textarea`/`pre`/`code`/contenteditable exists while the export is the
+      thing on screen. What that fails is the build that paints its SQL into a
+      canvas or stacks it as one `div` per line — text a user cannot select in
+      one gesture, which is what the item is about.
+
+      It is lenient in one direction, and the setup is written to contain it: a
+      `<code>` used decoratively elsewhere on the page would satisfy the count,
+      so the export must be what is on screen and nothing else. The complementary
+      check is `clipboard_equals`, which would decide whether a Copy button
+      really writes the SQL rather than showing a "Copied!" toast; it is not used
+      here because a build offering a selectable `<pre>` and no copy button
+      satisfies this item's text and would fail it.
+    setup: >-
+      Open the app's SQL export or preview so the generated SQL is the content on
+      screen, and close any other panel, modal or editor first. Do not click a
+      copy control.
+    check:
+      name: dom_count
+      selector: 'textarea, pre, code, [contenteditable=""], [contenteditable="true"]'
+      op: ">="
+      n: 1
+
+penalties:
+  - id: A1
+    text: >-
+      The export contains an unsubstituted template placeholder, e.g.
+      `[Your App URL Here]`, `TODO`, `lorem`.
+    points: -5
+    method: assert
+    note: >-
+      Present in 30/30 traces of one build.
+
+      The bracketed branch requires a filler word (`your`, `insert`, `enter`,
+      `replace`, `change`) immediately inside the bracket, which is what keeps it
+      off SQL Server's `[dbo].[users]` identifier quoting — a build emitting that
+      dialect would otherwise be penalised for correct syntax. `TODO` and
+      `FIXME` carry word boundaries, so a table legitimately named `todos` does
+      not fire them.
+    setup: >-
+      Open the SQL export with the design in place and leave the full generated
+      SQL on screen, including any header comment the app writes above the
+      statements — that is usually where the placeholder is.
+    check:
+      name: text_matches
+      patterns:
+        - "\\[\\s*(your|insert|enter|replace|change)\\b[^\\]\\n]{0,40}\\]|<\\s*(your|insert|enter|replace)\\b[^>\\n]{0,40}>|\\{\\{[^}\\n]{0,40}\\}\\}|\\bYOUR_[A-Z_]{2,}|\\b(TODO|FIXME|TBD)\\b|\\blorem\\b"
+  - id: A2
+    text: "A save control reports success but the work does not survive a reload."
+    points: -8
+    method: assert
+    note: >-
+      "The save button is a complete lie and refreshing wipes your entire
+      canvas." Worse than no save button, because it actively misleads.
+
+      NO CHECK, and `default_restored` was rejected rather than overlooked. It
+      decides the second half correctly — it performs the reload itself and fires
+      when the grader's own table is gone while the app still renders a populated
+      screen — but it cannot see the first half, because the
+      `Design saved locally!` toast is gone by the time the check reads the page.
+      Two things follow, and together they are why it is not used.
+
+      It would fire on a build that loses the work while claiming nothing at all,
+      taking -8 for a lie that build never told; "reports success" is this item's
+      entire distinguishing content, so a check blind to it is not a weaker
+      version of the item but a different one. And that different one is already
+      graded: universal P3 runs `default_restored` on this idea with its own
+      nonce. Adding a second copy here would charge -13 for one fault and record
+      it twice in the report as though two things had gone wrong.
+
+      Closing it needs `claimed_then_lost(nonce, claim)`: read the page for
+      `claim` before reloading, reload, then fire only if the claim was seen AND
+      the nonce is gone. Until then the item falls to the model, which is the
+      one instrument that can observe both halves — the toast is on screen when
+      it looks, and `reload_page` is a recorded call it must cite.
+    setup: >-
+      Make sure a table named exactly `vbnonce7391` exists — recreate it if F2's
+      reload removed it. Then use the app's own save control and `look`, so
+      whatever it claims is on the record; quote that claim. Then `reload_page`
+      and `look` again. Fire this only if the app claimed the design was saved
+      AND `vbnonce7391` is gone afterwards. A build with no save control at all,
+      or one that claims nothing, does not fire this however badly it persists —
+      that is F2's and P3's business, not this item's.
+  - id: A3
+    text: "The canvas is prepopulated with a demo schema on a clean first load."
+    points: -4
+    method: assert
+    note: >-
+      26% of trials loaded a prebuilt template, and one build shipped its whole
+      demo schema base64'd into the URL hash before the agent touched anything —
+      so `work_survived` was trivially true for work the user never did.
+
+      Decided from the EXPORT rather than from the canvas, because the canvas has
+      no cross-build rendering that separates a seeded table box from the type
+      dropdown of an empty field form — and both put `VARCHAR` on screen. A real
+      `CREATE TABLE <name> (` in the export cannot be produced by an empty
+      design, and the required opening paren is what keeps it off the
+      "-- your CREATE TABLE statements will appear here" placeholder several
+      builds print into an empty export pane.
+
+      Penalties are graded last, so a genuinely clean load has to be manufactured
+      by clearing storage; the setup does that and re-enters at the bare root so
+      the URL-hash build re-seeds itself. The residual limit is that a build
+      whose export control only appears once tables exist, or whose export is
+      broken, under-fires — the safe direction for a penalty.
+    setup: >-
+      Wipe every trace of this session's work first: `evaluate`
+      `() => { localStorage.clear(); sessionStorage.clear(); return 'cleared'; }`,
+      then `goto` `/` so the app reloads at its bare root with no URL hash. From
+      that point create nothing, import nothing and load no template. Open only
+      the app's SQL export or preview, read-only, and leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[^\\n(;]{1,40}\\("

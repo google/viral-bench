@@ -1,0 +1,483 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for code_screenshot_studio (CodeShot). Never shown to the founder.
+#
+# Several items share state, so the fixtures are fixed here and referenced by
+# name rather than restated in each setup:
+#
+#   the CodeShot snippet   the four-line Python snippet typed in S1; S2 reads its
+#                          token colours, S3 repaints it, S4 exports it, and F3
+#                          appends a line to it
+#   VBSHOT4417             the nonce inside that snippet's comment, which can only
+#                          reach `innerText` by way of a preview that rendered
+#   VBLIVE4417             the line F3 appends to prove the preview is live
+#   VBCLEAR4417            the text sentinel S5 puts on the clipboard first, so a
+#                          stale image cannot be read as a fresh write
+#
+# ON READING THE PREVIEW. Every item whose claim is about the RENDERED card reads
+# `document.body.innerText`, which does not report a `<textarea>`'s value — so
+# the raw code sitting in the editor cannot stand in for a preview that never
+# rendered. The cost is recorded rather than hidden: the reference app (Carbon)
+# and any build following it makes the editor itself a contenteditable, which
+# puts the typed code into innerText directly, so those items over-credit that
+# shape rather than failing it. S2's distinct-colour count is what still
+# separates a highlighted card from a plain one there.
+rubric_version: 1
+idea_id: code_screenshot_studio
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Single-shot tool: compose a snippet, export a PNG, leave. The brief never
+      asks for saved work. Top builds do persist via URL hash and the crowd
+      rewards it, but that is a crowd preference, not a brief requirement.
+
+tier1:
+  - id: S1
+    text: "Pasting code and selecting a language renders the snippet in the live preview."
+    points: 6
+    method: assert
+    setup: |-
+      Clear the app's code editor completely — none of its seeded sample snippet
+      may remain — and type exactly this snippet into it:
+
+      # CodeShot VBSHOT4417
+      def greet(name):
+          total = 42
+          return f"hello {name}"
+
+      Then set the app's language control to Python. Wait for the preview card
+      to render, and leave it on screen.
+    note: >-
+      Read from `document.body.innerText`, which does not report a
+      `<textarea>`'s value, so the nonce can only be there because the card
+      rendered it.
+
+      The language half is not asserted here. F4 decides whether the chosen
+      language is displayed and S2 decides whether highlighting actually
+      happened, so requiring a third reading of the same control would fail a
+      build twice for one fault.
+
+      LIMITATION: the contenteditable-editor shape described in the file header
+      is credited here without a separate preview existing. That is over-credit,
+      not a false failure.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "VBSHOT4417"
+  - id: S2
+    text: "Tokens are coloured by role: the preview contains at least 3 distinct computed text colours."
+    points: 10
+    method: assert
+    setup: >-
+      With the CodeShot snippet rendered as Python — retype it if the editor no
+      longer holds it — leave the preview card on screen. Do not collapse or
+      hide the card, and do not switch to a theme the app itself describes as
+      plain, mono or no-highlight.
+    note: >-
+      Counted as distinct computed colours rather than as a language class,
+      because a class name would grade whichever of hljs, Prism or Shiki the
+      build happens to use — and Shiki emits inline-styled spans with no
+      language class at all, which is real highlighting by any reading. Spans
+      present but all one flat colour is exactly what a CDN-blocked theme
+      produces (universal R2's note records 43x ERR_BLOCKED_BY_ORB on
+      highlight.js/dracula.css), and counting colours fails that while counting
+      spans would not.
+
+      The selector covers the two shapes builds ship: a `<pre><code>` card
+      rendered beside a plain textarea, and a contenteditable editor whose own
+      token spans are the preview. Both are standard tags and attributes, not
+      any build's markup.
+
+      `min_distinct: 3` is the item's own number, and it is the right threshold:
+      a monochrome-by-design theme is excluded by the setup, and three roles
+      (keyword, string, comment) is the minimum the fixture snippet contains.
+    check:
+      name: computed_style_distinct
+      selector: 'pre span, code span, [contenteditable=""] span, [contenteditable="true"] span'
+      prop: color
+      min_distinct: 3
+  - id: S3
+    text: "Changing the theme changes the set of computed colours."
+    points: 8
+    method: assert
+    setup: >-
+      With the CodeShot snippet rendered, call capture(label="before"). Then
+      switch the app to a different colour theme, wait for it to apply, and call
+      capture(label="after"). The labels must be exactly "before" and "after" —
+      no others are read. Change nothing else between the two captures: not the
+      language, not the font, not the padding or background.
+    note: >-
+      The two obvious alternatives are both wrong in the direction that flatters
+      a broken build. The `text` view does not change on a theme switch at all,
+      so `value_changes` would fail every honest build; and the `full` view
+      includes `select.value`, so it would report a change on exactly the builds
+      whose theme dropdown does nothing. `computed_style_changes` reads the
+      harness's own `style` fingerprint, and the model supplies only the two
+      moments, never the values it is judged on.
+
+      LIMITATION: that fingerprint samples `body`, `:root`, `main` and `section`
+      only. A build whose theme repaints the code card alone and leaves the page
+      chrome untouched changes nothing it looks at, and is failed here despite
+      being correct. Widening it needs a `selector` the harness honours at
+      capture time; today `selector` and `prop` are recorded for the reader and
+      used by the primitive only in its failure message.
+    check:
+      name: computed_style_changes
+      prop: background-color
+  - id: S4
+    text: >-
+      Export produces a downloaded file with PNG magic bytes, non-zero size and
+      non-degenerate dimensions.
+    points: 12
+    method: assert
+    expect: "89 50 4E 47 0D 0A 1A 0A"
+    note: >-
+      "Clicking Export PNG does absolutely nothing" and "Export PNG is a
+      complete stub action" recur across builds.
+
+      `image_props` rather than `download(magic: png)`, because the item names
+      three clauses and this decides all three at once: the PNG signature, a
+      real file on disk, and IHDR width and height both above 1. The last is
+      what separates a working export from a build that fires a download
+      carrying a 1x1 or zero-area render — a failure `download(magic: png)`
+      would pass.
+    setup: >-
+      With the CodeShot snippet rendered, use the app's export / download /
+      "Export PNG" control so a file is actually written, and wait for the
+      download to finish. If it offers a choice of format, choose PNG. Do not
+      use the browser's own print, save-page or screenshot facilities — the
+      claim is about the app's export, not about what a browser can do anyway.
+    check:
+      name: image_props
+  - id: S5
+    text: "Copy-to-clipboard places an image on the clipboard."
+    points: 4
+    method: assert
+    setup: >-
+      First put a known text value on the clipboard so a stale entry cannot be
+      mistaken for a fresh write: `evaluate` with
+      `() => navigator.clipboard.writeText('VBCLEAR4417')`. Then, with the
+      CodeShot snippet rendered, use the app's copy-image-to-clipboard control
+      once and let any confirmation appear. Do not use a "copy code" or "copy
+      link" control — this item is about the image — and do not copy anything
+      else afterwards.
+    note: >-
+      NOT `clipboard_equals` or `clipboard_matches`, and the reason is decisive
+      rather than stylistic: both read `navigator.clipboard.readText()`, which
+      returns the empty string for a clipboard holding only an `image/png`
+      flavour. They would report "clipboard empty" — a definite FAIL — on
+      precisely the builds that get this right, and would pass only the builds
+      that copy the code as text instead. That is the exact inversion the item
+      exists to catch.
+
+      The js is bespoke but not DOM-coupled: it reads a browser API, not the
+      build's markup, so it survives forty builds equally. It names the
+      clipboard's flavours, which is all the item claims — the pixels are S4's
+      business. `clipboard-read` is granted on the grader's context
+      (`rubric/run.py`), and the sentinel written in the setup is what stops an
+      image left behind by S4's export flow from being read as this control's
+      work.
+    check:
+      name: value_matches
+      js: |-
+        async () => {
+          try {
+            const items = await navigator.clipboard.read();
+            return items.map((i) => i.types.join(' ')).join(' | ') || 'EMPTY';
+          } catch (e) {
+            return 'CLIPBOARD_READ_FAILED ' + (e && e.name);
+          }
+        }
+      pattern: "image/(png|jpe?g|webp|gif)"
+
+tier2:
+  - id: F1
+    text: "At least 3 selectable colour themes and 2 selectable developer fonts."
+    points: 5
+    method: assert
+    setup: >-
+      Open every panel that holds appearance settings — a sidebar, a settings
+      drawer, a "customise" popover — so the theme and font choices are in the
+      DOM rather than behind an unopened menu, and open the font chooser if it
+      is a dropdown. Leave them open and select nothing.
+    note: >-
+      Only the FONT half is decided, and the omission is deliberate. Theme names
+      are unbounded — Dracula and Nord sit beside "Sunset" and "Ocean" — so no
+      pattern can count three of them without either missing a build's own names
+      or matching ordinary prose. Developer font names are a bounded, well-known
+      set, which is what makes that half countable at all. The theme half is not
+      lost so much as owned elsewhere: S3 fails any build whose theme control
+      does not change the rendering, and a build shipping one hardcoded theme
+      cannot pass it.
+
+      The survey reads option-like elements and buttons — generic tags and ARIA
+      roles, no ids or classes — and de-duplicates identical labels, so a
+      dropdown trigger echoing the current font is not counted as a second one.
+
+      RESIDUAL: a build offering ONE font can still reach two matches by
+      spelling the name differently in two places ("Fira Code" in the option,
+      "Font: Fira Code" in a readout). That over-credits and does not
+      false-fail. A `text_pattern_distinct(pattern, minimum)` primitive —
+      counting distinct matches rather than occurrences — would remove it.
+    check:
+      name: text_pattern_count
+      js: |-
+        () => [...new Set(Array.from(document.querySelectorAll(
+          'option,[role="option"],[role="radio"],[role="menuitemradio"],button'))
+          .map((e) => (e.textContent || e.getAttribute('aria-label') || '')
+            .replace(/\s+/g, ' ').trim())
+          .filter(Boolean))].join('\n')
+      pattern: "\\b(?:fira\\s*(?:code|mono)|jetbrains\\s*mono|source\\s*code\\s*pro|ibm\\s*plex\\s*mono|space\\s*mono|roboto\\s*mono|ubuntu\\s*mono|dejavu\\s*sans\\s*mono|liberation\\s*mono|geist\\s*mono|victor\\s*mono|operator\\s*mono|anonymous\\s*pro|cascadia\\s*(?:code|mono)|iosevka|inconsolata|consolas|menlo|monaco|courier(?:\\s*new)?|sf\\s*mono|hack\\s*(?:nerd\\s*)?font|pt\\s*mono|noto\\s*sans\\s*mono|red\\s*hat\\s*mono|martian\\s*mono|azeret\\s*mono|share\\s*tech\\s*mono)\\b"
+      minimum: 2
+  - id: F2
+    text: "Frame styling is operable: window title bar, padding, and background colour/gradient."
+    points: 6
+    method: assert
+    setup: >-
+      Open every panel that holds frame or appearance settings so the controls
+      are in the DOM, and leave them open. Do not change any value — this item
+      is about what is offered, not about what it does.
+    note: >-
+      A structural read of two of the three clauses at once: a padding control
+      (a range or a number input) together with a background control, accepted
+      in either of the two forms builds actually ship — an `input[type=color]`,
+      or a clickable preset swatch carrying an inline `linear-gradient`. The
+      second branch is why the selector is a list: requiring a colour input
+      alone would fail the gradient-palette builds, which are the shape the
+      reference app uses. Both branches are standard HTML, not any build's
+      markup.
+
+      The TITLE BAR clause is NOT asserted. Window chrome is three coloured dots
+      and a caption drawn as anonymous divs, with no build-independent
+      signature, and a title-bar toggle is an ordinary checkbox indistinguish-
+      able from any other on the page; requiring one would fail builds whose
+      title bar is simply always on, which the item does not forbid.
+
+      "Operable" is read as present-and-offered rather than measured.
+      `is_operable` cannot express a conjunction of two different controls, and
+      universal R4 (`controls_have_names`) already fails any visible control
+      without an accessible name, so asserting usability again here would
+      double-count one fault. UNDER-CREDITED: a build offering padding as a
+      `<select>` of preset sizes fails this despite satisfying the item.
+    check:
+      name: dom_count
+      selector: 'body:has(input[type="range"], input[type="number"]):has(input[type="color"]), body:has(input[type="range"], input[type="number"]):has(button[style*="gradient"], [role="radio"][style*="gradient"], [role="button"][style*="gradient"])'
+      op: ">="
+      n: 1
+  - id: F3
+    text: "The preview updates live as code and settings change, with no manual render click."
+    points: 5
+    method: assert
+    setup: >-
+      With the CodeShot snippet rendered, put the caret at the end of the code
+      in the editor and type a new final line `# live VBLIVE4417`. Then, in the
+      editor, press Space and then BackSpace, so a real keystroke reaches the
+      app without changing the text. Do NOT click any render, preview, update,
+      refresh or apply control, and do not submit a form. Leave the preview on
+      screen.
+    note: >-
+      The Space/BackSpace pair is load-bearing rather than decorative:
+      `type_text` fills the field and dispatches a single `input` event, so a
+      build that re-renders on `keyup` would otherwise be failed for a preview
+      that works perfectly for a real user. The pair is a no-op wherever the
+      caret sits, so it cannot corrupt the snippet either.
+
+      Preferred over `value_changes` on two captures, which any ticking
+      character counter, timestamp or dimension readout would satisfy without
+      the preview updating at all. Read from `document.body.innerText`, so the
+      appended line has to come back out of the RENDERED card. "With no manual
+      render click" is enforced by the setup forbidding one, not by the check.
+
+      The "and settings change" half is carried by S3 at Tier 1 weight rather
+      than asserted a second time here. The contenteditable-editor over-credit
+      recorded in the file header applies to this item too.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "VBLIVE4417"
+  - id: F4
+    text: >-
+      The chosen language, theme and pixel dimensions appear as text beside the
+      preview.
+    points: 5
+    method: assert
+    note: >-
+      An explicit requirement in the brief's core_features, and exactly
+      assertable.
+
+      The DIMENSIONS clause is the discriminating one and the reason the item
+      scores: nothing but a real readout of the card's size produces a
+      `WIDTH x HEIGHT` pair, and the fixture snippet contains no digit-x-digit
+      of its own to be mistaken for one. Both the ASCII `x` and the typographic
+      `×` are accepted, since builds disagree about which they print.
+
+      The LANGUAGE clause is nearly free and known to be: the read includes
+      `select.value`, so a build with a language dropdown satisfies it whether
+      or not it prints the language beside the preview. It is kept because a
+      build with no language control at all should not collect this item, and it
+      costs nothing.
+
+      The THEME clause is not asserted. Theme names are unbounded, and the only
+      build-independent pattern available — the word "theme" — appears in the
+      control's own label on every build, so it would decide nothing.
+    setup: >-
+      With the CodeShot snippet rendered as Python, bring the readout that names
+      the current settings into view and leave it on screen. Do not leave a
+      settings dialog or dropdown open over it.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b\\d{2,4}\\s*[x\u00d7]\\s*\\d{2,4}\\b"
+        - "python"
+  - id: F5
+    text: "The snippet is never uploaded: zero outbound requests carrying the code."
+    points: 4
+    method: assert
+    note: >-
+      NO CHECK — no primitive can decide this without either double-counting
+      another item or failing honest builds, and a wrong check here would
+      misgrade all forty in the same direction.
+
+      `network_origins` is the obvious candidate and is wrong twice over. It is
+      already universal R2, applied to every idea over the whole session, so
+      using it here would score one fault twice. And it decides HOSTS, not
+      payloads: it fails a build that fetches a webfont or a highlight theme
+      from a CDN — which carries no code and is not what this item forbids —
+      while passing a build that POSTs the snippet to its own backend, which is
+      exactly what it does forbid and which this idea's brief explicitly permits
+      ("a backend is permitted, it is simply not needed"). `phase_only: true`
+      narrows the window but fixes neither half, and adds a new false failure:
+      an html-to-image export legitimately fetches a remote webfont to inline
+      it. `request_payload_hash` has the opposite polarity — it passes when a
+      payload IS found — and needs a fixture file on disk, which a typed snippet
+      is not.
+
+      WHAT IS NEEDED: `no_request_payloads(max_body=..., phase_only=True)` —
+      passing when no outbound request in the window carried a body larger than
+      `max_body`, regardless of host. The harness already records `body_size`
+      for every request (`PageHandle._wire`), so the primitive is a few lines;
+      it simply does not exist yet. Until then the item falls back to the model,
+      which can at least read the source.
+    setup: >-
+      Complete one full cycle with the CodeShot snippet: type it, set the
+      language, switch theme once, and export the PNG. Then `grep` the app's own
+      source for a `fetch`, `XMLHttpRequest`, `sendBeacon` or form POST that
+      carries the editor's contents, and judge on that. A CDN request for a
+      font, a theme or a highlighter is NOT an upload of the snippet and must
+      not be counted as one.
+
+penalties:
+  - id: A1
+    text: "Export throws a cross-origin or canvas-taint security error."
+    points: -8
+    method: assert
+    note: >-
+      27x `Error inlining remote css file SecurityError: Failed to read the
+      'cssRules' property`.
+
+      NO CHECK — the polarity is right for a penalty but no primitive can read
+      the signal. That quoted message is a `console.error` emitted by
+      html-to-image's own catch block, not an uncaught exception:
+      `console_errors_present` matches only lines beginning `pageerror:`, so it
+      never sees it. Where the SecurityError IS uncaught, that primitive fires
+      on ANY uncaught error during the export, which is A3's condition rather
+      than this one, and a -8 penalty must not fire on an unrelated crash.
+      `download_absent` under-fires in the common case: html-to-image logs the
+      cssRules failure, skips that stylesheet and still writes a degraded PNG,
+      so a file exists and the penalty stays silent.
+
+      WHAT IS NEEDED: `console_matches(pattern, allow=None)` — passing, and so
+      firing the penalty, when any recorded console line of any level matches
+      `pattern` (here `SecurityError|tainted|cross-origin|cssRules`). The
+      harness already records every `console.error` and `console.warning`
+      verbatim (`PageHandle._wire`), so the data is present and only the
+      primitive is missing.
+    setup: >-
+      With the CodeShot snippet rendered, use the app's export control and wait
+      for it to finish. Then take a snapshot and read the console errors it
+      reports. Fire this only for a security, taint or cross-origin message
+      raised by the export itself — a `SecurityError`, a "tainted canvas", a
+      failure to read `cssRules`, or a blocked cross-origin image or font. An
+      export that simply does nothing is S4's business, and an unrelated crash
+      while editing is A3's.
+  - id: A2
+    text: "Non-ASCII text or emoji render as mojibake in the preview or the export."
+    points: -5
+    method: assert
+    setup: |-
+      Clear the app's code editor completely and type exactly this snippet, then
+      let the preview render:
+
+      # 안녕하세요 🍣 café
+      greeting = "héllo 🎉 안녕하세요"
+
+      Leave the rendered preview card on screen.
+    note: >-
+      Fires on the PRESENCE of corruption, which is why it is not `no_mojibake`:
+      that primitive returns yes when the text round-trips intact, the wrong way
+      round for a penalty. Universal R6 is the positive form and reads the
+      user-visible text including the editor's own value; this reads
+      `document.body.innerText` only, so corruption confined to the rendered
+      card — the case the item names — is caught even while the editor still
+      holds the correct bytes.
+
+      The pattern is U+FFFD plus the classic UTF-8-decoded-as-Latin-1 markers.
+      Listing only the accented and emoji forms is sufficient rather than
+      partial: an encoding fault is a property of the path, not of one
+      character, so a build that mangles 안녕하세요 mangles café in the same
+      string.
+
+      The "or the export" half is NOT decided, and cannot be: the PNG is pixels,
+      and nothing in the harness reads glyphs out of an image. A build whose
+      canvas draws tofu while the DOM preview is perfect is missed — the safe
+      direction for a penalty. An OCR-backed `image_text_matches` would be
+      needed, which is not a reasonable dependency for five points.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "\\uFFFD|Ã©|Ã¨|Ã¡|Ã³|Ãº|Ã±|â€|ð"
+  - id: A3
+    text: "The preview crashes while editing (e.g. a DOM removeChild error)."
+    points: -5
+    method: assert
+    setup: >-
+      With the CodeShot snippet rendered, stress the editing path as the LAST
+      thing you do: select all the code and delete it, retype two of its lines,
+      switch the language to JavaScript and back to Python, then delete the
+      final line character by character with BackSpace. Then report immediately
+      — do not take another snapshot, and do not reload.
+    note: >-
+      Fires on an uncaught page error raised during the editing stress, which is
+      what a React `removeChild` crash is. Broader than the example the text
+      names, and deliberately so: any uncaught error thrown while editing is the
+      preview crashing while editing.
+
+      "Report immediately" is load-bearing rather than fussy. `PageHandle.snapshot`
+      drains the console, so an error the stress sequence raised is consumed by
+      the next snapshot the model takes, and the check at settle time then sees
+      an empty list and under-fires. Universal R3 lives with the same property.
+
+      This does not duplicate R3. R3's window is the primary flow — type, set a
+      language, export — and is drained long before this item runs; the
+      destructive edit sequence above is a path R3 never walks. A build that
+      crashes in both places pays both, which is two distinct crashes rather
+      than one counted twice.
+    check:
+      name: console_errors_present

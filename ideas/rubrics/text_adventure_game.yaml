@@ -1,0 +1,289 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for text_adventure_game (Emberfall). Never shown to the founder.
+#
+# The best DOM-observability fit in the corpus (~65% of the brief), because the
+# game IS text. The dominant real discriminator is whether progression actually
+# unlocks: 7 of 10 recent builds never reveal a second action, and delight tracks
+# button growth almost perfectly.
+#
+# Authoring note (2026-08-28): that same property is what makes this rubric hard
+# to mechanise. Almost every item is a claim about the *set of controls* changing
+# between two moments, or about one number inside the text changing while the
+# rest of the text also changes. Neither has a primitive. Six of the thirteen
+# items below carry a NO CHECK note naming the primitive that would close them.
+rubric_version: 1
+idea_id: text_adventure_game
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes local-storage persistence a core feature and the success
+      criterion, so it is tested at Tier 1 weight in S5 rather than again here.
+
+tier1:
+  - id: S1
+    text: >-
+      On a clean first load with empty storage, the actions region contains
+      exactly one enabled action.
+    points: 8
+    method: assert
+    note: >-
+      Count only elements inside the actions region, excluding chrome (sound,
+      theme, save, export, import, help, restart, clear). One build exposes 8
+      buttons at load of which 7 are settings — a naive button-count check is
+      gamed by adding toggles.
+
+      NO CHECK — separating a game action from chrome needs the control's
+      label, and no primitive counts controls by label. `dom_count` selects on
+      CSS only, so it cannot exclude a settings button. `aria_names` takes one
+      pattern with an *exact* count, but it surveys every accessible name on the
+      page rather than just enabled controls, so the broad "does not look like
+      chrome" pattern this needs would also count headings, regions and images.
+      Needs a primitive that enumerates visible, enabled controls and counts
+      those whose accessible name does not match a supplied denylist.
+  - id: S2
+    text: "Taking that action changes the visible state and appends an entry to the log."
+    points: 6
+    method: assert
+    setup: >-
+      Start from the game's opening screen with no progress taken; if the screen
+      is not the starting one, use the app's restart or new-game control first.
+      Before clicking anything, call capture(label="before"). Now click the
+      single starting action, wait about two seconds for the screen to settle,
+      and call capture(label="after"). Do not type anything, and do not touch
+      any sound, theme, save, export, help or settings control.
+    note: >-
+      Only the first half is decided by code: the rendered text must differ
+      after the action. Whether the new text is specifically a log entry, and
+      whether it was appended rather than replacing what was there, is not
+      separately observable — `value_changes` compares whole snapshots.
+
+      The default `text` view is deliberate. `full` folds in every input and
+      select value, which would report a change on any build where the grader
+      touched a form control. Residual risk in the other direction: a build that
+      paints an ambient clock or an idle ticker on the opening screen passes
+      without responding to the click. The facts sheet carries no signal for how
+      many builds do that.
+    check:
+      name: value_changes
+      before: before
+      after: after
+  - id: S3
+    text: >-
+      A further action unlocks: a control that was ABSENT from the DOM at t=0,
+      not merely hidden, becomes available.
+    points: 10
+    method: assert
+    note: >-
+      The single cleanest good/mediocre discriminator for this idea.
+
+      NO CHECK — the claim is a diff of the *control set* between two moments,
+      and no primitive compares control sets across captures. `value_changes`
+      sees body text only, where a newly revealed button's label is
+      indistinguishable from a new log line, so it would pass the exact build
+      this item exists to fail: the one whose log narrates progress while no
+      control ever appears. A single-moment count of enabled controls is gamed
+      by chrome and would also credit a build that shipped two actions from the
+      start, which S1 already calls wrong. Needs
+      `controls_added(before, after, minimum: 1)` — the accessible names of
+      visible, enabled controls in `after` include one absent from `before`.
+  - id: S4
+    text: >-
+      Resource counts update in the rendered text on the action that changes
+      them, with no reload.
+    points: 10
+    method: assert
+    note: >-
+      The best build in the corpus fails exactly this: two wood were banked in
+      the model but the counter read `Wood: 0 /25` until a reload revealed the
+      true value. The brief says the amounts are "always shown as text". 30/30
+      agents rated it would_use.
+
+      NO CHECK — this needs one pattern-matched number compared across two
+      captures, and nothing does that. `value_changes` passes the instant any
+      text moves, and in the failing build the log text moved while the counter
+      did not, so it would score that build correct — misgrading in the exact
+      direction the note warns about. `captures_monotonic` is non-strict in its
+      one documented direction (`non_increasing`), so a counter stuck at 0
+      satisfies it. `text_number_in_range` with a low bound requires *every*
+      match to be in range, so it fails honest builds that legitimately show a
+      second, not-yet-gathered resource at 0. Needs
+      `capture_number_changes(before, after, pattern)`, or a documented strict
+      direction for `captures_monotonic`; and the facts sheet would need the
+      resource-label vocabulary across the 40 builds before the pattern could be
+      written at all.
+  - id: S5
+    text: >-
+      Progress survives a reload, and the surviving value differs from the
+      initial state.
+    points: 6
+    method: assert
+    setup: >-
+      Start from the game's opening screen with no progress taken; if the screen
+      is not the starting one, use the app's restart or new-game control first.
+      Before clicking anything, call capture(label="clean"). Now play: take the
+      starting action and any actions it unlocks, at least four clicks in all,
+      waiting for each to finish. Then reload the page, let it finish loading,
+      and call capture(label="reloaded"). Do not use restart, new-game, clear or
+      import at any point after the first capture.
+    note: >-
+      The inequality precondition is load-bearing: without it, a build whose
+      screen never changes "persists" perfectly. One such build split its crowd
+      14 True / 13 False on whether an unchanging empty screen survived.
+
+      Encoded as a single comparison rather than two: the post-reload screen
+      must differ from the pristine opening screen. A build that wipes on reload
+      returns to the opening screen and fails; a build whose screen never
+      changes fails for the same reason, which is the precondition. Note that
+      `survives_reload` cannot serve here — it needs a nonce the grader typed,
+      and a button-driven game offers nowhere to type one. Residual risk: a
+      build that renders a clock or a randomised opening line passes without
+      persisting anything.
+    check:
+      name: value_changes
+      before: clean
+      after: reloaded
+
+tier2:
+  - id: F1
+    text: >-
+      Cooldowns gate: an immediate second click is refused — the control is
+      disabled or the state does not change — and the same click succeeds after
+      the stated interval.
+    points: 7
+    method: assert
+    note: >-
+      NO CHECK — a conjunction whose halves are each individually unsound.
+      Encoding "refused" as `value_changes` with `should_change: false`
+      false-fails every build that renders a live countdown, because that text
+      moves once a second on its own; it would punish precisely the builds that
+      implemented the feature. The second half on its own ("the click works
+      after the wait") is satisfied by a build with no cooldown at all. Needs a
+      negative-polarity operability primitive — "the control with this
+      accessible name is disabled right now" — and a way to exclude a ticking
+      region from a snapshot comparison.
+  - id: F2
+    text: >-
+      The countdown is single-sourced: the control's accessible name and its
+      visible text report the same remaining time.
+    points: 5
+    method: assert
+    note: >-
+      Two independent countdown renderers drift in every build that has one — 0
+      of 10 are self-consistent.
+
+      NO CHECK — no primitive cross-references a control's accessible name
+      against its own visible text; `aria_names` only matches names against a
+      pattern. A bespoke `value_equals` js could walk the buttons, but it would
+      have to decide the vacuous case, and reporting "consistent" when no
+      countdown exists anywhere would hand the 5 points to every build that
+      never implemented cooldowns — inverting a signal the note says is 0 of 10.
+      Needs `aria_matches_text(pattern)`: for each control whose accessible name
+      carries a number matching `pattern`, the same number appears in its
+      visible text, and no such control means fail rather than pass.
+  - id: F3
+    text: "The event log is newest-first and grows by exactly one entry per action."
+    points: 5
+    method: assert
+    note: >-
+      NO CHECK — two claims, neither observable. Ordering *within* a page has no
+      primitive at all. "Grows by exactly one" needs a per-entry pattern plus a
+      count delta across two captures; `text_pattern_count` counts at one
+      moment, and the facts sheet records no timestamp, bullet or list-item
+      convention shared across builds to key an entry pattern on. Needs
+      `capture_pattern_count_delta(before, after, pattern, delta: 1)` and a
+      surveyed log-entry shape on the facts sheet.
+  - id: F4
+    text: >-
+      Spending is guarded: an action is refused when the resource is
+      insufficient, and no balance goes negative.
+    points: 5
+    method: assert
+    note: >-
+      NO CHECK — the refusal half needs the disabled-state primitive F1 asks
+      for, plus knowledge of what each action costs. The no-negative-balance
+      half looks reachable with `text_matches` and `absent:`, but the only
+      pattern general enough for 40 builds — a word, a colon, a negative number
+      — also matches legitimate cost and upkeep labels such as `Cost: -10`, and
+      on its own it would award the full 5 points to every build with no
+      spending guard whatsoever. Needs the resource-label vocabulary on the
+      facts sheet.
+  - id: F5
+    text: "At least one enabled action remains after any action."
+    points: 3
+    method: assert
+    note: >-
+      "A single button that disables itself and lets the fire die immediately is
+      a glorified syntax error, not a game."
+
+      NO CHECK — `dom_count` over enabled controls counts chrome too, so the one
+      build this item exists to catch still passes as long as it ships a sound
+      or theme toggle. Same missing primitive as S1: a count of enabled,
+      visible controls restricted to those whose accessible name is not chrome.
+
+penalties:
+  - id: A1
+    text: "An uncaught page error prevents any game action from rendering."
+    points: -10
+    method: assert
+    note: >-
+      69 occurrences of `actionButtonsContainer is not defined` in a build the
+      validity gate passed as does_what_it_claims.
+
+      The conjunction itself is not testable. `console_errors_present` fires on
+      any uncaught error including a harmless one, and -10 for a stray throw in
+      a build that plays fine would misgrade in the loud direction; universal R3
+      already charges uncaught errors across this same primary flow, so it would
+      double-count as well. This fires instead on the observable harm alone —
+      the page paints no interactive control of any kind, which no working
+      Emberfall build ever does. It therefore under-fires by design: a build
+      whose script throws after painting a static shell of chrome buttons
+      escapes it. Worth validating against the corpus once, since if these
+      builds render their chrome from HTML rather than from the script that
+      threw, this penalty will never fire at all.
+    setup: >-
+      Load the app and wait for it to finish rendering. Do not click anything
+      and do not dismiss any panel — leave the page exactly as it first paints.
+    check:
+      name: dom_count
+      selector: 'button, [role="button"], input[type="button"], input[type="submit"], select, a[href]'
+      op: "=="
+      n: 0
+  - id: A2
+    text: >-
+      The available-action count grows only through chrome controls, not through
+      game actions.
+    points: -6
+    method: assert
+    note: >-
+      NO CHECK — needs both missing pieces at once: the control-set diff S3 asks
+      for, and the chrome/game classification S1 asks for. Firing on either half
+      alone would penalise builds that merely have settings, at -6 across every
+      build of the idea.
+  - id: A3
+    text: >-
+      A cooldown is a label only: the countdown renders but the click still
+      succeeds during it.
+    points: -6
+    method: assert
+    note: >-
+      NO CHECK — fires only on the conjunction "a countdown is visible" and "the
+      click still worked while it ran". `value_changes` with
+      `should_change: true` across a click taken during the countdown reports a
+      change from the countdown ticking alone, so it would fire on honest
+      builds — the worst possible direction for a -6. Needs the disabled-state
+      primitive F1 asks for.

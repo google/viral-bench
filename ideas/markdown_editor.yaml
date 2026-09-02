@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): StackEdit — https://github.com/benweet/stackedit
+# Verified 23,048 GitHub stars on 2026-08-06.
+
+idea_id: markdown_editor
+title: "Scribepad"
+pitch: "A distraction-free Markdown editor with a live preview, right in a browser tab."
+problem: "Writing Markdown usually means installing an editor, and the online ones want an account before they will let you type a paragraph."
+target_user: "Writers and developers who want to draft Markdown quickly on any machine."
+core_features:
+  - "Split view: Markdown source on one side, rendered HTML preview on the other, updating as you type"
+  - "Support the common syntax — headings, bold/italic, lists, links, tables, and fenced code blocks with syntax highlighting"
+  - "A formatting toolbar for the frequent actions, plus keyboard shortcuts"
+  - "Auto-save to local storage so a refresh never loses work, with a document list for several drafts"
+  - "Export the document as a `.md` file or copy the rendered HTML"
+success_criteria: "Typing Markdown containing a heading, a list, a link, and a fenced code block renders each one correctly in the preview as you type; the draft survives a page reload; and exporting returns a `.md` file with the original source."
+allowed_scope: client-app
+difficulty: easy
+
+ground_truth:
+  source: "Hacker News"
+  metric: github_stars
+  value: 23048

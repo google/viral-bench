@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Outline — https://github.com/outline/outline
+# Verified 40,019 GitHub stars on 2026-08-06.
+
+idea_id: team_wiki
+title: "Loregarden"
+pitch: "A fast, self-hosted knowledge base where a team's documents actually stay findable."
+problem: "Team knowledge ends up scattered across chat threads and personal drives, and the wikis that fix that are either sluggish, expensive per seat, or hosted somewhere you would rather your internal docs were not."
+target_user: "Small teams who want a shared, searchable home for their internal documentation."
+core_features:
+  - "Write and edit documents in Markdown, organized into nested collections"
+  - "Full-text search across every document the reader is allowed to see"
+  - "Accounts, with documents attributed to their author and a visible edit history"
+  - "Another member of the same workspace can open, read, and edit a document someone else wrote"
+  - "Comment on a document, so discussion lives next to the text rather than in chat"
+success_criteria: "One signed-in user writes a document in a collection; a second, separate user signs in, finds that document by searching for a phrase inside it, reads it, and adds an edit and a comment that the first user then sees."
+allowed_scope: full-stack-app
+difficulty: hard
+
+ground_truth:
+  source: "Hacker News / GitHub"
+  metric: github_stars
+  value: 40019

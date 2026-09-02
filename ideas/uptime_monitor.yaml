@@ -1,0 +1,47 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Uptime Kuma — https://github.com/louislam/uptime-kuma
+# Verified 89,912 GitHub stars on 2026-08-06.
+#
+# Multi-user note: the operator/viewer split IS the multi-user flow here — one
+# signed-in operator configures monitors and publishes a status page, and an
+# anonymous visitor reads it without an account. The spec leans on that
+# deliberately, because the rest of the product is single-admin.
+#
+# Runtime note: monitors must target something INSIDE the app (its own health
+# endpoint, or a user-supplied URL that may be its own origin). The container has
+# outbound network but the app must not depend on any specific public site being
+# reachable, or the same build passes or fails with the weather.
+
+idea_id: uptime_monitor
+title: "StatusWatch"
+pitch: "A self-hosted dashboard that watches your sites and services and tells you the moment one goes down."
+problem: "Hosted uptime monitors lock useful features behind subscriptions and put your monitoring data on someone else's servers."
+target_user: "Self-hosters and small teams who want to track the availability of their own websites and services."
+core_features:
+  - "Sign in as an operator and add monitors for HTTP(S) endpoints, with a configurable check interval"
+  - "Check each monitor on its schedule in the background and record the up/down history durably"
+  - "An operator dashboard showing each monitor's current state, latest response time, and uptime percentage"
+  - "Record a state change (up to down, or back) as a visible, timestamped incident in the monitor's history"
+  - "Publish a PUBLIC status page for selected monitors, readable at its own URL by anyone with no account"
+success_criteria: "A signed-in operator adds a monitor pointing at a reachable URL and a second one pointing at a URL that cannot resolve; after the check interval elapses the dashboard shows the first as up and the second as down with a recorded incident and a correct uptime percentage. A separate visitor with no account then opens the public status page and sees those same two states."
+allowed_scope: full-stack-app
+difficulty: medium
+
+ground_truth:
+  source: "Reddit (r/selfhosted)"
+  metric: github_stars
+  value: 89912

@@ -1,0 +1,468 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for shared_bookmarks (Linkloft). Never shown to the founder.
+#
+# Worst packaging record of any idea surveyed: 8 of 14 recent runs failed the
+# validity gate across four distinct modes (no manifest x4, `uv pip install .`
+# with no venv, `uv sync` with no pyproject.toml, and two builds reporting
+# smoke=ok while the entry URL returns HTTP 500).
+#
+# This is a MULTI-USER, server-backed idea whose success criterion is a SECOND
+# visitor reading the first user's collection. The grader drives one browser and
+# signs in and out to play both parts, so the items only compose if they agree
+# on identities, collection names and nonces. They are fixed here and referenced
+# by name:
+#
+#   user A       display name "Ada VB4417", email ada4417@example.com
+#   user B       display name "Ben VB4417", email ben4417@example.com
+#   password     Linkloft-4417, for both
+#   public coll  "Openloft VB4417"   -- marked public, holds the link below
+#   private coll "Vaultloft VB4417"  -- stays private, holds VBPRIVATE4417
+#   link         title "Untitled-4a19" -- deliberately says nothing about the
+#                notes; URL https://vb4417.example.com/alpha; notes contain
+#                VBNOTE4417; tag vbtag4417
+#   private link title "VBPRIVATE4417", URL https://vb4417.example.com/vault
+#
+# The split between the link's TITLE and its NOTES phrase is what makes F1
+# possible: searching VBNOTE4417 finds a link whose title never contains it, so
+# the query separates real full-text search from a title-prefix match. Putting
+# the phrase in the title would collapse that and quietly pass every build.
+#
+# The URL host carries the nonce (vb4417.example.com) rather than the path,
+# because bookmark apps commonly render only a link's domain; a nonce in the
+# path would be invisible on those builds and S2 would fail them for a
+# rendering choice rather than for losing the URL.
+#
+# ANONYMITY, and its one real limit. `http_status(anonymous=True)` is the only
+# instrument in the pipeline that issues a genuinely cookie-free request, but it
+# runs as a pre-pass BEFORE the grader has created anything, so it can only
+# speak about routes that exist on a fresh app -- never about a collection the
+# grader made, whose URL carries a runtime id. Every "anonymous" item below
+# therefore uses the app's own sign-out plus a `goto` back to the collection
+# URL. That is a signed-out browser, not a cookie-free client: a build that
+# leaks to a stale cookie is scored as if it had denied access. Closing this
+# needs a primitive that re-fetches the URL the model last visited in a fresh
+# context -- see the S4 note.
+rubric_version: 1
+idea_id: shared_bookmarks
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Server-side persistence is the point of this brief and is tested through
+      S2 and S4 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      Two users can sign up and sign in; sign-up completes in one submit and
+      leaves no modal open.
+    points: 6
+    method: probe
+    note: >-
+      One build took 71 username entries across 30 agents to reach 3 saved
+      links: "trapping users in silent modal failures right at the front door".
+
+      The check reads whichever session is live when the model stops, so it
+      decides one signed-in header rather than both. The second account is not
+      unexercised -- F4 is impossible without it -- but a build that creates Ada
+      and silently drops Ben passes here and fails there. "One submit" and "no
+      modal open" are not decided: the number of submits is in the transcript,
+      not on the page, and no primitive reads modality DOM-agnostically (only 6
+      of 37 builds use `<dialog>` at all). A signup modal left open usually
+      still renders "Sign up" or "Create account", which the absent list
+      catches; a generic modal does not.
+    setup: >-
+      Create two accounts, in this order: "Ben VB4417" (ben4417@example.com,
+      password Linkloft-4417), then sign out, then "Ada VB4417"
+      (ada4417@example.com, same password). Sign in explicitly if signup does
+      not sign you in. Leave Ada signed in on the app's own library screen, and
+      do not open a sign-in or sign-up dialog before you stop.
+    check:
+      name: text_matches
+      patterns:
+        - "Ada\\s*VB4417|ada4417"
+        - "sign\\s*out|log\\s*out|logout|signout"
+      absent:
+        - "\\bsign in\\b|\\bcreate account\\b|\\blog in\\b|\\bsign up\\b"
+  - id: S2
+    text: "A link saves with title, URL, notes and tags, and all four round-trip verbatim."
+    points: 7
+    method: assert
+    note: >-
+      The reload is performed by the model (a `goto` back to the app root)
+      rather than by the harness, so unlike a `survives_reload` item it rests on
+      a navigation the transcript records rather than one the harness forces.
+      That trade buys the thing the item actually names: `survives_reload` takes
+      a single nonce and could attest one of the four fields, whereas reading
+      the re-fetched record decides all four. Server-side persistence is
+      independently carried by S4, which loads the collection in a signed-out
+      session.
+
+      The URL is matched at host granularity, which is why the host carries the
+      nonce -- see the header. A build that stores the path but renders only the
+      domain is indistinguishable here from one that stored the domain alone.
+    setup: >-
+      Signed in as Ada, save a link with title exactly `Untitled-4a19`, URL
+      `https://vb4417.example.com/alpha`, notes reading "Saved for the
+      VBNOTE4417 review." and the tag `vbtag4417`. Wait for the save to
+      complete, then `goto` the app's root URL so the page is loaded fresh from
+      the server, sign in again if it drops you out, and open the saved link's
+      detail or edit view so its title, URL, notes and tags are all on screen at
+      once.
+    check:
+      name: text_matches
+      patterns:
+        - "Untitled-4a19"
+        - "vb4417\\.example\\.com"
+        - "VBNOTE4417"
+        - "vbtag4417"
+  - id: S3
+    text: >-
+      Links can be filed into a named collection via an operable control, and
+      the collection can be marked public.
+    points: 7
+    method: assert
+    note: >-
+      9 of 9 select attempts failed on one build whose collection picker was a
+      list of links — the second core feature untestable by the crowd.
+
+      What is decided is the OUTCOME -- the link renders inside a user-named
+      collection that calls itself public -- not the operability of the picker,
+      which has no DOM-agnostic instrument (see A3). The public half is the weak
+      one: a build whose toggle is labelled "Public" renders that word whether
+      or not the collection is public, so this over-credits a build with a
+      cosmetic toggle. What it still catches is the build with no notion of
+      public at all, and F2 and S4 both fail a toggle that does nothing.
+    setup: >-
+      Still signed in as Ada, create a collection named "Openloft VB4417", file
+      the saved link `Untitled-4a19` into it using the app's own collection
+      picker, and mark that collection public. Then create a second collection
+      named "Vaultloft VB4417", leave it private, and save into it a link titled
+      `VBPRIVATE4417` with URL `https://vb4417.example.com/vault`. Open
+      "Vaultloft VB4417" once and note the URL in the address bar -- S5 needs
+      it. Finish on the "Openloft VB4417" collection page, with its name, its
+      public status and the link `Untitled-4a19` all on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "Openloft\\s*VB4417"
+        - "Untitled-4a19"
+        - "\\bpublic\\b|\\bshared\\b|\\banyone with the link\\b"
+  - id: S4
+    text: >-
+      An anonymous client with no cookies opens the public collection URL and
+      sees the saved links with their tags.
+    points: 10
+    method: assert
+    note: >-
+      The brief says "browsable by anyone with the URL, without an account", so
+      the unauthenticated context is mandatory.
+
+      This is the idea's success criterion and the only item that reads the
+      shared collection from a session other than its author's. Absence of a
+      sign-out control is required alongside the content, so a build whose
+      sign-out silently did nothing -- leaving the author's session live -- shows
+      the links but does not earn the item; that is the closest the pipeline can
+      get to proving the reader was not the author, and it is weaker than a
+      cookie-free fetch (see the header). The tag is required as well as the
+      title because the item names it, and because a share page that renders
+      titles only is a real and common shortfall.
+    setup: >-
+      Signed in as Ada, open "Openloft VB4417" and copy its share URL (use the
+      app's own share or copy-link control if it offers one, otherwise the URL
+      in the address bar). Sign out using the app's own control, then `goto`
+      that URL. Leave whatever the app renders on screen and do not sign in
+      again.
+    check:
+      name: text_matches
+      patterns:
+        - "Untitled-4a19"
+        - "vbtag4417"
+      absent:
+        - "sign\\s*out|log\\s*out|logout|signout"
+  - id: S5
+    text: >-
+      That same anonymous client receives 403 or 404 on the private collection,
+      and no private link title appears in any response body.
+    points: 10
+    method: assert
+    note: >-
+      Read as: a signed-out visitor at the private collection's URL is told they
+      cannot have it, and the private link's title is nowhere on the page. The
+      HTTP status itself is not decided -- an SPA that renders "Not found" over
+      a 200 passes, which is the right call for the user-visible claim but not
+      for the literal one. Requiring a denial affordance is what stops a blank
+      page or a failed navigation from earning the item on absence alone; the
+      cost is that a build which silently redirects to a bare home page with no
+      sign-in link fails.
+    setup: >-
+      Still signed out, `goto` the URL of the private collection "Vaultloft
+      VB4417" that you noted in S3. Leave whatever the app renders on screen and
+      do not sign in.
+    check:
+      name: text_matches
+      patterns:
+        - "not\\s*found|does ?n[o']?t exist|\\b403\\b|\\b404\\b|forbidden|unauthori[sz]ed|\\bprivate\\b|no access|access denied|not authori[sz]ed|permission|\\bsign in\\b|\\blog in\\b"
+      absent:
+        - "VBPRIVATE4417"
+
+tier2:
+  - id: F1
+    text: >-
+      Full-text search and tag filtering return the correct subsets, scoped to
+      what the searcher is allowed to see.
+    points: 7
+    method: assert
+    note: >-
+      Only the full-text half is decided, and only the "correct subset" half of
+      that: the query is a phrase living solely in the link's NOTES, so a build
+      whose search matches titles only returns nothing and fails. The private
+      link's title is required absent, which is what separates a search that
+      filters from a page that lists everything -- and it is the LINK title, not
+      the collection name, so a persistent sidebar of collection names does not
+      suppress it.
+
+      Tag filtering is not decided (a second, independent final state, and an
+      item gets one), and neither is cross-user scoping: the search runs in
+      Ada's own session, where the private link is legitimately hers to see. F4
+      and S5 carry the scoping claim.
+    setup: >-
+      Sign back in as Ada (ada4417@example.com, Linkloft-4417). Using the app's
+      own search, search for the exact phrase VBNOTE4417, which appears only
+      inside the link's notes and never in any title. Leave the results on
+      screen with the query still in the search box; do not open the link.
+    check:
+      name: text_matches
+      patterns:
+        - "Untitled-4a19"
+      absent:
+        - "VBPRIVATE4417"
+  - id: F2
+    text: >-
+      Toggling a collection from public to private revokes anonymous access
+      immediately on the same URL.
+    points: 6
+    method: assert
+    note: >-
+      Catches caching and 'unlisted, not private'.
+
+      Decided from the final state only: the same URL that served the link in S4
+      now shows neither the link title nor its tag, and says so. "Immediately"
+      is enforced by the setup revisiting straight away rather than by the
+      check. Same denial-affordance trade as S5 -- a build that revokes by
+      redirecting to a bare home page with no sign-in link fails -- and the same
+      signed-out-browser limit described in the header.
+    setup: >-
+      Signed in as Ada, open "Openloft VB4417" and toggle it from public back to
+      private. Sign out immediately using the app's own control, then `goto` the
+      same share URL you used in S4, without waiting. Leave whatever the app
+      renders on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "not\\s*found|does ?n[o']?t exist|no longer|\\b403\\b|\\b404\\b|forbidden|unauthori[sz]ed|\\bprivate\\b|no access|access denied|not authori[sz]ed|permission|\\bsign in\\b|\\blog in\\b"
+      absent:
+        - "Untitled-4a19"
+        - "vbtag4417"
+  - id: F3
+    text: >-
+      Enumerating collection ids as an anonymous client never returns a private
+      collection's contents.
+    points: 5
+    method: probe
+    note: >-
+      NO CHECK — needs a corpus fact this idea's facts sheet does not carry, and
+      a primitive that does not exist. `http_status(anonymous=True)` is the only
+      cookie-free instrument, and it needs a literal path; the modal
+      collection-list route for the r3 shared_bookmarks slice is not on the
+      sheet (team_wiki's equivalent item could name `/api/documents` only
+      because that route census had been taken). Even with the path it would not
+      settle this item, because it runs as a pre-pass before the grader has
+      created "Vaultloft VB4417", so a `body_excludes: VBPRIVATE4417` assertion
+      would be vacuously true on every build.
+
+      Two things would close it: a route census for this idea on the facts
+      sheet, and either a post-flow anonymous probe or an
+      `enumerate_paths(template, range, anonymous, body_excludes)` primitive
+      that walks `/c/1..N` in a cookie-free context. Until then the item falls
+      back to the model, which can try a handful of ids by hand and should
+      answer `unknown` rather than generalise from three probes.
+    setup: >-
+      Still signed out, try to reach collections you were never given a URL for:
+      take the private collection's URL from S3 and vary its id (increment and
+      decrement it, try 1, 2 and 3), and try any listing route the app exposes.
+      Report every id you reached and whether the link title VBPRIVATE4417 was
+      ever rendered.
+  - id: F4
+    text: "Library isolation: user B's library contains none of user A's items."
+    points: 4
+    method: assert
+    note: >-
+      Ben's own name is required present so that a signed-out page, an error
+      page or a failed navigation cannot earn the item by showing nothing --
+      absence alone is far too easy to satisfy here. The two absent patterns are
+      Ada's link titles, one from each collection, so a build that leaks only
+      the public one still fails.
+    setup: >-
+      Sign out of Ada's session and sign in as Ben (ben4417@example.com,
+      Linkloft-4417). Open Ben's own library or home view -- the screen that
+      lists the links Ben has saved -- and leave it on screen. Do not use search
+      and do not open Ada's shared URL.
+    check:
+      name: text_matches
+      patterns:
+        - "Ben\\s*VB4417|ben4417"
+      absent:
+        - "Untitled-4a19"
+        - "VBPRIVATE4417"
+  - id: F5
+    text: "Zero non-localhost requests."
+    points: 3
+    method: assert
+    note: >-
+      209x cdn.tailwindcss.com warnings in one self-hosted build.
+
+      The bookmarked host is allowed, because a build that fetches a favicon or
+      an OpenGraph preview for a link the grader saved is doing what a bookmark
+      manager does, and failing it here would grade the fixture rather than the
+      build. Every other off-machine origin -- the CDN case this item exists for
+      -- still fires.
+    setup: >-
+      Nothing specific to navigate: use the app normally for a few steps as Ben
+      (open the library, run a search, open a link's detail view) so its pages
+      and assets load, and leave it on screen.
+    check:
+      name: network_origins
+      allow:
+        - "vb4417.example.com"
+
+penalties:
+  - id: A1
+    text: >-
+      A private collection is merely unlisted: a direct request for its URL
+      returns 200.
+    points: -10
+    method: probe
+    note: >-
+      Fires only when both halves hold at once: the private link's title is
+      readable AND the page offers a sign-in affordance with no sign-out control
+      anywhere on it, i.e. the app itself renders the reader as signed out. A
+      build that bounces the visitor to a login screen shows the affordance
+      without the title and does not fire; a build that kept the session shows
+      the title with a sign-out control and does not fire either.
+
+      The literal claim -- HTTP 200 -- is not read; what is read is that the
+      contents came back. An SPA that 404s the API and renders the body from a
+      cache would fire, which is the right answer for the leak even though the
+      status is not 200.
+    setup: >-
+      Sign out using the app's own control, then `goto` the URL of the private
+      collection "Vaultloft VB4417" that you noted in S3. Leave whatever the app
+      renders on screen and do not sign in again.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPRIVATE4417"
+        - "\\bsign in\\b|\\bsign up\\b|\\bcreate account\\b|\\blog in\\b|\\blogin\\b"
+      absent:
+        - "sign\\s*out|log\\s*out|logout|signout"
+  - id: A2
+    text: "Auth fails silently on valid credentials, trapping the user on the landing page."
+    points: -8
+    method: assert
+    note: >-
+      Fires when a sign-in with credentials known to be valid leaves the sign-in
+      affordance still on screen, with no signed-in identity, no sign-out
+      control, and nothing that explains the refusal. A build that rejects
+      loudly does not fire -- that is a different fault -- and a build that signs
+      Ada in has no sign-in affordance left to match.
+
+      Whether exactly one submit was made is in the transcript, not on the page,
+      so the setup's "submit once and stop" is a discipline the check cannot
+      enforce: a model that retries until it works suppresses the penalty. That
+      is the safe direction for a -8.
+    setup: >-
+      Sign out, then sign in as Ada with the credentials that are known to work
+      (ada4417@example.com, Linkloft-4417). Submit the form exactly once, wait
+      several seconds for the app to respond, and then stop -- do not retry, do
+      not reload, and do not correct anything. Leave whatever is on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bsign in\\b|\\blog in\\b|\\blogin\\b|\\bsign up\\b|\\bcreate account\\b"
+      absent:
+        - "Ada\\s*VB4417|ada4417"
+        - "sign\\s*out|log\\s*out|logout|signout"
+        - "invalid|incorrect|wrong|error|failed|unable|not found|no account|try again|check your|does ?n[o']?t match"
+  - id: A3
+    text: "The collection picker is not an operable control, so links cannot be filed."
+    points: -6
+    method: assert
+    note: >-
+      NO CHECK — no primitive can decide this without grading a DOM convention.
+      `is_operable` is positive-polarity and takes a CSS selector, so the only
+      inversion available is `dom_count(op: "==", n: 0)` over a guessed selector
+      set, and a -6 penalty would then fire on every build whose picker is a
+      button-and-menu, a radio group or a command palette rather than a
+      `<select>` or an ARIA combobox. Those are operable and correct.
+
+      What would decide it is an inverse keyed on the accessible name rather
+      than the tag -- `control_not_operable(name_pattern)`, "an element whose
+      accessible name matches /collection|folder|add to/ exists but is an
+      anchor, a plain div, or is smaller than a touch target". That also needs a
+      corpus fact the sheet lacks: what shared_bookmarks builds actually build
+      collection pickers out of. The sheet says 23 of 37 set aria-labels
+      somewhere, which is not the same question. Falling back to the model here
+      is cheap -- it tries the picker and sees whether the link lands.
+    setup: >-
+      Signed in as Ada, start filing a link into a collection using the app's
+      collection picker. Report what the picker is made of (a native select, a
+      listbox, a set of links, plain text), whether keyboard focus reaches it,
+      and whether the link actually ends up in the collection afterwards.
+  - id: A4
+    text: >-
+      Validation rejects input with no visible message (a silent 400 on a
+      password or username rule).
+    points: -4
+    method: assert
+    note: >-
+      Probed with a DUPLICATE account rather than a short password on purpose. A
+      short password is usually caught by native constraint validation, whose
+      bubble is browser chrome the harness never reads, so the penalty would
+      fire on builds that did show the user a message. Uniqueness cannot be
+      enforced client-side, so the response has to come from the server and has
+      to be rendered to be seen.
+
+      Fires when the signup form is still on screen after the submit and nothing
+      on it names a reason. A build that succeeds in creating a duplicate
+      account signs the grader in, removes the form and does not fire -- that is
+      a different bug, and not this one. A build that renders a permanent rules
+      hint ("at least 8 characters") under the field suppresses the penalty even
+      when its actual rejection was silent; under-firing is the safe direction.
+    setup: >-
+      Sign out and open the sign-up form the way a fresh visitor reaches it.
+      Create an account using Ada's existing identity -- email
+      ada4417@example.com, display name "Ada VB4417", password Linkloft-4417 --
+      so the app must reject it as already taken. Submit once, wait several
+      seconds, and stop. Do not retry, do not change the values, do not reload.
+      Leave whatever is on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bsign up\\b|\\bcreate account\\b|\\bregister\\b|\\bcreate your account\\b"
+      absent:
+        - "invalid|incorrect|error|failed|unable|cannot|can'?t|already|taken|in use|exists|registered|must\\b|at least|too short|minimum|required|characters|try again|choose another|different"

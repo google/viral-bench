@@ -1,0 +1,321 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for json_graph_viewer (JSONScape). Never shown to the founder.
+#
+# Reference document, used by S1-S3, F1 and F2. It is pasted COMPACT, on one
+# line, on purpose: any 2-space-indented rendering of it therefore came from the
+# app's own formatter and not from the grader echoing pretty input back.
+#   {"id":42,"name":"Ada Lovelace","tags":["math","code"],"meta":{"active":true,"score":9.5,"nickname":null}}
+#
+# Rendering technology is deliberately NOT graded. In the r3 slice 17/39 builds
+# use SVG geometry, 8/39 draw the scene into canvas pixels, and the remaining
+# ~14 lay the graph out in plain DOM, so `dom_count` over `svg` would decide the
+# technology rather than the feature. Every check below reads rendered text, a
+# harness snapshot, or the clipboard. The consequence is deliberate and matches
+# what S1/S2 already say in prose: a build whose graph exists only as canvas
+# pixels has no labelled nodes and no accessibility tree, and fails those items.
+rubric_version: 1
+idea_id: json_graph_viewer
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      A viewer, not an authoring tool. The brief asks for parse, render, search,
+      error-report; it never asks that a pasted document persist.
+
+tier1:
+  - id: S1
+    text: >-
+      A nested JSON document renders as a graph of individually labelled nodes
+      with edges — not one text blob.
+    points: 12
+    method: assert
+    expect: >-
+      For the reference document: >=14 discrete labelled elements; a node whose
+      name contains both `name` and `Ada Lovelace`; `tags` labelled as an array
+      of cardinality 2; `score` showing 9.5; `nickname` showing null. Edge count
+      >= node count - 1, or explicit aria-owns/aria-level relationships. A single
+      <pre> containing the whole document is an automatic fail.
+    setup: >-
+      Paste this exact document, compact and on one line, into the app's JSON
+      input and let it render:
+      {"id":42,"name":"Ada Lovelace","tags":["math","code"],"meta":{"active":true,"score":9.5,"nickname":null}}
+      Expand every collapsed node so the whole document is on screen. Do not use
+      any built-in sample or demo document.
+    note: >-
+      One build markets itself as a graph explorer, shows only an indented
+      key/value listing with no node/edge vocabulary and no collapse controls,
+      and scored 7.43. The accessibility tree is the tell.
+
+      Partial by construction: the check decides that every leaf of the
+      reference document is individually visible and nothing was truncated or
+      summarised, which is the necessary half. It cannot decide the
+      node/edge-structure half, because the brief also requires a formatted text
+      view alongside the graph, so the same strings are on screen either way —
+      see A1, which is the item that would have carried that and is unauthored.
+    check:
+      name: text_matches
+      patterns:
+        - "Ada Lovelace"
+        - "9\\.5"
+        - "nickname"
+        - "tags"
+        - "(?i)\\bnull\\b"
+  - id: S2
+    text: >-
+      Collapsing a node removes exactly its descendants from the accessibility
+      tree; expanding restores exactly those.
+    points: 8
+    method: assert
+    expect: "collapse `meta` -> active, score, nickname absent from the a11y tree (not merely visually hidden); counter drops by exactly 3; expand restores the same 3"
+    setup: >-
+      Paste the reference document, compact and on one line, and let it render:
+      {"id":42,"name":"Ada Lovelace","tags":["math","code"],"meta":{"active":true,"score":9.5,"nickname":null}}
+      Expand everything so `active`, `score` and `nickname` are all on screen,
+      then call capture(label="before"). Now collapse the `meta` node using the
+      app's own collapse control, wait for the view to settle, and call
+      capture(label="after"). Do not collapse anything else.
+    note: >-
+      Weaker than the item text: the snapshots decide that collapsing `meta`
+      changes what is rendered, not that it removes exactly three descendants.
+      An exact test is not available, because the brief also requires a
+      formatted text view alongside the graph, so `active`/`score`/`nickname`
+      stay on screen in that panel however well the graph collapses — an
+      absent-text check would fail almost every honest build. Deciding "exactly
+      its descendants" needs an accessibility-tree diff primitive.
+    check:
+      name: value_changes
+      before: before
+      after: after
+      should_change: true
+  - id: S3
+    text: >-
+      Searching a nested key highlights exactly the matching node and changes
+      the visible-node count; a no-match query says so explicitly.
+    points: 8
+    method: assert
+    setup: >-
+      Paste the reference document, compact and on one line, and let it render:
+      {"id":42,"name":"Ada Lovelace","tags":["math","code"],"meta":{"active":true,"score":9.5,"nickname":null}}
+      Call capture(label="before"). Now type `nickname` into the app's search
+      box, wait for the results to settle, and call capture(label="after"). Do
+      not type into anything other than the search box.
+    note: >-
+      The default `text` snapshot view is used deliberately: the `full` view
+      includes input values, so it would report a change merely because the
+      grader typed into the search box, awarding the item to a build whose
+      search does nothing. A build that only tints the matching node with CSS
+      and shows no count fails; the item text requires the visible-node count to
+      change, so that is faithful rather than an artefact.
+    check:
+      name: value_changes
+      before: before
+      after: after
+      should_change: true
+  - id: S4
+    text: >-
+      Malformed JSON produces a parse error citing the correct line and column,
+      derived from the input.
+    points: 12
+    method: assert
+    expect: >-
+      `{"a":1,}` -> line 1 column 8 (position 7); `{'a':1}` -> line 1 column 2;
+      `{"a":1}\n{"b":2}` -> line 2, not line 1. Verified with two differently
+      malformed documents whose error positions differ, so a canned diagnostic
+      for the app's own sample cannot pass.
+    setup: >-
+      Clear the input, then enter a two-line document: the first line is exactly
+      {"a":1} and the second line is exactly {"b":2} (press Enter between them,
+      so the document really does span two lines). Wait for the app to report
+      the parse error and leave the error message on screen.
+    note: >-
+      The two-line fixture is the discriminating one: its error is on line 2, so
+      a canned diagnostic written for the app's own malformed sample cannot
+      accidentally pass. Only the line is asserted, not the column, because
+      builds disagree about whether the offending character is column 1 or 8 of
+      line 2 while all correct ones agree on the line.
+    check:
+      name: text_number_equals
+      pattern: "(?i)\\bline\\s*:?\\s*(\\d+)"
+      expect: 2
+      tolerance: 0
+
+tier2:
+  - id: F1
+    text: >-
+      The formatted text view matches `JSON.stringify(JSON.parse(input), null, 2)`
+      byte-for-byte.
+    points: 6
+    method: assert
+    setup: >-
+      Paste the reference document, compact and on one line, with no spaces or
+      line breaks in it:
+      {"id":42,"name":"Ada Lovelace","tags":["math","code"],"meta":{"active":true,"score":9.5,"nickname":null}}
+      If the app needs a Format/Beautify/Prettify action to produce the
+      formatted text view, use it. Leave that formatted view scrolled to the top
+      and fully visible.
+    note: >-
+      Samples the exact 2-space-indented output at three depths rather than
+      comparing the whole string, since the rendered text also contains the
+      app's own chrome. Because the grader pastes the document compact, a match
+      cannot come from echoing pretty input back.
+    check:
+      name: text_matches
+      patterns:
+        - '\n  "id": 42,'
+        - '\n  "meta": \{'
+        - '\n    "score": 9\.5,'
+  - id: F2
+    text: "Copy-to-clipboard places exactly that formatted text on the clipboard."
+    points: 4
+    method: assert
+    setup: >-
+      In the same state as F1 — the reference document pasted compact and the
+      formatted text view showing — click the app's copy-to-clipboard control
+      for that formatted text. Do not select text by hand and do not use Ctrl+C.
+    note: >-
+      Pattern form rather than `clipboard_equals`, so that a build appending a
+      trailing newline is not failed for punctuation; the patterns still pin the
+      2-space indentation, so copying the raw compact input or the unformatted
+      document does not pass.
+    check:
+      name: clipboard_matches
+      patterns:
+        - '"name": "Ada Lovelace",'
+        - '\n  "meta": \{'
+        - '\n    "score": 9\.5,'
+  - id: F3
+    text: >-
+      An 8-level nested document renders 8 distinguishable depth levels, without
+      silently truncating.
+    points: 5
+    method: assert
+    setup: >-
+      Clear the input and paste this document, compact and on one line:
+      {"L1":{"L2":{"L3":{"L4":{"L5":{"L6":{"L7":{"L8":"deepest"}}}}}}}}
+      Expand every node, all the way down, until nothing is left collapsed.
+      Leave the deepest level on screen.
+    note: >-
+      Decides that all eight keys survive to the screen, which is the
+      "without silently truncating" half. It cannot tell whether the eight
+      levels are visually distinguishable, and a build whose graph stops at
+      depth 5 while its formatted text view still prints all eight would pass;
+      separating those needs a per-node depth or indentation survey.
+    check:
+      name: text_pattern_distinct
+      pattern: "\\b(L[1-8])\\b"
+      minimum: 8
+  - id: F4
+    text: "Empty input produces an explicit message, never a blank canvas."
+    points: 4
+    method: assert
+    setup: >-
+      Select everything in the app's JSON input and delete it so the input is
+      completely empty, then click outside it and wait for the app to react.
+      Leave the app in that empty state.
+    note: >-
+      The pattern deliberately excludes bare invitations like "paste your JSON",
+      which most builds carry as a permanent heading and which would pass on
+      every build whether or not it handles the empty case. It requires wording
+      that only an empty-state message uses.
+    check:
+      name: text_matches
+      pattern: "(?i)\\bempty\\b|\\bno\\s+(?:valid\\s+)?(?:json|data|input|content|nodes?)\\b|\\bnothing\\s+to\\s+(?:show|display|render|parse|visuali[sz]e)\\b|\\bwaiting\\s+for\\b|\\bawaiting\\b"
+  - id: F5
+    text: "Keys and values containing CJK and emoji render exactly, with no mojibake."
+    points: 6
+    method: assert
+    expect: '{"名前":"寿司 🍣","emoji":"café"} -> node labels exactly 名前, 寿司 🍣, café; any ã, å, ?, U+FFFD or surrogate leakage fails'
+    setup: >-
+      Clear the input and paste this exact document, on one line:
+      {"名前":"寿司 🍣","emoji":"café"}
+      Let it render and leave the node labels on screen.
+    note: >-
+      A live bug: 11 of 30 agents in one run reported mojibake, and delight fell
+      only 0.5.
+
+      One probe token is asserted rather than all three: `寿司 🍣` carries
+      multibyte CJK, an ASCII space and a surrogate pair, so it fails on every
+      encoding fault that would also corrupt 名前 or café.
+    check:
+      name: no_mojibake
+      text: "寿司 🍣"
+
+penalties:
+  - id: A1
+    text: "The graph is a pretty-printed text tree with no node or edge structure."
+    points: -10
+    method: assert
+    note: >-
+      NO CHECK — needs a primitive that decides whether the document is laid out
+      as positioned nodes joined by connectors, or as one top-to-bottom text
+      run: a layout-dispersion survey (bounding boxes of the elements carrying
+      the leaf text), or an edge count. Nothing in the catalogue can express it
+      DOM-agnostically here. `dom_count` over `svg`/`canvas` was considered and
+      rejected twice over: only 17/39 r3 builds use SVG geometry and 8/39 draw
+      to canvas, so it grades rendering technology; and almost every build ships
+      inline `<svg>` icons, so a zero-count form would never fire at all.
+      Falls back to the model.
+  - id: A2
+    text: >-
+      Parse errors are generic, or identical across differently-malformed
+      inputs.
+    points: -6
+    method: assert
+    setup: >-
+      Same state as S4: the input cleared, then a two-line document entered
+      whose first line is exactly {"a":1} and whose second line is exactly
+      {"b":2}, with the resulting parse error left on screen.
+    note: >-
+      One build ships a preset called "Sample Malformed JSON (Diagnostics Demo)"
+      hand-crafted so the diagnostic looks brilliant; all 114 occurrences of
+      `line 6` in its traces come from that one canned string.
+
+      Fires as the inverse of S4, on the same phase: the error for this document
+      belongs on line 2, so an app that cites no line, or cites the line its own
+      canned sample uses, is being generic. The literal "identical across two
+      inputs" comparison is not available — `value_changes` with
+      should_change:false would compare whole-page snapshots, and 17/39 builds
+      echo the input in a contenteditable editor, so the two snapshots differ
+      whatever the error says.
+    check:
+      name: text_matches
+      absent:
+        - "(?i)\\bline\\s*:?\\s*2\\b|\\b2\\s*:\\s*1\\b"
+  - id: A3
+    text: "An auto-fix silently rewrites the user's JSON without showing what changed."
+    points: -5
+    method: agent
+    note: >-
+      Heavily credited by the crowd ("robust auto-fixing for messy JSON"), but
+      it is arguably the opposite of the brief's "clear, specific error
+      messages": it makes the error disappear rather than pointing at it.
+  - id: A4
+    text: "Parse failures spew to console.error rather than being handled."
+    points: -3
+    method: assert
+    setup: >-
+      Clear the input and paste the malformed document {'a':1} (single quotes,
+      which JSON does not allow). Wait for the app to react, then leave it
+      alone — do not reload and do not fix the document.
+    note: >-
+      `console_errors_present` records an uncaught error during this item's
+      phase, which is the worst form of the behaviour the item names. If the
+      harness does not also record explicit `console.error` calls, the penalty
+      under-fires rather than over-fires, which is the safe direction for a
+      penalty.
+    check:
+      name: console_errors_present

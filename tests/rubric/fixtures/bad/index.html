@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!--
+  The dishonest fixture app. Every rubric primitive should FAIL against this
+  page, and each failure is a NAMED failure taken from a real build in the
+  corpus rather than an invented one:
+
+    * a labelled <div> standing in for an input        (89 real type failures)
+    * a "Saved!" toast that persists nothing           (0/30 work_survived)
+    * an "Offline" badge over a third-party fetch      (60 CDN hits per run)
+    * an export button that fires no download          (~24 of 36 builds)
+    * a savings figure with the minus sign stripped    (+5.2 delight swing)
+    * a score that is maximal on empty input           (ATS 100% on nothing)
+    * a board flattened to bare text                   (2 of 10 builds)
+    * an uncaught page error                           (69 occurrences)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: bad</title>
+<!-- A third-party fetch, under an "Offline Ready" badge. -->
+<link rel="stylesheet" href="https://cdn.example.invalid/theme.css">
+<style>
+  /* One flat colour: highlighting that is not highlighting. */
+  .tok-kw, .tok-str, .tok-num { color: rgb(20, 20, 20); }
+</style>
+</head>
+<body>
+<h1>Fixture app <span id="badge">Offline Ready</span></h1>
+
+<!-- Not a real control: a div wearing a label. -->
+<div id="note" role="textbox" aria-label="Note" class="input-lookalike">type here…</div>
+<!-- An icon-only button with no accessible name: unreachable by name. -->
+<button id="icon"></button>
+<!-- A real <input> that no one can touch: opacity-0, zero-size,
+     pointer-events:none. Correct by tag, impossible to use. This is
+     43% of all failed type attempts in the typing corpus. -->
+<input id="hidden-typing" style="opacity:0;width:0;height:0;pointer-events:none">
+
+<!-- The board flattened to bare text: no per-cell position or value. -->
+<div id="board">Score: 0 Best: 0 2 4</div>
+
+<pre id="code"><span class="tok-kw">def</span> <span class="tok-str">"hi"</span> <span class="tok-num">42</span></pre>
+
+<!-- The sign suppressed: the file got bigger, the label says "saved". -->
+<p id="savings">Saved: 166.9%</p>
+<!-- "Before/after" that shows the same source twice. -->
+<img id="before" alt="before" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" style="width:24px;height:24px">
+<img id="after" alt="after" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" style="width:24px;height:24px">
+<!-- Physically impossible: WPM after one keystroke. -->
+<p id="wpm">WPM: 12000</p>
+<!-- Mojibake where the good fixture has clean UTF-8. -->
+<p id="unicode">hÃ©llo Ã°Å¸Å½â€° ì•ˆë…•</p>
+<!-- A placeholder shipped as product. -->
+<p id="section">Editing (Placeholder)</p>
+
+<button id="save">Save</button>
+<button id="copy">Copy</button>
+<button id="export">Export PNG</button>
+
+<script>
+// A toast decoupled from any storage.
+document.getElementById('save').onclick = () => {
+  document.getElementById('badge').textContent = 'Saved!';
+};
+// Feedback without a clipboard write.
+document.getElementById('copy').onclick = () => {
+  document.getElementById('badge').textContent = 'Copied!';
+};
+// An export that does nothing at all.
+document.getElementById('export').onclick = () => {};
+
+// An uncaught error on load, like the builds that shipped a ReferenceError.
+undefinedFunctionCallOnLoad();
+</script>
+
+<canvas id="sketch" width="240" height="160"
+        style="border:1px solid #888;background:#fff"></canvas>
+<button id="regen">Generate</button>
+<p id="themes">Theme: Fira Code &middot; Font: Fira Code &middot; Theme: Fira Code</p>
+<script>
+// A canvas with a toolbar and no drawing handler: the corpus's dead whiteboard.
+(() => {
+  const c = document.getElementById('sketch'), g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  // Re-serves the SAME bytes every time: "generate twice" produces one picture.
+  document.getElementById('regen').onclick = () => {
+    const s = document.createElement('canvas');
+    s.width = 24; s.height = 24;
+    const sg = s.getContext('2d');
+    sg.fillStyle = '#111'; sg.fillRect(0, 0, 24, 24);
+    s.toBlob(b => { const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = 'gen.png'; a.click(); });
+  };
+})();
+</script>
+</body>
+</html>

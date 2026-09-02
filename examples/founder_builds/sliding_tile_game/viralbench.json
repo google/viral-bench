@@ -1,0 +1,23 @@
+{
+  "app_type": "single-page-app",
+  "title": "TileMerge",
+  "summary": "A 2048-style sliding tile puzzle that runs in the browser.",
+  "setup": [],
+  "run": {
+    "command": "python3 -m http.server 8000",
+    "cwd": ".",
+    "port": 8000,
+    "url": "http://localhost:8000/"
+  },
+  "test": {
+    "manual": [
+      "Open the URL in a browser.",
+      "Use arrow keys/WASD to slide tiles or swipe on touchscreen.",
+      "Confirm matching tiles merge into their sum and a new tile spawns.",
+      "Test custom themes by clicking 'Theme' in the header, customising, and loading.",
+      "Confirm score updates, undo rewinds moves, and best score persists on reload."
+    ],
+    "smoke": "test -f index.html -a -f style.css -a -f app.js"
+  },
+  "notes": "Pure static files; zero compilation or npm dependencies needed. Completely offline capable."
+}

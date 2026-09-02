@@ -1,0 +1,239 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# viral_bench founder harness configuration (Stage 2).
+#
+# The founder agent is opencode (https://opencode.ai) driven non-interactively,
+# backed by whichever model you point it at. ViralBench ships NO default model
+# and presumes no provider account: you bring a key, name it once, and every
+# stage that needs a model uses it.
+#
+# Pick a provider and a model with `viral-bench init`, or per run:
+#
+#   viral-bench found <idea> --model openai/gpt-5-mini
+#   viral-bench found <idea> --model anthropic/claude-sonnet-4-5
+#   viral-bench found <idea> --model openrouter/meta-llama/llama-3.3-70b-instruct
+#   viral-bench found <idea> --model ollama/qwen3-coder
+#
+# `viral-bench models` lists the providers and says which ones you have
+# credentials for. `viral-bench models --check <provider>/<model>` proves one is
+# actually reachable before you spend a build on it. Credentials are read from
+# the environment or the repo .env -- never from this file, which is tracked.
+#
+# ONLY the founder model is meant to vary: it is the thing under test. The crowd
+# that uses the app, the grader that inspects it and the autorater that rates it
+# are configured separately (config/crowd.yaml, config/score.yaml) and should be
+# held FIXED across a comparison, so changing the model under test never moves
+# the yardstick it is measured against; tests/test_models.py asserts that.
+#
+# The model + vertex target below ARE loaded from this file (via
+# viral_bench.config); env vars VERTEX_PROJECT / VERTEX_LOCATION still take
+# precedence. The rest of the per-build opencode config
+# (share/small_model/provider block) is applied in
+# viral_bench.founder.harness.OpenCodeHarness.
+
+harness: opencode
+
+# Founder configuration. There are exactly THREE modes, selected on the CLI with
+# `viral-bench found <idea> --agents {1,4,dynamic}`:
+#
+#   agents=1  Solo founder. One design turn then one build turn, in a single
+#             opencode session. Byte-for-byte the original single-agent baseline.
+#
+#   agents=4  Round-table team. Four specialists -- Architect, Implementer, UX &
+#             Virality Designer, QA & Finisher -- collaborate over multiple
+#             ROUNDS. Each round every specialist takes one turn (A -> I -> D ->
+#             Q), and each keeps its OWN opencode session across rounds (resumed
+#             with --session), so it retains its own context while the app grows
+#             in the shared working directory. This is genuine back-and-forth, not
+#             a one-pass relay -- it cannot be flattened to a single agent.
+#
+#             Each specialist is a distinct, "levelled-up" opencode agent: its own
+#             system prompt, temperature, tool permissions (e.g. web research for
+#             Architect/Designer, off for Implementer/QA), gated skills
+#             (viral_bench.founder.skills), and -- with --browser-tools -- a real
+#             browser for the Designer/QA to see and click the app.
+#
+#   agents=dynamic
+#             Dynamic orchestrator. ONE founder agent is handed the idea, the
+#             deliverable contract, and opencode's delegation machinery -- the
+#             `task` tool, resumable subagents, and a directory it can write its
+#             own subagent definitions into -- and nothing else. No roles, no
+#             rounds, no division of labour: it decides whether to delegate, to
+#             whom, how many at a time, and when it is finished.
+#
+#             agents=1 and agents=4 both encode ONE human's answer to "how should
+#             a founding team be organised?", frozen in advance and identical for
+#             every idea and every model. This mode removes the answer and keeps
+#             the question, so a model is measured on running an agentic process
+#             as well as on writing code. It ships no bench-authored agents and no
+#             skills -- the only specialists in the build are ones the model
+#             writes -- but the browser IS available to the founder and to every
+#             subagent it spawns, so it is not handicapped against the team arm.
+#
+#             The only thing the harness insists on is finishing: a turn that ends
+#             with the deliverables incomplete gets a content-free nudge naming
+#             the gap and the same session resumes, up to `turns`. See
+#             viral_bench.founder.structures.DynamicOrchestrator.
+#
+#   collaboration.turns      hard cap on dynamic orchestrator turns. Default 3
+#                            because that is what makes the affordances line up: a
+#                            subagent the founder defines for itself only loads on
+#                            the turn AFTER it is written (opencode reads agent
+#                            definitions at turn start), so 1 would advertise a
+#                            capability it cannot reach and 2 would let it use a
+#                            self-defined team exactly once. A founder that
+#                            finishes sooner just says so and stops.
+#   collaboration.rounds     hard cap on team rounds (each round = 4 turns, so the
+#                            upper bound is 4 * rounds model turns). QA can end the
+#                            build EARLY by emitting the ship signal once the app
+#                            genuinely runs and meets every success criterion; QA
+#                            always acts last, so the app is left shippable either
+#                            way.
+#   collaboration.min_rounds minimum rounds the team must run before QA may ship
+#                            early (1 = QA can ship after round 1). Raise it to
+#                            force more iteration, e.g. min_rounds=3 with rounds=4
+#                            means 3-4 rounds (12-16 turns). QA is told not to ship
+#                            below the floor. Must be 1 <= min_rounds <= rounds.
+#
+#                            Now 2, was 1. At min_rounds=1 the round-table did not
+#                            actually round-table: in a large internal run the
+#                            overwhelming majority of team builds shipped after ONE
+#                            round, and they were genuine early ships (shipped_early
+#                            and qa_verified both true) rather than truncated
+#                            builds. So "4 specialists x 3 rounds" was in practice
+#                            4 specialists x 4 turns, and a team-vs-solo result
+#                            could not speak to whether ITERATION helps -- the
+#                            mechanism barely engaged. A floor of 2 makes the second
+#                            round happen; the cap stays 3, so a team that still
+#                            wants a third round can take it.
+#
+#   collaboration.toolset    how the team collaborates (orthogonal to the team),
+#                            selected on the CLI with `--collab`:
+#     - "local" (default):   teammates collaborate through the shared working
+#                            directory (DESIGN.md + TEAM_NOTES.md + the code). The
+#                            reproducible, default scored path, and the only
+#                            toolset that ships. viral_bench.founder.collab is the
+#                            extension point if you want to route collaboration
+#                            through some external surface instead.
+# Loaded by viral_bench.config and used as the `viral-bench found` CLI defaults.
+# This block was documentation only for a long time -- nothing read it -- so it
+# was free to disagree with the real defaults, and did: browser_tools said false
+# against a code default of true. Note that scripts/build_fleet.py pins its own
+# FOUNDER_CONFIG for a scored fleet and does NOT read this block, deliberately:
+# a fleet's shape is frozen into fleet.json and verified per build.
+collaboration:
+  agents: 1
+  rounds: 3
+  min_rounds: 2
+  turns: 3
+  toolset: local
+  browser_tools: true
+
+model:
+  # '<provider>/<model>'. The provider prefix is required -- it selects which
+  # API to call, and there is nothing sensible to guess. Empty means "not
+  # chosen yet"; `viral-bench init` writes your choice to config/local.yaml,
+  # which is gitignored and takes precedence over this file.
+  # `viral-bench found --model` overrides both, per run.
+  id: ''
+
+# The rubric grader inspects the shipped app and makes the binary judgements.
+# Hold this FIXED across a comparison for the same reason as the crowd.
+grader:
+  model: ''
+
+# Google Vertex AI target, used ONLY if you name a `google-vertex/...` or
+# `google-vertex-anthropic/...` model. Authentication is then application-default
+# credentials rather than an API key. Irrelevant for every other provider.
+# Override with env/.env VERTEX_PROJECT / VERTEX_LOCATION.
+vertex:
+  project: ''
+  location: global
+
+# opencode is configured per-build (see harness.OpenCodeHarness._config_json):
+#   - share: disabled           # nothing leaves the machine
+#   - small_model: the SAME model as the founder (never call opencode's hosted
+#     small model). Deliberately not a cheap fixed model: every model doing its
+#     own bookkeeping calls is what keeps a cross-provider comparison
+#     apples-to-apples, even though it costs more on an expensive founder model.
+#   - provider.<provider>.models.<id> defined so a model id newer than
+#     opencode's models.dev metadata is still accepted.
+
+# Wall-clock backstop per model turn, loaded by viral_bench.config and applied in
+# harness.OpenCodeHarness. These are a DEADLOCK BACKSTOP, not a compute budget.
+#
+# A turn that exceeds its limit is SIGKILLed mid-generation and comes back
+# rc=124, which build.py records as `harness_failed` -- so a model that is slow
+# but succeeding gets scored as one that could not build the app. That is a
+# fabricated capability difference of exactly the kind in docs/crowd_bugs.md
+# T0.1, and it is why these were raised from 1200/2400/2700: those numbers were
+# tight enough to bite a genuinely-working long turn.
+#
+# Set any of them to null for no limit. The per-build ceiling in
+# scripts/build_fleet.py still bounds a fleet run, and a timeout is now recorded
+# as `harness_timeout` rather than being laundered into a build failure.
+timeouts_seconds:
+  design: 5400      # solo design turn (was 1200)
+  build: 10800      # solo build turn (was 2400)
+  team_turn: 10800  # one team round-table turn -- plans + edits, and the
+                    # heaviest turn in the bench; may also be waiting out
+                    # provider rate limits, which is not the model being slow
+  dynamic_turn: 14400  # one dynamic orchestrator turn. The largest unit of work
+                    # here: a team turn is ONE model turn, but this can contain a
+                    # whole fan-out of subagent runs, sequential or concurrent,
+                    # inside the single opencode process being timed.
+
+# What of a founder build gets written down. A build's value does not stop at the
+# app it shipped: the reasoning, the delegation and the dead ends are the record
+# of HOW a model founds something, and they are what a trajectory viewer or a
+# supervised-finetuning set is built from. Both default on; they cost disk, not
+# model behaviour.
+#
+#   thinking   pass `--thinking` to `opencode run`, so the JSON transcript keeps
+#              the model's chain of thought. opencode ALREADY asks the provider
+#              for thoughts (thinkingConfig.includeThoughts for Gemini) and we
+#              already pay for those tokens -- the flag only decides whether they
+#              are printed, and it defaults OFF, which is why every build before
+#              this knob existed threw its reasoning away. Display-only: it does
+#              not change the request, the model's behaviour, or the cost.
+#
+#              Claude needs one thing more, applied automatically for the
+#              anthropic family (harness._thinking_options): the request must ask
+#              for `thinking.display: summarized`. Without it Vertex returns a
+#              thinking block that is real but ENCRYPTED -- signature present,
+#              text empty -- so the trace looks captured and is worthless.
+#              Measured on all four registered Claude models.
+#
+#   sessions   dump opencode's own session store for this build into
+#              transcript/sessions/. Everything below is in the store and NOWHERE
+#              else: the prompts we sent (they go on stdin and are never echoed
+#              back), every subagent session a dynamic founder spawned (the JSON
+#              stream is filtered to the root session, so a delegating model's
+#              actual work is invisible without this), and the file patches.
+#              It also has to happen DURING the build: scripts/build_fleet.py
+#              deletes the per-cell store as soon as a cell succeeds.
+trajectory:
+  thinking: true
+  sessions: true
+
+# NOTE: the founder BUILD always runs on the host (opencode writes into a fresh
+# builds/work/<build_id>/ directory). Container isolation applies only when the
+# *built* app is later run/tested -- see config/runtime.yaml and
+# viral_bench.founder.runtime.
+
+ship:
+  # No repo-per-build: one shared git store, one orphan branch per build.
+  store: builds/store
+  branch_prefix: build/

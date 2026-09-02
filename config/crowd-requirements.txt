@@ -1,0 +1,27 @@
+# Pinned dependencies for the isolated crowd-simulation environment (.venv-crowd).
+#
+# OASIS (camel-oasis) requires Python >=3.10,<3.12 and hard-pins camel-ai,
+# pandas, torch (via sentence-transformers), etc. -- incompatible with the main
+# project's Python 3.12 + light dependency set. So the crowd simulation runs in a
+# DEDICATED Python 3.11 virtualenv, kept fully separate from the main project.
+#
+# Create/refresh this env with:  scripts/setup_crowd_env.sh
+#   uv venv --python 3.11 .venv-crowd
+#   uv pip install --python .venv-crowd -r config/crowd-requirements.txt
+#
+# The crowd runner imports the viral_bench source directly via PYTHONPATH=src
+# (NOT a pip install), so viral_bench's own requires-python (>=3.12) never gates
+# this 3.11 env. Only the third-party libraries below are installed here.
+
+# The OASIS social-simulation engine (pulls camel-ai==0.2.78, pandas==2.2.2,
+# sentence-transformers==3.0.0 -> torch, igraph, etc.).
+camel-oasis==0.2.5
+
+# Drive single-page apps in a real browser for the "trier" agents (same lib the
+# main env uses; system Chrome via channel="chrome", no bundled download).
+playwright>=1.40
+
+# Native Gemini SDK. The crowd drives Gemini through google-genai (not CAMEL's
+# OpenAI-compat GeminiModel) so recent Gemini multi-turn tool calling round-trips the
+# required thought_signature. See viral_bench.crowd.sim.gemini_native.
+google-genai>=2.10

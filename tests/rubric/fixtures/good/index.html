@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!--
+  The honest fixture app. Every rubric primitive should PASS against this page.
+
+  It is deliberately not a realistic product: it is the smallest surface that
+  exercises each primitive exactly once, so a failure here is a bug in the
+  primitive rather than an ambiguity in some real build.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: good</title>
+<style>
+  /* Three distinct token colours, so computed_style_distinct has something real
+     to find. A CDN-blocked theme would collapse these to one. */
+  .tok-kw { color: rgb(200, 40, 40); }
+  .tok-str { color: rgb(40, 160, 40); }
+  .tok-num { color: rgb(40, 40, 200); }
+</style>
+</head>
+<body>
+<h1 id="title">Fixture app</h1>
+
+<!-- A real, fillable, labelled control. -->
+<label for="note">Note</label>
+<input id="note" aria-label="Note" value="">
+
+<!-- A 2x2 board whose cells name their position and value, like the tile game's
+     machine-readability clause. Exactly 4, all distinct. -->
+<div role="grid" aria-label="Board">
+  <div role="gridcell" aria-label="row 1, column 1, tile 2">2</div>
+  <div role="gridcell" aria-label="row 1, column 2, empty"></div>
+  <div role="gridcell" aria-label="row 2, column 1, empty"></div>
+  <div role="gridcell" aria-label="row 2, column 2, tile 4">4</div>
+</div>
+
+<pre id="code"><span class="tok-kw">def</span> <span class="tok-str">"hi"</span> <span class="tok-num">42</span></pre>
+
+<p id="savings">Saved: -167.0%</p>
+<!-- A real before/after: two genuinely different sources. -->
+<img id="before" alt="before" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" style="width:24px;height:24px">
+<img id="after" alt="after" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" style="width:24px;height:24px">
+<p id="wpm">WPM: 62</p>
+<p id="unicode">héllo 🎉 안녕하세요</p>
+
+<button id="save">Save</button>
+<button id="copy">Copy</button>
+<button id="export">Export PNG</button>
+<button id="icon" aria-label="Settings">⚙</button>
+
+<script>
+// Persistence that stores the USER'S text, not a demo default.
+const note = document.getElementById('note');
+note.value = localStorage.getItem('note') || '';
+document.getElementById('save').onclick = () => localStorage.setItem('note', note.value);
+
+document.getElementById('copy').onclick = () =>
+  navigator.clipboard.writeText(document.getElementById('code').textContent);
+
+// A real download: a 2x2 PNG, built byte by byte so the fixture needs no assets.
+document.getElementById('export').onclick = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32; canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#123456'; ctx.fillRect(0, 0, 32, 16);
+  canvas.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'card.png';
+    a.click();
+  });
+};
+</script>
+
+<canvas id="sketch" width="240" height="160"
+        style="border:1px solid #888;background:#fff"></canvas>
+<button id="regen">Generate</button>
+<p id="themes">Theme: Dracula &middot; Theme: Nord &middot; Theme: Solarized</p>
+<script>
+// A canvas that records the gesture -- the shape 125 of 127 whiteboard builds have.
+(() => {
+  const c = document.getElementById('sketch'), g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  let drawing = false;
+  const at = e => { const r = c.getBoundingClientRect();
+                    return [e.clientX - r.left, e.clientY - r.top]; };
+  c.addEventListener('pointerdown', e => { drawing = true;
+    const [x, y] = at(e); g.strokeStyle = '#c02b2b'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(x, y); });
+  c.addEventListener('pointermove', e => { if (!drawing) return;
+    const [x, y] = at(e); g.lineTo(x, y); g.stroke(); });
+  c.addEventListener('pointerup', () => { drawing = false; });
+
+  // Each generation is genuinely different bytes.
+  let n = 0;
+  document.getElementById('regen').onclick = () => {
+    const s = document.createElement('canvas');
+    s.width = 24; s.height = 24;
+    const sg = s.getContext('2d');
+    sg.fillStyle = ['#111', '#eee', '#3a7'][n++ % 3];
+    sg.fillRect(0, 0, 24, 24);
+    sg.fillStyle = '#f0f'; sg.fillRect(0, 0, 4 + n * 3, 4 + n * 3);
+    s.toBlob(b => { const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = 'gen' + n + '.png'; a.click(); });
+  };
+})();
+</script>
+</body>
+</html>

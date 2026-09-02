@@ -1,0 +1,416 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for team_wiki (Loregarden). Never shown to the founder.
+#
+# This is a MULTI-USER, server-backed idea, so nearly every item is a claim about
+# what one account can see of another's work. The grader drives one browser and
+# signs in and out to play both parts, which means the items only compose if they
+# agree on identities and nonces. They are fixed here and referenced by name:
+#
+#   user A     display name "Ada VB7391", email ada7391@example.com
+#   user B     display name "Ben VB7391", email ben7391@example.com
+#   password   Loregarden-7391, for both
+#   collection "Vault VB7391", with a child collection "Shelf 7391"
+#   document   title "Untitled-7f2a" -- deliberately says nothing about the body
+#   body       contains VBPHRASE7391, and nothing else in the app ever does
+#
+# The split between the title and the body phrase is what makes S3 and A4
+# possible at all: a title-matching search finds `Untitled-7f2a` and a full-text
+# one finds VBPHRASE7391, so the two queries separate the builds that only claim
+# full-text search from the ones that have it. Putting the phrase in the title
+# would collapse that distinction and quietly pass every build.
+#
+# Anonymous access (F1) is checked with `http_status`, whose request carries no
+# cookie. Nothing else in the pipeline can produce a session-free read -- a crowd
+# agent has no way to drop its session -- so the 401/403 half of this brief is
+# invisible to every other instrument.
+rubric_version: 1
+idea_id: team_wiki
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Server-side persistence is the point of this brief and is tested through
+      S2-S5 and F5 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      Two users can sign up and sign in, and the rendered header reflects the
+      session: a sign-out control and the display name are present, and
+      "Sign in" / "Create account" are gone.
+    points: 6
+    method: probe
+    note: >-
+      Two builds keep the anonymous header after a successful signup. In one it
+      is not merely cosmetic — see A1.
+
+      The check reads whichever session is live when the model stops, so it
+      decides one signed-in header rather than both. The second account is not
+      unexercised — S3 through S5 are impossible without it, and F4 pushes
+      signup thirty times — but a build that creates Ada and silently drops Ben
+      passes here and fails there.
+    setup: >-
+      Create two accounts, in this order: "Ben VB7391" (ben7391@example.com,
+      password Loregarden-7391), then sign out, then "Ada VB7391"
+      (ada7391@example.com, same password). Sign in explicitly if signup does
+      not sign you in. Leave Ada signed in on a page showing the app's header,
+      and do not open a sign-in dialog before you stop.
+    check:
+      name: text_matches
+      patterns:
+        - "Ada\\s*VB7391|ada7391"
+        - "sign\\s*out|log\\s*out|logout|signout"
+      absent:
+        - "\\bsign in\\b|\\bcreate account\\b|\\blog in\\b|\\bsign up\\b"
+  - id: S2
+    text: >-
+      User A writes a Markdown document into a collection and it renders with
+      author attribution and a timestamp.
+    points: 7
+    method: assert
+    note: >-
+      Whether the Markdown is *rendered* is not asserted, and cannot honestly
+      be: the harness reads the page's text together with every field value, so
+      a build showing raw source in a textarea and one showing rendered HTML
+      produce the same string. The three things the item actually names — the
+      body, the author, a time — are each checked.
+    setup: >-
+      Signed in as Ada, create a collection named "Vault VB7391" if the app
+      requires one, then a document titled exactly `Untitled-7f2a` whose
+      Markdown body is "## Runbook" followed by a line reading "The rollback
+      phrase is VBPHRASE7391." Save it, then open the saved document (not the
+      editor) so the author and the timestamp render.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPHRASE7391"
+        - "Ada\\s*VB7391|ada7391"
+        - "\\d{4}-\\d{2}-\\d{2}|\\d{1,2}:\\d{2}|\\d{1,2}/\\d{1,2}/\\d{2,4}|\\bjust now\\b|\\d+\\s*[a-z]{0,7}\\s*\\bago\\b|\\b(second|minute|hour|day|week|month|year)s?\\s+ago\\b|\\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?\\s+\\d{1,2}\\b"
+  - id: S3
+    text: >-
+      User B, in a separate session, finds A's document by searching a phrase
+      that appears only in its BODY, not its title.
+    points: 10
+    method: assert
+    expect: "title Untitled-7f2a, body contains a nonce; searching the nonce returns exactly 1 result linking to A's doc; a nonsense query returns 0 with an empty state"
+    note: >-
+      This is the actual success criterion and the crowd barely touches it — 3
+      to 18 searches per 30-agent run, essentially never for a phrase inside
+      someone else's body.
+
+      Two halves of the `expect` are not machine-decided. "Exactly 1 result" and
+      "a nonsense query returns 0 with an empty state" have no cross-build
+      rendering to read — a result count is a number in one build, a list length
+      in another and nothing at all in a third. And a build whose sidebar lists
+      every document shows `Untitled-7f2a` whether or not search works, so this
+      can pass on a build with no search. A4 is the counterweight: it fires when
+      the body phrase returns nothing.
+    setup: >-
+      Sign out of Ada's session and sign in as Ben (ben7391@example.com,
+      Loregarden-7391). Using the app's own search, search for the exact phrase
+      VBPHRASE7391, which appears only inside Ada's document body and never in
+      its title. Leave the results on screen with the query still in the search
+      box; do not open the document.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPHRASE7391"
+        - "Untitled-7f2a"
+  - id: S4
+    text: >-
+      B edits A's document: the history count increments, the new revision is
+      attributed to B while the original author remains A, and the prior
+      revision is still retrievable.
+    points: 9
+    method: assert
+    note: >-
+      What is decided is the attribution half: B's edit text, A's name and B's
+      name all present on a surface that calls itself history or a version. The
+      count increment and the retrievability of the prior revision are not —
+      both need a before/after read of a number the builds do not render the
+      same way. Note also that B's name is on screen anyway while B is signed
+      in, so the discriminating pattern here is A's: a build that reassigns
+      authorship to the last editor loses this item.
+    setup: >-
+      Still signed in as Ben, open Ada's document `Untitled-7f2a`, edit the
+      Markdown body so it also contains the literal text VBEDIT7391, and save.
+      Then open the document's history or revisions view and leave it on screen
+      with the author of each revision visible.
+    check:
+      name: text_matches
+      patterns:
+        - "VBEDIT7391"
+        - "Ada\\s*VB7391|ada7391"
+        - "Ben\\s*VB7391|ben7391"
+        - "histor|revision|version|\\bv[1-9]\\b"
+  - id: S5
+    text: "B comments on the document and A sees the comment attributed to B."
+    points: 8
+    method: assert
+    note: >-
+      Which account is looking cannot be read off the page — Ada's name is on
+      the document as its author either way — so "A sees it" rests on the
+      sign-out and sign-in the transcript records. What is decided is that B's
+      comment text and B's name render together, which is the half that fails
+      when comments are stored with no author or shown only to their writer.
+    setup: >-
+      Still signed in as Ben, add a comment on `Untitled-7f2a` containing the
+      literal text VBCOMMENT7391. Then sign out, sign back in as Ada
+      (ada7391@example.com, Loregarden-7391), open the same document and leave
+      the comment thread visible.
+    check:
+      name: text_matches
+      patterns:
+        - "VBCOMMENT7391"
+        - "Ben\\s*VB7391|ben7391"
+
+tier2:
+  - id: F1
+    text: >-
+      Anonymous access is denied: with no cookie, the document API and document
+      URL return 401 or 403, and the document's text appears in no anonymous
+      response body.
+    points: 8
+    method: probe
+    note: >-
+      `/api/documents` is the corpus's modal document route — 46 of 129
+      team_wiki builds define it, and no other candidate comes close except
+      `/api/search` at 78, which needs a query parameter whose name varies. A
+      build that names its API something else answers 404, accepted here as an
+      abstention rather than scored as a leak, so this item over-credits a build
+      whose API lives elsewhere. That is the price of naming a fixed path, and
+      there is no primitive that can be handed the document URL the model just
+      visited.
+
+      Two further limits. The fetch follows redirects, so a build that bounces
+      an anonymous API call to a login page is recorded as a failure rather than
+      as the reasonable design it is. And only the list route is probed, never
+      the per-document URL. A1 covers the in-browser half — the case where the
+      app renders the reader as signed out and shows the body anyway.
+    setup: >-
+      Nothing to navigate: the harness issues its own cookie-free request. Leave
+      Ada's document saved and do not delete it.
+    check:
+      name: http_status
+      path: /api/documents
+      expect: [401, 403, 404]
+      anonymous: true
+      body_excludes: "VBPHRASE7391"
+  - id: F2
+    text: "Nested collections can be created and documents organised into them."
+    points: 5
+    method: assert
+    note: >-
+      The parent/child RELATION is not decided here. No primitive reads DOM
+      ancestry between two named nodes, so a build that creates "Shelf 7391" as
+      a sibling of "Vault VB7391" rather than inside it passes. What is decided
+      is that user-named collections can be created and are both rendered, which
+      is the half that fails on builds with a single flat document list. A
+      `nested_under(parent_text, child_text)` primitive would close it.
+    setup: >-
+      Signed in as Ada, create the collection "Vault VB7391" if S2 has not
+      already, and inside it a child collection named "Shelf 7391". Put a
+      document in the child. Leave the collection tree expanded so both names
+      are on screen at once.
+    check:
+      name: text_matches
+      patterns:
+        - "Vault\\s*VB7391"
+        - "Shelf\\s*7391"
+  - id: F3
+    text: "The Markdown body editor is a real fillable control."
+    points: 4
+    method: assert
+    note: >-
+      89 combined `Element is not an <input>, <textarea>...` failures — the most
+      important input in the app is a styled div in four builds.
+
+      Counted structurally rather than resolved by name: the body editor's
+      accessible name differs in almost every build (`Write your document in
+      markdown...`, `Start writing in markdown...`, `# Heading`, and 20 more),
+      so `is_real_control` with any fixed target would report "not found" on
+      builds that are perfectly fine. 108 of 129 builds ship a `<textarea>` and
+      17 a contenteditable; the ~21 with neither are the ones this catches. The
+      cost is that a comment box left open beside a fake body div would satisfy
+      it, which is why the setup says to leave only the editor on screen.
+    setup: >-
+      Open `Untitled-7f2a` for editing so the Markdown body editor is on screen
+      and focused, with no comment box or search palette open. Leave the app in
+      edit mode.
+    check:
+      name: dom_count
+      selector: 'textarea, [contenteditable=""], [contenteditable="true"]'
+      op: ">="
+      n: 1
+  - id: F4
+    text: >-
+      Thirty sequential signups from distinct usernames all succeed — no rate
+      limit on onboarding.
+    points: 4
+    method: probe
+    note: >-
+      One build returns 429 on account creation under crowd load: a self-inflicted
+      wound that bricks first-touch testing.
+
+      NO CHECK, deliberately. Thirty sequential signups is out of reach of every
+      primitive: `http_status` issues one cookie-free GET and cannot POST a
+      signup, and the grader's budget is 14 tool calls for the whole item. A
+      `repeat_request(path, method, count, body_template)` primitive — N
+      sequential requests to a named route, reporting how many were non-2xx —
+      would decide it. Until then the item falls back to the model, which can
+      sample two or three signups and read the source, and should answer
+      `unknown` rather than generalise from three to thirty.
+    setup: >-
+      Create as many further accounts as your budget allows, each with a
+      distinct username (vb7391-c, vb7391-d, ...), and note what the app does on
+      the later ones. Then grep the source for a rate limiter on the signup
+      route (`rate`, `limiter`, `throttle`, `slowdown`, `429`).
+  - id: F5
+    text: "Every script and stylesheet asset returns 200, and the session survives a reload."
+    points: 4
+    method: assert
+    note: >-
+      The harness performs the reload, not the model, so this cannot be earned
+      by reporting a reload that never happened — which matters here because R1
+      is not applicable for this idea and this is the only reload item left.
+
+      Only the session half is decided. R9 already fails any 4xx or 5xx during
+      the flow, which is this item's asset half, and asserting it twice would
+      double-count one fault. A second, narrower limit: a build with no access
+      control at all keeps the body on screen after a reload without any session
+      surviving, and passes; F1 and A1 are what separate those.
+    setup: >-
+      Signed in as Ada, open `Untitled-7f2a` so its body is on screen. Then
+      stop — the harness performs the hard reload itself.
+    check:
+      name: survives_reload
+      nonce: VBPHRASE7391
+
+penalties:
+  - id: A1
+    text: >-
+      A session the app itself renders as signed-out can read another user's
+      document body.
+    points: -10
+    method: probe
+    note: >-
+      Found in the TOP-scoring build (delight 7.93, would_use 30/30,
+      functionality 9.0 with min == max): 4 of 30 agents, across 63 steps, read
+      other users' full documents while the header offered "Sign in / Create
+      account" and no sign-out. Absent from all 10 other builds, so it is a real
+      discriminator rather than an artefact — and 30 of 30 agents walked past it.
+
+      Fires only when both halves hold at once: Ada's body phrase is readable
+      AND the page offers a sign-in affordance with no sign-out control anywhere
+      on it. A build that redirects a signed-out reader to a login screen shows
+      the affordance without the body and does not fire; a build that keeps the
+      session shows the body with a sign-out control and does not fire either.
+    setup: >-
+      Signed in as Ada, open `Untitled-7f2a` and note its URL path. Sign out
+      using the app's own control, then navigate straight back to that same path
+      with `goto`. Leave whatever the app renders on screen and do not sign in
+      again.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPHRASE7391"
+        - "\\bsign in\\b|\\bsign up\\b|\\bcreate account\\b|\\blog in\\b|\\blogin\\b"
+      absent:
+        - "sign\\s*out|log\\s*out|logout|signout"
+  - id: A2
+    text: "Demo documents or collections exist on a fresh volume."
+    points: -8
+    method: assert
+    note: >-
+      One build ships three collections and three readable documents before any
+      account exists, so "full-text search across every document the reader is
+      allowed to see" can be demonstrated entirely against founder-written seed
+      content.
+
+      INSTRUMENT. Decided from the build's own seeding code rather than from the
+      screen, because by the time penalties are graded the volume is no longer
+      fresh: the grader has written a collection and a document of its own, and
+      nothing on the page distinguishes founder-seeded rows from those. The
+      pattern matches a server-side definition that seeds documents,
+      collections or content — `def seed_database(...)`, `SEED_DOCS = [`,
+      `def ensure_seed_content(...)` — and fires on 12 of the 129 team_wiki
+      builds in the corpus. Requiring a definition keyword is what drops the two
+      client-side false positives measured: an `app.seedSampleData()` button
+      labelled "Load Sample Docs", which a user has to press, and a
+      `seedOpenCollections()` helper that only remembers which sidebar nodes are
+      expanded. One over-fire survives: a build whose `_seed_first_document()`
+      runs per signup rather than at install.
+    setup: >-
+      Nothing to navigate; this is read from source. Leave the app as it is.
+    check:
+      name: source_present
+      pattern: "(def|function|async def)\\s+_?(seed|ensure_seed)[_A-Za-z]*(data|doc|document|collection|content|database|starter|initial)|SEED_(DOCS|DOCUMENTS|COLLECTIONS|DATA|CONTENT)\\s*="
+  - id: A3
+    text: "The login screen offers demo or quick-access credentials."
+    points: -6
+    method: assert
+    note: >-
+      One build offers `Quick Demo Accounts: Alex (Admin)` and ships a document
+      that already carries `v1 History` and `Comments 1` — two of the five core
+      features satisfied by seed rows rather than by anything a user did.
+
+      The pattern requires the demo word to collocate with an account or
+      credential word, so "See the demo" or "Create account" alone does not fire
+      it. Every instance measured in the corpus is caught by that branch alone —
+      `Demo Accounts: robert, linda...`, `Quick Sign In as Demo User`,
+      `Quick Demo Accounts:`, a `/demo-login` button. The second branch adds the
+      login screen that simply prints working credentials without ever calling
+      them a demo: a password label followed on the same line by six or more
+      credential characters. That is what makes it miss the placeholder hints
+      builds really use ("at least 6 characters", "••••••••", which is an
+      attribute the harness never reads) and what makes it over-fire on the one
+      shape nobody has shipped yet — an inline "Password: Required".
+    setup: >-
+      Sign out, then open the app's sign-in screen the way a fresh visitor
+      reaches it. Leave the login form on screen and type nothing into it.
+    check:
+      name: text_matches
+      patterns:
+        - "(demo|test|guest|sample|quick)[\\s-]*(account|accounts|credential|credentials|login|logins|user|users|access)|(try|use)\\s+(the\\s+)?demo|password[^\\n]{0,4}[:=][ \\t]*[A-Za-z0-9][A-Za-z0-9_@.\\-]{5,}"
+  - id: A4
+    text: "Search matches titles only while the app claims full-text search."
+    points: -6
+    method: assert
+    note: >-
+      The inverse of S3, and the reason the fixture splits title from body: a
+      titles-only build finds `Untitled-7f2a` and returns nothing for
+      VBPHRASE7391.
+
+      The check reads only the final state, so the title search the setup asks
+      for first is a precaution the harness cannot enforce — a build whose
+      search is broken for every query also fires this, on top of failing S3.
+      Requiring the query to still be in the search box is what stops it firing
+      when the model never reached a search state at all, and a build whose
+      sidebar lists every document suppresses it, which is the safe direction
+      for a penalty.
+    setup: >-
+      Signed in as either account, first search for `Untitled-7f2a` and confirm
+      the document comes back, so that a wholly broken search is not mistaken
+      for a titles-only one. Then search for VBPHRASE7391, which appears only in
+      the body, and leave THOSE results on screen with the query still in the
+      search box.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPHRASE7391"
+      absent:
+        - "Untitled-7f2a"

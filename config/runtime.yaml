@@ -1,0 +1,83 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# viral_bench app run/test runtime configuration.
+#
+# This governs how a *built* app is executed for testing -- by a human via
+# `viral-bench serve-build`, and by the OASIS crowd's verify_code / try_app
+# tools. A founder BUILD always runs on the host (see config/founder.yaml); this
+# file is only about running the finished app.
+#
+# NOTE: this documents the intended defaults. The values here mirror the defaults
+# baked into viral_bench.founder.runtime (ContainerRuntime) and apphost.AppHost;
+# wiring a loader to read them is a small follow-up.
+
+# Which backend runs an app, per consumer. Directory isolation (a fresh clone per
+# run) always applies; these choose whether real containment is added on top.
+isolation:
+  # You testing locally: host is fine (fast); flip to container with --container.
+  serve: host
+  # The crowd runs untrusted apps unattended and at scale -> always a container.
+  # This is enforced in code (verify_code / AppHost default container=True).
+  crowd: container
+
+container:
+  runtime: podman # 'podman' (corp-sanctioned) or 'docker' (OSS). OCI either way.
+  # Built from docker/Containerfile: python3.12 + uv + node. Build once with:
+  #   podman build -t viralbench-runtime:latest -f docker/Containerfile docker
+  image: localhost/viralbench-runtime:latest
+
+  # Per-container resource caps (rootless cgroups v2). Keep total = concurrency x
+  # these under host RAM; sized for many small apps.
+  limits:
+    memory: 1g
+    cpus: "1.0"
+    pids: 512
+
+  # Network posture. null/"default" = podman's default network (outbound ON),
+  # which is the ViralBench default. Set "none" to fully isolate an app that does
+  # not need the network. Even with network on, only the app dir is mounted and
+  # NO host credentials are injected (see env_allowlist), so the blast radius is
+  # bounded to whatever is explicitly passed in.
+  network: default
+
+  # App runtime env. Built apps may need to call a model when the crowd or a
+  # human uses them. They are handed a provider-neutral, OpenAI-compatible
+  # triple -- VIRALBENCH_APP_LLM_BASE_URL / _API_KEY / _MODEL -- resolved from
+  # the `app` stage model (`viral-bench init`). See viral_bench.founder.appenv.
+  #
+  # SECURITY: apps are untrusted, model-generated code that can read this value,
+  # so give the `app` stage its OWN credential, separate from the one the
+  # benchmark runs on. Any spend cap on it is a blast-radius control, not a
+  # compute budget: size it so normal app use never reaches it, because a
+  # throttled app still answers from its required no-key fallback and so reads
+  # as healthy while the crowd rates canned output instead of the real feature.
+  #
+  # env_map adds plain {container_var: host_var} pass-throughs on top, for
+  # anything else a deployment wants apps to see. A mapping whose host var is
+  # unset is skipped. Mirrors DEFAULT_ENV_MAP in viral_bench.founder.appenv.
+  env_map: {}
+
+# The model a BUILT app calls, as '<provider>/<model>'. Empty means built apps
+# get no credential at all, which is fine for every idea that does not need a
+# model. Give this its OWN key, separate from the one the benchmark runs on:
+# apps are untrusted, model-generated code. Hold it FIXED across a comparison --
+# it is part of the environment the apps are measured in.
+app:
+  model: ''
+
+# Leak prevention. Containers are torn down after each session; a label-based
+# sweep (viral_bench.founder.runtime.reap_orphans) removes any crash orphans.
+reaper:
+  label: viralbench=1

@@ -1,0 +1,150 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[project]
+name = "viral-bench"
+version = "0.1.0"
+description = "A benchmark for evaluating large language models (LLMs)."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    "google-genai>=2.10.0",
+    "python-dotenv>=1.2.2",
+    "pyyaml>=6.0",
+    # Crowd app-interaction: drive single-page apps in a real (headless) browser
+    # so agents test them like a human. Driven against the *system* Chrome
+    # (channel="chrome"), so no bundled-browser download is required at run time;
+    # imported lazily so the static-HTTP fallback still works if it is absent.
+    "playwright>=1.40",
+    "uvicorn>=0.51.0",
+    "starlette>=1.3.1",
+    "reportlab>=5.0.0",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "pillow>=10.4.0",
+    "python-multipart>=0.0.32",
+    "pydantic>=2.13.4",
+    "python-jose[cryptography]>=3.5.0",
+    "pyjwt>=2.13.0",
+    "jinja2>=3.1.6",
+    "alembic>=1.19.1",
+    "email-validator>=2.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "flask>=3.1.3",
+    "gunicorn>=26.1.0",
+    "markdown>=3.10.3",
+    "sqlalchemy>=2.0.52",
+    "bcrypt>=5.0.0",
+]
+
+[project.optional-dependencies]
+# The crowd agent stack. Kept optional: the interaction layer and its CAMEL
+# FunctionTool adapter import CAMEL lazily, so the app-interaction tools can be
+# built and tested without it. This phase ships the adapter only (so the tools
+# drop into a CAMEL/OASIS ``SocialAgent(tools=...)``); the full OASIS simulation
+# dependency (``camel-oasis``) is added with the scoring stage. Install with:
+#   uv sync --extra crowd
+crowd = [
+    "camel-ai>=0.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/google/viral-bench"
+Repository = "https://github.com/google/viral-bench"
+Issues = "https://github.com/google/viral-bench/issues"
+
+[project.scripts]
+viral-bench = "viral_bench.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "pre-commit>=3.8",
+    # Analysis only. scripts/score_robustness.py re-weights the stored component
+    # matrix across ~10^5 weightings, which is not a stdlib-sized job. The
+    # scoring layer itself stays dependency-free.
+    "numpy>=2.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
+
+# Resolve packages from public PyPI. This pins the index explicitly so CI
+# (and any contributor) resolves the same public packages regardless of any
+# machine-local default index configuration.
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.uv.workspace]
+# Deliberately EMPTY, with builds/ excluded.
+#
+# A founder agent runs `uv sync` / `uv add` inside builds/work/<id>/app. uv walks
+# up, finds this file, and registers that app as a member of the BENCHMARK's own
+# workspace -- rewriting this list. Two builds whose app dir is called `app` then
+# collide and every `uv run` in the repo dies with "Two workspace members are
+# both named `app`", which took out 15 cells of a 48-cell fleet as `no_record`
+# and would have kept doing so for every subsequent run.
+#
+# The exclusion makes that impossible: nothing under builds/ can become a member,
+# so a build can no longer break the harness for the builds that follow it, nor
+# leave its own directory committed into the repo's configuration.
+members = []
+exclude = ["builds/**"]
+
+# ----------------------------------------------------------------------
+# Tooling configuration
+# ----------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# A sensible, beginner-friendly default rule set.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.pytest.ini_options]
+# viz/tests holds the trajectory viewer's suite. It needs listing explicitly:
+# testpaths is not a glob, so without this entry a bare `pytest` collects zero
+# of them and the viewer looks tested when it is not.
+testpaths = ["tests", "viz/tests"]
+addopts = "-ra --cov=viral_bench --cov=viz --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["viral_bench", "viz"]

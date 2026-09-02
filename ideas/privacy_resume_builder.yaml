@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Reactive Resume — https://github.com/amruthpillai/reactive-resume
+# Verified 40,050 GitHub stars on 2026-08-06.
+
+idea_id: privacy_resume_builder
+title: "OpenResume"
+pitch: "A free, privacy-first resume builder with live preview and one-click PDF export."
+problem: "Popular resume builders paywall basic exports and harvest personal data; people want a free tool that keeps their data private."
+target_user: "Job seekers who want a polished resume without paying or surrendering personal data."
+core_features:
+  - "Structured editor for sections (basics, experience, education, skills, projects)"
+  - "Live WYSIWYG preview that updates as you type"
+  - "Multiple templates with adjustable layout, fonts, and colors"
+  - "One-click export to a print-ready PDF"
+  - "Local-first storage (with optional self-hosting) so resumes stay private"
+success_criteria: "A user can fill in their details, see a live preview, switch templates, and export a clean PDF without creating a paid account."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Reddit / Hacker News"
+  metric: github_stars
+  value: 40050

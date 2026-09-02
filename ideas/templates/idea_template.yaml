@@ -1,0 +1,62 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec TEMPLATE — copy this file as a starting point for new ideas.
+#
+#   cp ideas/templates/idea_template.yaml ideas/<your_slug>.yaml
+#
+# This file lives in ideas/templates/ (NOT ideas/) on purpose: ideas/ is the
+# frozen test set, and load_ideas() globs ideas/*.yaml non-recursively, so
+# anything in this subdirectory is deliberately excluded from the bench. Do not
+# move a template up into ideas/ — it would be loaded as a real benchmark idea.
+#
+# Every value below is a placeholder. Replace all of them.
+# See ideas/README.md for the full field reference.
+
+idea_id: replace_me_snake_case
+title: "Replace Me"
+pitch: "One-line pitch for the product."
+problem: "The problem this solves, and why it's painful today."
+target_user: "Who specifically this is for."
+core_features:
+  - "First must-have feature"
+  - "Second must-have feature"
+  - "Third must-have feature"
+success_criteria: "What a reviewer checks to call this done and good."
+# client-app     = runs in the browser, state in localStorage/IndexedDB
+# full-stack-app = real backend + database + accounts, and one user's write is
+#                  visible to another (only pick this when that IS the point)
+allowed_scope: client-app        # one of: client-app | full-stack-app
+difficulty: easy                 # one of: easy | medium | hard
+
+# Before you commit, check the idea is buildable in the runtime: 1 GB RAM,
+# 1.0 CPU, no GPU, no local model weights, and NO second credential (no OAuth
+# provider, managed DB, payments, or email). See ideas/README.md.
+
+# Optional: include ONLY for ideas drawn from real apps that actually went
+# viral, and ONLY with a real, verified number — this data is what the
+# simulation is later validated against, so a made-up value silently corrupts
+# the correlation analysis. Delete this whole block if the idea has no real
+# reference app.
+#
+# When you do include it, also add a header comment naming the reference repo
+# and the date you checked, matching the other specs in ideas/:
+#
+#   # Reference app (ground truth): ollama — https://github.com/ollama/ollama
+#   # Verified 175,191 GitHub stars on 2026-06-30.
+#
+# ground_truth:
+#   source: "Hacker News / Twitter/X"   # where it went viral
+#   metric: github_stars
+#   value: 0                            # the real, verified count

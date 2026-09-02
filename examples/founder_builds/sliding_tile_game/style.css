@@ -1,0 +1,211 @@
+/* Modern Custom Styles for TileMerge */
+
+/* Custom properties & responsive layouts */
+:root {
+  --grid-gap: 12px;
+}
+
+/* Container responsive lock */
+#game-container {
+  touch-action: none; /* Prevents default browser scrolling/swiping when sliding tiles */
+}
+
+/* Tile Layout and Mathematical Positioning */
+.tile {
+  position: absolute;
+  width: calc((100% - 36px) / 4);
+  height: calc((100% - 36px) / 4);
+  left: calc(var(--col) * (100% + var(--grid-gap)) / 4);
+  top: calc(var(--row) * (100% + var(--grid-gap)) / 4);
+  will-change: top, left, transform;
+  transition: left 140ms cubic-bezier(0.2, 0.8, 0.2, 1), 
+              top 140ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 100ms ease-out;
+}
+
+/* Animations */
+@keyframes tile-spawn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tile-merge {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes float-score {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+.animate-spawn {
+  animation: tile-spawn 180ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-merge {
+  animation: tile-merge 200ms ease-in-out forwards;
+}
+
+.animate-score-add {
+  animation: float-score 600ms cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+/* Tile styling by value (Classic Theme default colors) */
+.tile-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  backface-visibility: hidden;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Theme standard styling */
+.tile-2 .tile-inner {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155/50;
+}
+
+.tile-4 .tile-inner {
+  background: #334155;
+  color: #f1f5f9;
+  border: 1px solid #475569/50;
+}
+
+.tile-8 .tile-inner {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fffbeb;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.2);
+}
+
+.tile-16 .tile-inner {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  color: #fff5f1;
+  box-shadow: 0 0 12px rgba(234, 88, 12, 0.3);
+}
+
+.tile-32 .tile-inner {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fef2f2;
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.35);
+}
+
+.tile-64 .tile-inner {
+  background: linear-gradient(135deg, #db2777, #9d174d);
+  color: #fdf2f8;
+  box-shadow: 0 0 16px rgba(219, 39, 119, 0.4);
+}
+
+.tile-128 .tile-inner {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color: #422006;
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+}
+
+.tile-256 .tile-inner {
+  background: linear-gradient(135deg, #a855f7, #7e22ce);
+  color: #faf5ff;
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.5);
+}
+
+.tile-512 .tile-inner {
+  background: linear-gradient(135deg, #6366f1, #4338ca);
+  color: #e0e7ff;
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.55);
+}
+
+.tile-1024 .tile-inner {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: #ecfeff;
+  box-shadow: 0 0 26px rgba(6, 182, 212, 0.6);
+}
+
+.tile-2048 .tile-inner {
+  background: linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.3);
+  animation: glow-pulse 2s infinite alternate;
+}
+
+/* High score states */
+.tile-4096 .tile-inner,
+.tile-8192 .tile-inner,
+.tile-16384 .tile-inner {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #f0fdf4;
+  box-shadow: 0 0 35px rgba(16, 185, 129, 0.9);
+}
+
+@keyframes glow-pulse {
+  0% {
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.5), inset 0 0 5px rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 32px rgba(236, 72, 153, 0.95), inset 0 0 15px rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Modal and Overlays show states */
+.show-overlay {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: scale(1) !important;
+}
+
+/* Styling adjust for long text on custom themes */
+.custom-text-sm {
+  font-size: 0.8rem;
+  line-height: 1rem;
+}
+
+.custom-text-xs {
+  font-size: 0.65rem;
+  line-height: 0.8rem;
+}
+
+/* Custom scrollbar for theme creator list */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

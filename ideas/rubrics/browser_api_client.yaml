@@ -1,0 +1,480 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for browser_api_client (ReqBench). Never shown to the founder.
+#
+# ONE FACT SHAPES EVERY CHECK HERE: an API client makes outbound requests by
+# design, so `network_origins` — the workhorse of the offline and privacy items
+# in nine other rubrics — is the wrong instrument for this idea. A request to
+# another host is the app doing the job the brief asked for, not a leak. What can
+# honestly be decided is what the RESPONSE PANE says: the status line, the timing
+# and size figures, whether an indented body is rendered, and whether a transport
+# error string is on screen. Almost every item below is a read of that pane.
+#
+# THE SAMPLE TARGET. The brief requires a built-in sample target so a full cycle
+# works offline, and every send below aims at it rather than at a public
+# endpoint. That is not a stylistic choice: the container's network is
+# restricted (see universal R2), so a rubric that sent requests to httpbin.org
+# would grade the sandbox rather than the build. Setups refer to it as "the app's
+# built-in sample target — the URL its shipped default request uses", which the
+# grader reads off the composer on a fresh load.
+#
+# COMPOSER STATE ACCUMULATES. Items are graded in file order and nothing resets
+# the app between them, so S1 leaves an edited request in the composer. Every
+# later item that needs the SHIPPED DEFAULT back — S2, S6 and A1 — opens with the
+# same instruction: reload, and if the composer still holds an edited request,
+# use the app's new-request or reset control. It is restated in each setup
+# because the grader sees one item at a time with no memory of the last.
+#
+# NONCES
+#   vbpath7391 vbparam7391 vbhdr7391 VBBODY7391  S1's four composer fields
+#   VBCOLL7391                                   the collection S5 saves, F3 fills
+#   vbreqa7391 vbreqb7391                        F3's two saved requests
+#   vbhist7391 vbother7391                       S6's history entry and its decoy
+#   vbvar                                        F2's environment variable
+#   vbhistone7391 vbhisttwo7391 vbhistthree7391  F4's three history entries
+rubric_version: 1
+idea_id: browser_api_client
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes history and saved collections core features, so persistence is tested at Tier 1/2 weight in S5 and F4 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: "Method, URL, query params, headers and body are all editable via operable controls."
+    points: 8
+    method: assert
+    setup: >-
+      Do not send anything for this item, and do not change the method — F5 tests
+      that control. If the app has a new-request or "+" control, use it first so
+      you are editing a blank request rather than the shipped default. Set the
+      URL to `http://localhost:8000/vbpath7391`. In the query-parameter editor add
+      one parameter named `probe` with the value `vbparam7391`. In the header
+      editor add one header named `X-VB-Probe` with the value `vbhdr7391`. In the
+      request-body editor type `{"probe": "VBBODY7391"}`. Finish with the body
+      editor on screen.
+    note: >-
+      Each field is decided by whether the nonce typed into it can be read back,
+      which is DOM-agnostic and, better, tests the claim the item actually makes:
+      a labelled div cannot hold a value. Measured in Chromium: the harness's
+      user-visible read collects `input.value` from EVERY input in the document,
+      visible or not, so a build that hides its inactive Params/Headers/Body
+      panes with CSS still reports all three.
+
+      The alternation on the third pattern is the cost of the builds that do NOT
+      hide but UNMOUNT — a React composer rendering only the active tab puts one
+      of params and headers outside the document entirely, and requiring both
+      would fail an app whose fields work perfectly. Requiring either credits
+      whichever pane survived; a build with no editable params AND no editable
+      headers still fails.
+
+      Two halves are owned elsewhere rather than asserted twice. The method
+      selector is F5's, and "operable controls" in the accessible-name sense is
+      universal R4's (`controls_have_names`, `max_unnamed: 0`), which fails any
+      visible control lacking a name and any div posing as a field.
+    check:
+      name: text_matches
+      patterns:
+        - "vbpath7391"
+        - "VBBODY7391"
+        - "vbparam7391|vbhdr7391"
+  - id: S2
+    text: >-
+      Sending the shipped default request with no external network returns a 2xx
+      — not ERR_CONNECTION_REFUSED.
+    points: 12
+    method: assert
+    note: >-
+      This idea's signature defect and the heaviest item in its rubric: 46x
+      `ERR_CONNECTION_REFUSED` across recent runs. The affected build scored
+      1/30 would_use.
+
+      Decided from the response pane, in both directions at once: a 2xx status
+      must be on screen AND none of the transport-error strings may be. Both
+      clauses are load-bearing. Requiring the 2xx alone would credit a build that
+      renders a stale success panel beside a fresh error; forbidding the errors
+      alone would credit a build whose Send button does nothing at all.
+
+      "With no external network" is the container, not the check — the network is
+      restricted for every build alike (universal R2), so a default request
+      aimed at a public endpoint fails here for the same reason a dead localhost
+      port does, and A1 is this item's exact inverse.
+
+      The status pattern accepts the three shapes a response pane actually
+      renders — `200 OK`, `Status: 200`, and a bare `201` next to a millisecond
+      figure — rather than a fixed layout. A build printing an unlabelled `200`
+      with no timing beside it is not credited; S3 requires the timing anyway.
+    setup: >-
+      Reload the page so the app returns to its shipped default request. If the
+      composer still holds an edited request from an earlier item, use the app's
+      new-request or reset control to get the default back. Then click Send
+      WITHOUT editing the method, URL, params, headers or body, and wait for the
+      response to arrive. Leave the response pane on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b2\\d{2}\\s*(?:ok|created|accepted|no\\s*content)\\b|status[^\\d]{0,24}\\b2\\d{2}\\b|\\b2\\d{2}\\b[^\\d]{0,16}\\d+\\s*ms\\b"
+      absent:
+        - "ERR_CONNECTION_REFUSED|ECONNREFUSED|connection refused|net::ERR_|ERR_NAME_NOT_RESOLVED|failed to fetch|networkerror|load failed|ERR_EMPTY_RESPONSE|ERR_BLOCKED_BY|getaddrinfo|ENOTFOUND"
+  - id: S3
+    text: "The response pane shows status code, response time and payload size."
+    points: 6
+    method: assert
+    setup: >-
+      With a response from the app's built-in sample target on screen — send the
+      shipped default request again if the pane is empty — leave the response
+      summary visible. Do not collapse it and do not switch to a body-only view.
+    note: >-
+      Three separate patterns, one per clause, so a build showing status and
+      timing but no size loses the item rather than scraping it. The status
+      pattern accepts any class here rather than only 2xx: this item is about the
+      pane DISPLAYING a status, and whether that status is a 2xx is S2's
+      question, priced at twice the points.
+
+      The size clause accepts `B`, `KB`, `MB` and `bytes`, which is every unit
+      the corpus renders. It cannot distinguish a real byte count from a
+      hardcoded one — `download_size_matches` is the primitive that can, and it
+      needs a downloaded file, which this idea never produces.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b[1-5]\\d{2}\\s*(?:ok|created|accepted|no\\s*content|not found|bad request)\\b|status[^\\d]{0,24}\\b[1-5]\\d{2}\\b|\\b[1-5]\\d{2}\\b[^\\d]{0,16}\\d+\\s*ms\\b"
+        - "\\b\\d+(?:[.,]\\d+)?\\s*(?:ms|millisecond|sec\\b|secs\\b|seconds?\\b|s\\b)"
+        - "\\b\\d+(?:[.,]\\d+)?\\s*(?:bytes?\\b|[kKmM]?B\\b)"
+  - id: S4
+    text: "The response body is prettified — valid JSON, indented, visibly different from raw."
+    points: 4
+    method: assert
+    setup: >-
+      Send a request against the app's built-in sample target so a JSON response
+      comes back — reuse the shipped default request. If the app offers a
+      Raw/Pretty or Formatted toggle for the body, switch it to the pretty or
+      formatted view. Leave the response body on screen, scrolled so more than
+      its first line is visible.
+    note: >-
+      Indentation is read straight out of the rendered text: a line beginning
+      with two or more spaces followed by a JSON token can only exist if the body
+      was re-serialised with an indent. Verified in Chromium — `innerText`
+      preserves leading whitespace inside a `<pre>` or any element with
+      `white-space: pre`/`pre-wrap`, which is where every syntax-highlighted
+      body lives, and a `<textarea>`'s value preserves it unconditionally.
+
+      LIMITATION, measured rather than assumed: a build that emits one plain
+      `<div>` per line with no `white-space` rule has its indentation collapsed
+      by `innerText` and is failed here even though a user sees it indented.
+
+      The "visibly different from raw" clause is deliberately NOT asserted.
+      `value_changes` across a Raw/Pretty toggle would express it exactly, and
+      would also fail every build that has no toggle — the majority, which
+      prettify unconditionally and are correct to.
+    check:
+      name: text_matches
+      patterns:
+        - "\\n[ \\t]{2,}(?:\"|\\[|\\{|-?\\d|true|false|null)"
+  - id: S5
+    text: "Save to a named collection, hard reload, and the collection is still listed."
+    points: 5
+    method: assert
+    setup: >-
+      Compose any request against the app's built-in sample target and use the
+      app's save control to save it into a NEW collection named exactly
+      VBCOLL7391, creating the collection if the app asks you to. Wait until the
+      collection appears in the app's own sidebar or list. Then stop — the
+      harness performs the hard reload itself. Do not reload the page yourself.
+    note: >-
+      The collection NAME is the nonce, which is what makes this honest: several
+      builds seed a demo collection, so "a collection is listed after a reload"
+      passes trivially, and only the one the grader named counts. R1 is marked
+      not-applicable for this idea precisely so this item carries the reload at
+      the weight the brief implies rather than being scored twice.
+
+      LIMITATION: the name is read from the user-visible text, so a build that
+      restores the collection correctly but renders its sidebar collapsed
+      (`display: none`) after a reload is failed. Input values are read whatever
+      their visibility, but a collapsed list item is not.
+    check:
+      name: survives_reload
+      nonce: VBCOLL7391
+  - id: S6
+    text: "Re-running an entry from history reproduces the same status code."
+    points: 5
+    method: assert
+    setup: >-
+      Reload the page and, if the composer no longer holds the shipped default
+      request, use the app's new-request or reset control. Read the default URL,
+      then retype it with `?vbhist7391=1` appended (use `&vbhist7391=1` if it
+      already carries a query string) and Send it. Wait for the response. Now
+      type `http://localhost:8000/?vbother7391=1` into the URL field but DO NOT
+      send it. Finally, open the app's history list, click the entry for the
+      vbhist7391 request to load it back into the composer, and Send it again.
+      Leave the response on screen.
+    note: >-
+      The unsent decoy is what makes this decidable. A check run straight after a
+      history click cannot tell a fresh response from the one already on screen,
+      so the composer is first poisoned with a URL that was never sent — and
+      therefore never entered history. If the history entry really loaded,
+      vbother7391 is gone from the whole page and the vbhist7391 request is back;
+      if clicking the entry did nothing, the decoy is still sitting in the URL
+      field and the `absent` clause fires. That is the dead-history build this
+      item exists to separate out.
+
+      The decoy is deliberately a VALID same-origin URL that is never sent,
+      rather than a dead port that would be. A deliberately failing request would
+      leave console entries that universal R3 and R9 drain in Tier 3, which runs
+      after this item — costing every build six points for the grader's own probe.
+
+      "The SAME status code" is pinned to 2xx rather than compared across the two
+      sends: the request is aimed at the built-in sample target, which S2 has
+      already established should answer 2xx. Comparing the two literally would
+      need a primitive that differences one labelled number across two captures;
+      `captures_monotonic` reads only the first number in a snapshot and would
+      pick up the timing figure as often as the status.
+    check:
+      name: text_matches
+      patterns:
+        - "vbhist7391"
+        - "\\b2\\d{2}\\s*(?:ok|created|accepted|no\\s*content)\\b|status[^\\d]{0,24}\\b2\\d{2}\\b|\\b2\\d{2}\\b[^\\d]{0,16}\\d+\\s*ms\\b"
+      absent:
+        - "vbother7391"
+        - "ERR_CONNECTION_REFUSED|ECONNREFUSED|connection refused|net::ERR_|ERR_NAME_NOT_RESOLVED|failed to fetch|networkerror|load failed"
+
+tier2:
+  - id: F1
+    text: >-
+      The sample target is bundled in-app — no external service and no separate
+      process the user must start.
+    points: 5
+    method: source
+    note: >-
+      Fires as a whole-tree read for a public API sandbox being wired in as the
+      sample target: httpbin, jsonplaceholder, postman-echo, reqres, dummyjson
+      and the rest of the list an LLM reaches for when asked for "an endpoint to
+      try". A build referencing none of them has bundled something, because the
+      brief's cycle has to work and the container's network does not.
+
+      Three exclusions keep it off honest builds, and each is a real shape rather
+      than a hypothetical. A line carrying `placeholder` is skipped — an input
+      hint suggesting httpbin is not a dependency on it, and the word is also a
+      substring of `jsonplaceholder`, so the guard is written `\bplaceholder\b`.
+      A comment line is skipped. And the host must follow a `:` or `=`, so
+      README prose ("try it against https://httpbin.org/get") does not fire while
+      `defaultUrl: "https://httpbin.org/get"` and `- Default target: https://...`
+      both do.
+
+      The "no separate process" half is A2's, at penalty polarity. What neither
+      can see is a build that fabricates its sample response in JavaScript and
+      calls that bundled: S2 credits it too, and P2 (a silent mock presented as
+      the real feature) is where that belongs.
+    check:
+      name: source_absent
+      pattern: "^(?!.*\\bplaceholder\\b)(?!\\s*(?://|\\*|#|<!--))[^\\n]*[:=]\\s*[\"'`]?\\s*https?://(?:www\\.)?(?:httpbin\\.org|jsonplaceholder\\.typicode\\.com|typicode\\.com|postman-echo\\.com|reqres\\.in|dummyjson\\.com|swapi\\.dev|pokeapi\\.co|httpstat\\.us|[a-z0-9-]*\\.?beeceptor\\.com|run\\.mocky\\.io|randomuser\\.me|catfact\\.ninja|api\\.github\\.com|api\\.chucknorris\\.io)"
+  - id: F2
+    text: >-
+      An environment variable can be defined and resolves when used in a URL,
+      verified against the mock's echo of the received path.
+    points: 7
+    method: assert
+    setup: >-
+      First read the app's built-in sample-target URL off the shipped default
+      request. Open the app's environment or variables editor and define one
+      variable named exactly `vbvar` whose value is that full URL, and save it
+      (select the environment as active if the app asks you to). Then clear the
+      request URL and set it to the template `{{vbvar}}` — use the app's own
+      syntax if its documentation or placeholder shows a different one, for
+      example `${vbvar}` — and Send. Leave the response pane on screen.
+    note: >-
+      Resolution is decided by CONSEQUENCE rather than by echo, because the
+      echo the item's text assumes is not something every build's sample target
+      does. An unresolved `{{vbvar}}` is not a URL; the request either never
+      leaves or lands on the app's own static server. A resolved one reaches the
+      sample target and answers 2xx. So a 2xx with the variable's name still
+      visible in the composer or the environment editor is the signature of a
+      substitution that happened.
+
+      The `absent` HTML clause closes the one hole in that reasoning: a static
+      server with a history fallback answers 200 with its own index page for
+      `/%7B%7Bvbvar%7D%7D`, so a build that did NOT substitute could otherwise
+      show a 2xx. A response body rendering `<!doctype html>` is that fallback,
+      not the sample target.
+
+      LIMITATION: a build whose sample target is a JavaScript interceptor
+      answering 200 to any URL passes without substituting anything. Deciding it
+      outright needs a primitive that reads the outbound request URL out of the
+      harness's own network log — `request_url_matches(pattern)`. Nothing today
+      does: `network_origins` only classifies hosts, and `request_payload_hash`
+      needs a fixture and a large body.
+    check:
+      name: text_matches
+      patterns:
+        - "vbvar"
+        - "\\b2\\d{2}\\s*(?:ok|created|accepted|no\\s*content)\\b|status[^\\d]{0,24}\\b2\\d{2}\\b|\\b2\\d{2}\\b[^\\d]{0,16}\\d+\\s*ms\\b"
+      absent:
+        - "<!doctype|<html\\b|cannot get\\b"
+        - "ERR_CONNECTION_REFUSED|ECONNREFUSED|net::ERR_|failed to fetch|networkerror|invalid url"
+  - id: F3
+    text: "Collections can be named and hold multiple requests."
+    points: 5
+    method: assert
+    setup: >-
+      Use the collection named VBCOLL7391 that an earlier item created, or create
+      it now if it is gone. Compose a request whose URL is the app's built-in
+      sample target with `?vbreqa7391=1` appended and SAVE it into VBCOLL7391
+      without sending it; if the app asks for a name, name it vbreqa7391. Then do
+      the same for a second request carrying `?vbreqb7391=1`. Now set the URL
+      field back to the plain sample target with no query string, so neither
+      nonce is left in the composer, and expand VBCOLL7391 so both saved requests
+      are listed on screen.
+    note: >-
+      The two requests are saved but never SENT, and the composer is cleared
+      afterwards, so neither nonce can reach the screen by any route except the
+      collection's own listing. Without both of those the item would pass on the
+      history list or on the URL field still holding the last thing typed — which
+      is exactly the build that has a name field and a save button and no
+      collection behind them.
+
+      Distinguishing the two requests by a query nonce rather than only by a name
+      is deliberate: a fair number of builds derive a saved request's label from
+      its URL and offer no name field at all, and failing those would grade a
+      naming affordance the item does not ask for. The collection's own name is
+      asserted, which is the "can be named" half.
+    check:
+      name: text_matches
+      patterns:
+        - "VBCOLL7391"
+        - "vbreqa7391"
+        - "vbreqb7391"
+  - id: F4
+    text: "History persists across reload and retains at least 20 entries."
+    points: 4
+    method: assert
+    setup: >-
+      Read the app's built-in sample-target URL, then send three requests in a
+      row against it, distinguished only by their query strings: first
+      `?vbhistone7391=1`, then `?vbhisttwo7391=1`, then `?vbhistthree7391=1`.
+      Wait for each response before composing the next. Open the app's history
+      list so all three entries are on screen. Then stop — the harness performs
+      the hard reload itself. Do not reload the page yourself.
+    note: >-
+      The nonce checked is the OLDEST of the three, which decides two things at
+      once: that history is written to storage rather than held in memory, and
+      that it is not the one-entry buffer several builds ship. Reading the newest
+      would prove neither — a build that keeps only the last request restores it
+      and passes.
+
+      PARTIAL, recorded rather than hidden: the literal "at least 20 entries" is
+      not asserted. Sending twenty requests is four tool calls each inside a
+      14-step per-item budget, so the grader cannot reach the state, and no
+      primitive counts list rows in rendered text against a threshold anyway
+      (`text_pattern_count` counts a regex, but twenty entries share no text to
+      match). What would decide it is a scripted burst plus
+      `text_pattern_count(pattern, minimum: 20)` over a nonce every entry
+      carries.
+    check:
+      name: survives_reload
+      nonce: vbhistone7391
+  - id: F5
+    text: "The method selector offers at least GET/POST/PUT/DELETE/PATCH and is operable."
+    points: 4
+    method: assert
+    note: >-
+      11x `Locator.select_option: Timeout` against custom non-select dropdowns.
+
+      Both halves fall out of one measurement, which is why the setup asks for
+      the menu to be OPENED. Verified in Chromium: a native `<select>`'s option
+      texts appear in `document.body.innerText` whether or not the control is
+      open, so a select-based build is credited on its option list alone — and it
+      is operable by construction, since `select_option` is exactly what works on
+      it. A custom dropdown's menu does not appear until it is opened, so the
+      build in the quoted failure — the one no agent can open — has no PATCH on
+      screen and fails, while a custom dropdown that opens on a click passes. The
+      list and the operability are the same observation here.
+
+      One over-credit, recorded rather than hidden: `\bDELETE\b` also matches a
+      delete-collection button's label, so a build offering only GET and POST but
+      shipping a delete control gets that clause free. PATCH is the clause that
+      actually discriminates — nothing else on an API client's screen says it.
+    setup: >-
+      Open the app's method selector so the full list of methods it offers is on
+      screen, and leave the menu open. If it is a native dropdown that will not
+      stay open, that is fine — leave it closed. Do not send anything and do not
+      edit any other field.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bGET\\b"
+        - "\\bPOST\\b"
+        - "\\bPUT\\b"
+        - "\\bDELETE\\b"
+        - "\\bPATCH\\b"
+
+penalties:
+  - id: A1
+    text: "The shipped default request targets a dead or external endpoint."
+    points: -8
+    method: assert
+    setup: >-
+      Reload the page so the app returns to its shipped default request, and if
+      the composer still holds an edited request from an earlier item use the
+      app's new-request or reset control to get the default back. Click Send
+      WITHOUT editing anything — not the method, URL, params, headers or body —
+      and wait until the app stops loading. Leave whatever it renders on screen.
+    note: >-
+      The exact inverse of S2, on the same state, and fired on the OUTCOME rather
+      than on the shape of the URL. That is the whole point: reading the default
+      URL and testing whether its host looks external would fire on a footer that
+      prints a project link, and would miss a default aimed at `localhost:3001`
+      where nothing is listening — the dead half of the item's own text. Sending
+      it collapses both halves into one observation, because the container's
+      network is restricted (universal R2), so an external default fails exactly
+      the way a dead local one does.
+
+      Graded after Tier 3, so the failed request this deliberately provokes
+      cannot pollute R3 (`no_console_errors`) or R9 (`no_failed_requests`) — they
+      have already drained the console. S2 provokes the same request in Tier 1
+      and does reach them, which is correct: on a build whose default is dead,
+      those items are reporting a real fault.
+
+      LIMITATION: a build with no shipped default at all — an empty URL field on
+      first load — cannot fire this, and does not deserve to. It fails S2 instead.
+    check:
+      name: text_matches
+      patterns:
+        - "ERR_CONNECTION_REFUSED|ECONNREFUSED|connection refused|net::ERR_|ERR_NAME_NOT_RESOLVED|failed to fetch|networkerror|load failed|ERR_EMPTY_RESPONSE|ERR_BLOCKED_BY|getaddrinfo|ENOTFOUND|ERR_INTERNET_DISCONNECTED"
+  - id: A2
+    text: "Using the sample target requires starting a separate sidecar process."
+    points: -5
+    method: source
+    note: >-
+      Read from the build's own instructions, because that is where a sidecar
+      requirement is actually visible: a second process the USER must start is by
+      definition one the app tells them about. `concurrently`, `npm-run-all` and
+      `start-server-and-test` are deliberately NOT in the pattern — a run command
+      that launches two processes itself is not a sidecar the user starts, and
+      firing on them would penalise the ordinary client+server build at -5.
+
+      The "start the mock server" alternative requires a `first`, `manually`,
+      `separately` or `before` qualifier for the same reason: a README saying
+      "run the mock server" as a description of what `run.command` does is not an
+      instruction to the user.
+
+      LIMITATION, and the safe direction for a penalty: a build that needs a
+      sidecar but never says so is missed. Deciding it properly means starting
+      the app as declared and watching the sample request fail — which is what
+      S2 already does, at Tier 1 weight, without attributing the cause.
+    check:
+      name: source_present
+      pattern: "\\b(?:another|second|separate|new)\\s+terminal\\b|\\bopen\\s+(?:a|another)\\s+terminal\\b|\\b(?:start|run|launch)\\s+the\\s+(?:mock|sample|echo|proxy|json)[- ]?server\\s+(?:first|manually|separately|before)\\b"

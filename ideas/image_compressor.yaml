@@ -1,0 +1,41 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Squoosh — https://github.com/GoogleChromeLabs/squoosh
+# Verified 25,628 GitHub stars on 2026-08-06.
+#
+# Observability note: the headline result here is NUMERIC (original vs compressed
+# byte size and the percentage saved), so the outcome is legible as text even
+# before a reviewer looks at the image itself.
+
+idea_id: image_compressor
+title: "Shrinkwrap"
+pitch: "Make images dramatically smaller in the browser, and see exactly what you traded away."
+problem: "Image optimizers make you upload originals to someone else's server, and give you a single 'optimized' file with no way to judge the quality you just lost."
+target_user: "Web developers and writers who need smaller images without shipping their originals to a third party."
+core_features:
+  - "Load an image from the file picker or by dragging it in"
+  - "Choose an output format and adjust a quality setting"
+  - "Show the original and compressed file sizes and the percentage saved, as text"
+  - "A before/after comparison of the two images so quality loss is visible"
+  - "Download the compressed result; all processing happens in the browser with no upload"
+success_criteria: "After loading an image and lowering the quality setting, the app reports both the original and the compressed byte size with a correct percentage saved, offers a working download of the smaller file, and never sends the image off the machine."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Twitter/X / Hacker News"
+  metric: github_stars
+  value: 25628

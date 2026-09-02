@@ -1,0 +1,678 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for collaborative_table (Gridwork). Never shown to the founder.
+#
+# A MULTI-USER, server-backed idea, so almost every item is a claim about what one
+# account can see of another's work. The grader drives one browser and signs in and
+# out to play both parts, which means the items only compose if they agree on
+# identities and nonces. They are fixed here and referenced by name:
+#
+#   user A     display name "Ada VB4417", email ada4417@example.com
+#   user B     display name "Ben VB4417", email ben4417@example.com
+#   password   Gridwork-4417, for both
+#   table      "Roster VB4417", owned by A
+#   columns    Task (text), Est (number), Due (date), Stage (single-select,
+#              options Draft / Review / Done), Ready (checkbox)
+#   A's rows   Task = VBROW-ALPHA / VBROW-BETA / VBROW-GAMMA, Est = 2 / 9 / 10
+#   B's edit   VBEDIT4417 typed into an existing row's Task cell
+#   B's row    VBROW-DELTA, Est 40, Stage Done
+#   A's second table "Private VB4417", never shared -- the isolation fixture for F2
+#
+# Est = 2, 9, 10 is the whole reason those three values were chosen: sorted
+# numerically they read 2, 9, 10 and sorted as strings they read 10, 2, 9. That is
+# the trap S5 names in its `expect`, and it is invisible to any check that only asks
+# whether a sort control exists.
+#
+# TWO READING HAZARDS drove most of the check design here, both measured:
+#
+# 1. The harness's default text reader (`USER_VISIBLE_JS`) appends EVERY
+#    `input.value` in the document, including inputs inside rows the app has
+#    hidden with `display:none` and inputs the user has scrolled past. 35 of 120
+#    builds render grid cells as `<input>` and 17 hide filtered rows by style, so
+#    on those builds the default reader reports filtered-out rows as still on
+#    screen -- which would pass the filter half of S5 on a build whose filter does
+#    nothing. Verified directly in a browser. Every item here that reads the grid
+#    therefore passes an explicit `js:` that skips zero-size and hidden elements.
+#
+# 2. Cell values are frequently rendered TWICE in one page -- a row and its
+#    expanded detail card, or a sidebar echo. Measured on 21 of 30 builds where a
+#    typed value was rendered at all. Any ordering check written as "2 appears
+#    before 9 appears before 10" in raw text is therefore unsound, which is why S5
+#    reduces the page to first-appearance order of exact-match cells instead.
+#
+# Anonymous access (F2, A1) is checked with `http_status`, whose request carries no
+# cookie: nothing else in the pipeline can produce a session-free read, since a
+# crowd agent has no way to drop its session. That primitive runs in the
+# deterministic PRE-PASS, before the grader model navigates, so it sees a freshly
+# reset app with no user data -- no assertion here may depend on data the grader
+# would later create.
+rubric_version: 1
+idea_id: collaborative_table
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Persistence is the point of this brief and is tested at Tier 1/2 weight in S3, S4 and F5 (survives a server restart) rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: "Two distinct users can sign up and sign in independently, each getting a session."
+    points: 8
+    method: probe
+    note: >-
+      The check reads whichever session is live when the model stops, so it
+      decides ONE signed-in header rather than both. The second account is not
+      unexercised — S3, S4 and F2 are all impossible without it — but a build
+      that creates Ada and silently drops Ben passes here and fails there.
+
+      The `absent` clause is what makes this more than "a name is on screen".
+      Measured over the corpus's crowd snapshots: of 29 builds that ever rendered
+      the agent's own display name beside a sign-out control, only 2 also offered
+      a sign-in or create-account affordance on that same page. So the clause
+      discriminates a real minority rather than firing everywhere. One of those
+      two is a genuine defect (a modal sign-in left mounted behind the signed-in
+      workspace); the other renders a marketing landing section below the app and
+      is a false positive this item accepts.
+    setup: >-
+      Create two accounts, in this order: "Ben VB4417" (ben4417@example.com,
+      password Gridwork-4417), then sign out, then "Ada VB4417"
+      (ada4417@example.com, same password). Sign in explicitly if signing up does
+      not sign you in. Leave Ada signed in on a page showing the app's own
+      header, and do not open a sign-in dialog before you stop.
+    check:
+      name: text_matches
+      patterns:
+        - "Ada\\s*VB4417|ada4417"
+        - "sign\\s*out|log\\s*out|logout|signout"
+      absent:
+        - "\\bsign in\\b|\\bcreate account\\b|\\blog in\\b|\\bsign up\\b"
+  - id: S2
+    text: "User A creates a table with typed columns including a single-select, and its options are retrievable."
+    points: 8
+    method: assert
+    note: >-
+      "Retrievable" is read as "the option labels the user defined are on screen
+      at the same time as the column that owns them". That is the half which
+      fails on a build that accepts a select column and then forgets its options,
+      or that stores options but never renders them anywhere a user can see.
+
+      What is NOT decided is that Stage is genuinely typed as a select rather
+      than a text column whose value happens to read `Draft` — no primitive reads
+      a column's declared type out of forty different renderings. F1 is the
+      counterweight: it requires the five type names to be on offer at all.
+
+      The reader is the visibility-aware one described in the file header, so a
+      build whose option list lives in a closed dropdown does not get credit for
+      markup nobody can see.
+    setup: >-
+      Signed in as Ada, create a table named exactly `Roster VB4417`. Give it
+      these columns, with these types: `Task` (text), `Est` (number), `Due`
+      (date), `Stage` (single-select with exactly the options Draft, Review and
+      Done), `Ready` (checkbox). Then leave the table open on a view where the
+      Stage column's three options are all visible at once — open its dropdown,
+      or its column settings, whichever the app offers.
+    check:
+      name: text_matches
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? Array.from(n.options).map(o => o.textContent).join('\n')
+                : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+      patterns:
+        - "Roster\\s*VB4417"
+        - "Stage"
+        - "Draft"
+        - "Review"
+        - "Done"
+  - id: S3
+    text: "User A adds 3 or more rows; user B, in a separate session, opens the shared table and sees all of them."
+    points: 10
+    method: assert
+    note: >-
+      The core of the brief, and the item the crowd cannot reach: a crowd agent
+      drives one session and never sees another account's view.
+
+      Which account is looking cannot be read off the page — the rows say nothing
+      about who is reading them — so "in a separate session" rests on the sign-out
+      and sign-in the transcript records. What is decided is the half that
+      actually fails: all three of A's rows rendering at once on a page that also
+      shows B as the signed-in user. A build storing rows in the creator's
+      browser rather than on the server shows B an empty table and fails; so does
+      one that shares the table but paginates two rows out of view.
+    setup: >-
+      Signed in as Ada, add three rows to `Roster VB4417` with Task values
+      exactly VBROW-ALPHA, VBROW-BETA and VBROW-GAMMA, and Est values 2, 9 and 10
+      respectively. Save them. Then share or invite Ben to the table if the app
+      requires an explicit share, sign out, and sign in as Ben
+      (ben4417@example.com, Gridwork-4417). Open `Roster VB4417` and leave all
+      three rows on screen.
+    check:
+      name: text_matches
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? (n.selectedOptions[0] || {}).textContent : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+      patterns:
+        - "VBROW-ALPHA"
+        - "VBROW-BETA"
+        - "VBROW-GAMMA"
+        - "Ben\\s*VB4417|ben4417"
+  - id: S4
+    text: "User B edits a row and adds another; user A sees both after a reload."
+    points: 8
+    method: assert
+    note: >-
+      Two nonces, because the item makes two claims. VBEDIT4417 is B's edit to an
+      existing row and VBROW-DELTA is B's new row; a build that broadcasts
+      inserts but drops updates has exactly one of them and fails.
+
+      The reload is the model's, not the harness's — `survives_reload` takes only
+      one nonce and reloads itself, so it cannot express "these two strings, seen
+      by the OTHER account". The instruction to reload is therefore prose the
+      transcript records rather than something the harness enforces. The
+      substantive half is still machine-decided: both nonces rendering on Ada's
+      screen is impossible unless B's two writes reached the server and A's
+      session read them back.
+    setup: >-
+      Still signed in as Ben, open `Roster VB4417`. Edit the VBROW-BETA row's
+      Task cell so it reads exactly VBEDIT4417, and save. Then add one new row
+      with Task exactly VBROW-DELTA and Est 40. Now sign out, sign back in as Ada
+      (ada4417@example.com, Gridwork-4417), open `Roster VB4417`, reload the
+      page, and leave the grid on screen with both VBEDIT4417 and VBROW-DELTA
+      visible.
+    check:
+      name: text_matches
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? (n.selectedOptions[0] || {}).textContent : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+      patterns:
+        - "VBEDIT4417"
+        - "VBROW-DELTA"
+        - "Ada\\s*VB4417|ada4417"
+  - id: S5
+    text: >-
+      Sorting a numeric column orders numerically and a filter returns exactly
+      the expected row count.
+    points: 6
+    method: assert
+    expect: "2, 9, 10"
+    note: >-
+      Catches alphabetical sorting of a numeric column (10, 2, 9).
+
+      Only the SORT half is decided; the filter half is not, and could not
+      honestly be. "Exactly the expected row count" has no cross-build rendering
+      to read — a count is a number in one build, a list length in another and
+      nothing at all in a third — and the one instrument that could infer it, the
+      absence of the other rows from the page text, is exactly what hazard 1 in
+      the file header makes unreliable: 35 of 120 builds render cells as inputs
+      and 17 hide filtered rows by style, so the default reader reports
+      filtered-out rows as present. A `visible_row_count(selector)` primitive
+      reading only laid-out rows would close it. The filter is still driven in
+      the setup so that R3, R9 and A2 observe it.
+
+      The sort half is decided by reducing the page to the first appearance of
+      each cell whose ENTIRE content is 2, 9 or 10, in document order. Exact-cell
+      matching is what makes this survive real pages: a sidebar reading "10
+      members", a "26 rows" caption or a 1-2-3 row gutter all contribute nothing,
+      and a grid rendered twice contributes its order once. Verified against five
+      hostile layouts in a browser and against 16,237 real crowd snapshots of
+      this idea, where the exact string "2,9,10" arises by accident on 0.7%.
+
+      Two known limits. A build rendering Est as "2 d" or "2 days" in the cell
+      matches nothing and abstains rather than failing. And the check reads
+      whatever ordering is on screen when the model stops, so it cannot tell a
+      correct sort from a table that happened to be entered in that order — which
+      is why the setup has the model sort DESCENDING first.
+    setup: >-
+      Signed in as either account, open `Roster VB4417`. First sort the Est
+      column DESCENDING and confirm the order visibly changes, so that a table
+      merely left in entry order cannot be mistaken for a working sort. Then sort
+      Est ASCENDING and let the grid settle. Next apply a filter that keeps only
+      the row whose Est is 40, note what the app shows, then CLEAR the filter
+      completely so all rows are visible again. Leave the grid sorted ascending
+      by Est with no filter applied.
+    check:
+      name: value_equals
+      expect: "2,9,10"
+      js: |-
+        () => {
+          const want = ['2', '9', '10'];
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? (n.selectedOptions[0] || {}).textContent : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          const seen = [];
+          for (const t of out) {
+            if (want.includes(t) && !seen.includes(t)) seen.push(t);
+          }
+          return seen.join(',');
+        }
+
+tier2:
+  - id: F1
+    text: "All five column types are creatable: text, number, date, single-select, checkbox."
+    points: 6
+    method: assert
+    note: >-
+      Decided as "all five type names are on offer at once", not as five columns
+      actually created — creating five columns costs more tool calls than the
+      14-step budget leaves after reaching the type picker, and S2 already
+      exercises the creation path.
+
+      The select branch is deliberately wider than the literal phrase. 104 of 120
+      builds say "single-select" or "dropdown" somewhere, but three more label
+      the option plainly `select` beside `checkbox` in the same picker
+      (`text / number / date / select / checkbox`), and one writes `Select (from
+      options)`; requiring the compound phrase would fail those four for
+      vocabulary rather than for capability. Measured on the corpus's crowd
+      snapshots, the wide branch and the strict one identify the same 25 of 43
+      builds — the widening costs nothing here and protects against a picker
+      this corpus has not yet produced.
+
+      The remaining gap is that a picker OFFERING a type is not proof the type
+      works. A build listing `date` and then storing it as text passes. That is
+      the honest limit of a one-snapshot read.
+    setup: >-
+      Open the app's "add column" control on `Roster VB4417` and leave the column
+      TYPE picker open, so every type the app offers is visible at once. If the
+      types live in a native dropdown, that is enough — do not close it. Add no
+      column; just leave the picker on screen.
+    check:
+      name: text_matches
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? Array.from(n.options).map(o => o.textContent).join('\n')
+                : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+      patterns:
+        - "\\btext\\b"
+        - "\\bnumber\\b|\\bnumeric\\b"
+        - "\\bdate\\b"
+        - "single[\\s_-]*select|\\bpicklist\\b|\\bdropdown\\b|\\bselect\\b"
+        - "check\\s?box|\\bboolean\\b|\\byes\\s*/\\s*no\\b"
+  - id: F2
+    text: "Tenant isolation: user B cannot see user A's table unless it was explicitly shared or invited."
+    points: 7
+    method: assert
+    note: >-
+      A build satisfied "several people work against the same table" with one
+      global workspace where "anyone can wipe your tables". Six triers flagged
+      it and it still scored 4.5. Predicted crowd/rubric divergence.
+
+      Both halves are asserted together on purpose, and the pairing is what makes
+      the item mean anything. `Private VB4417` absent alone would also be
+      satisfied by a build that shows B nothing at all — broken, not isolated —
+      so `Roster VB4417` must be present in the same read. A build with one
+      global workspace shows both names and fails; a build with no sharing at all
+      shows neither and fails; only per-resource access control shows exactly one.
+
+      The unavoidable weakness is that this reads a LIST. A build that omits
+      `Private VB4417` from B's sidebar while still serving it to anyone who
+      guesses its URL passes. A1 covers the crudest form of that (the row data
+      served with no cookie at all), but a URL-guessing probe would need a
+      primitive that can be handed a URL the model discovered at runtime, which
+      does not exist.
+    setup: >-
+      Sign in as Ada (ada4417@example.com, Gridwork-4417) and create a SECOND
+      table named exactly `Private VB4417`, with any one column. Do not share it
+      and do not invite anyone to it. Then sign out and sign in as Ben
+      (ben4417@example.com, Gridwork-4417). Go to the place the app lists the
+      tables Ben can reach — his workspace, dashboard or sidebar — and leave that
+      list on screen. Do not use a search box to filter the list.
+    check:
+      name: text_matches
+      patterns:
+        - "Roster\\s*VB4417"
+      absent:
+        - "Private\\s*VB4417"
+  - id: F3
+    text: "Rows can be deleted, and the deletion persists across a reload."
+    points: 4
+    method: assert
+    note: >-
+      The harness performs the reload, not the model, so this cannot be earned by
+      reporting a reload that never happened — which matters more than usual
+      here, because R1 is not applicable for this idea and this is one of only
+      two harness-driven reloads in the file.
+
+      Written as `default_restored`, whose polarity is inverted relative to its
+      name: it passes when the nonce is GONE after a reload but the page still
+      shows content. That is precisely "the deletion stuck and the table is still
+      there", so it is used here as a positive item rather than as a penalty. The
+      `js` reader is the visibility-aware one, because on an input-cell build the
+      default reader would report a deleted-but-not-yet-removed input as still
+      present. Its <40-character guard also protects the item honestly: a build
+      that reloads into a blank page is recorded as a failure rather than
+      credited for having "deleted" everything.
+    setup: >-
+      Signed in as either account, open `Roster VB4417` and delete the row whose
+      Task is VBROW-GAMMA, using the app's own delete control. Confirm any
+      dialog. Leave the grid on screen with the remaining rows visible. Do NOT
+      reload — the harness does that itself.
+    check:
+      name: default_restored
+      nonce: VBROW-GAMMA
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? (n.selectedOptions[0] || {}).textContent : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+  - id: F4
+    text: "A column can be hidden, and its values survive unhiding plus a reload."
+    points: 4
+    method: assert
+    note: >-
+      The hide and unhide themselves are not separately decided, and cannot be
+      from one final read — a build with no hide feature at all leaves the column
+      visible throughout and reaches the same end state. What IS decided is the
+      half that actually destroys data: a build that implements hiding by
+      deleting the column's values, or by dropping them from the payload it
+      persists, has nothing to show after the reload and fails. 86 of 120 builds
+      ship a hide-column feature, so the item is live for most of the corpus and
+      abstains benignly for the rest.
+
+      `survives_reload` performs the reload itself, so the sequencing is
+      enforced: the model cannot report an unhide it never did and have the
+      values reappear.
+    setup: >-
+      Signed in as either account, open `Roster VB4417`. Use the app's hide-column
+      control to hide the `Task` column and confirm its values leave the grid.
+      Then unhide it through the same control, so the Task values are on screen
+      again. Stop there — the harness performs the hard reload itself.
+    check:
+      name: survives_reload
+      nonce: VBROW-ALPHA
+      js: |-
+        () => {
+          const out = [];
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const w = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) {
+            const n = w.currentNode;
+            if (n.nodeType === 3) {
+              const t = n.textContent.trim();
+              if (t && n.parentElement && vis(n.parentElement)) out.push(t);
+            } else if (n.matches('input,textarea,select') && vis(n)) {
+              const v = n.tagName === 'SELECT'
+                ? (n.selectedOptions[0] || {}).textContent : n.value;
+              if (v) out.push(String(v).trim());
+            }
+          }
+          return out.join('\n');
+        }
+  - id: F5
+    text: "Data survives a server restart — state is written under VIRALBENCH_DATA_DIR, not the app dir."
+    points: 4
+    method: source
+    note: >-
+      LIMITATION, recorded rather than hidden: the harness never restarts the app
+      while grading, so this is decided from source, exactly as R7 decides the
+      model-key item and for the same reason — a second app start per build would
+      buy four points at the price of doubling the sweep's container cost. A
+      `restart_app` primitive (stop the process, start it again, re-navigate,
+      re-read the grid) is what would decide it properly.
+
+      What the source read does assert is the thing that actually loses data
+      here. The app's code lives in a throwaway clone and only
+      `VIRALBENCH_DATA_DIR` (mounted at /data) survives a restart, so a build
+      whose store is anywhere else — the app directory, /tmp, or a process dict —
+      loses every table. 119 of 120 builds in this idea's corpus mention the
+      variable and 118 read it from the environment in code, which is what this
+      pattern requires; the one that does not is the item's intended catch.
+
+      What it cannot see is a build that reads the variable and then writes its
+      rows somewhere else anyway, or one that recreates its schema at startup and
+      truncates.
+    setup: >-
+      Nothing to navigate; this is read from source. Leave the app as it is.
+    check:
+      name: source_present
+      pattern: "(getenv|environ|process\\.env|env\\[|env\\.get)[^\\n]{0,40}VIRALBENCH_DATA_DIR"
+
+penalties:
+  - id: A1
+    text: "A single global workspace with no per-account isolation."
+    points: -10
+    method: assert
+    note: >-
+      INSTRUMENT, and the polarity is the point: this passes — i.e. the penalty
+      FIRES — when a request carrying no cookie at all is served the table list.
+      A build with per-account isolation answers 401 or 403; one whose data is
+      global answers 200 with rows in it.
+
+      Deliberately probed rather than read off the screen, because by the time
+      penalties are graded the grader has signed in and nothing on the page
+      distinguishes "shared with me" from "shared with everyone". `http_status`
+      with `anonymous: true` is the only instrument in the pipeline that can make
+      a session-free request; no crowd agent can drop its session, which is why
+      30 agents per run walk past this.
+
+      `/api/tables` is the corpus's modal route: 96 of 120 builds define it, and
+      no other candidate comes close. A build naming its API something else
+      answers 404, which is NOT counted as a leak — `expect: 200` means the
+      penalty simply does not fire, the safe direction for a penalty. That
+      under-fires on a build that is genuinely global behind a differently-named
+      route, and there is no primitive that can be handed a route discovered at
+      runtime.
+
+      This runs in the pre-pass, against a freshly reset app with no user data, so
+      it asserts only the STATUS. It cannot also require table names in the body:
+      at pre-pass time no table exists yet. A build that returns 200 with an
+      empty list to anonymous callers therefore fires this penalty on a
+      technicality — it is still serving the collection unauthenticated, which is
+      the defect, but a reader should know the body was not inspected.
+    setup: >-
+      Nothing to navigate: the harness issues its own cookie-free request before
+      the grading pass begins. Leave the app as it is.
+    check:
+      name: http_status
+      path: /api/tables
+      expect: 200
+      anonymous: true
+  - id: A2
+    text: "Auth returns 4xx on a valid signup or login for some sessions (flaky auth)."
+    points: -6
+    method: probe
+    note: >-
+      74x `401 (Unauthorized)`; one build split its crowd into agents who got in
+      and agents who did not.
+
+      NO CHECK — deliberately, and this is the item most worth a new primitive.
+      The condition is "SOME sessions fail", which is a rate over repeated
+      attempts, and nothing here can produce one. `http_status` issues a single
+      cookie-free GET and cannot POST a credential pair; `no_failed_requests` is
+      the closest fit and is wrong in both directions — it is scoped to one
+      item's phase, it would fire on any unrelated 404, and it cannot separate
+      "the login the grader just made returned 401" from "a favicon was missing".
+      Using it here would have silently converted an auth-flakiness penalty into
+      a generic 4xx detector.
+
+      What would decide it: `repeat_request(path, method, count, body_template)`
+      — N sequential POSTs to a named route, reporting how many were non-2xx.
+      That same primitive is what team_wiki's F4 asks for. Until it exists the
+      item falls back to the model, which can sign in and out a few times within
+      its budget and should answer `unknown` rather than generalise from three
+      attempts to a rate.
+    setup: >-
+      Sign out and sign back in as Ada (ada4417@example.com, Gridwork-4417) at
+      least twice, and as Ben (ben4417@example.com, same password) once, noting
+      whether any attempt with correct credentials is rejected. Then grep the
+      source for the login and signup handlers and check whether either can
+      return 401 on a valid credential pair — look for `401`, `Unauthorized`,
+      `rate`, `limiter`, `throttle`.
+  - id: A3
+    text: "Any 5xx on a core CRUD path (create table, add row, edit, export)."
+    points: -6
+    method: assert
+    note: >-
+      Fires on a server error the harness recorded during THIS item's phase, via
+      `console_errors_present`, which is the penalty-polarity inverse of
+      `no_console_errors` (it passes when errors exist).
+
+      Read honestly, this is narrower than the item's text and slightly wider.
+      Narrower: the browser reports a failed subresource and an uncaught page
+      error, and `console_errors_present` counts only the `pageerror:` lines, so
+      a 500 the app catches and renders as a toast does not fire it. Wider: an
+      uncaught error thrown by the client during a CRUD action fires it even if
+      no server was involved. Both were preferred to the alternative,
+      `no_failed_requests`, whose polarity is backwards for a penalty and which
+      would need negating — the specific trap the authoring guide warns about.
+
+      R3 already scores uncaught errors across the primary flow, so a build with
+      a broken CRUD path is charged twice: once as a robustness failure and once
+      here. That is intentional for this idea — the brief's whole value is the
+      shared write path — but it is double-counting and should be read as such.
+    setup: >-
+      Exercise the core CRUD paths in one go on `Roster VB4417`: add a row with
+      Task VBCRUD4417, edit its Est to 7, then delete that same row. If the app
+      offers an export or download, use it too. Leave whatever the app renders on
+      screen.
+    check:
+      name: console_errors_present
+  - id: A4
+    text: "The app advertises realtime sync but the WebSocket or SSE handshake fails."
+    points: -4
+    method: assert
+    note: >-
+      NO CHECK — the two halves cannot be conjoined by any primitive here, and
+      firing on either half alone would be wrong.
+
+      The advertising half is readable: `text_matches` finds "realtime",
+      "live sync" or "multiplayer" in the rendered copy. The handshake half is
+      not. The harness records requests as `{url, method, resource_type,
+      body_size}` with no status, and `console_errors_present` sees a failed
+      WebSocket only if the page leaves the rejection uncaught. Worse, the
+      browser layer deliberately reclassifies aborted streams as
+      `subresource-failed` precisely BECAUSE an SSE stream cut short by
+      navigation was being misread as breakage — 106 of 660 trials were voided
+      that way — so the one signal that looks usable is the one already known to
+      be a false positive for this exact technology. 91 of 120 builds ship a
+      WebSocket or SSE, so a wrong check here would misgrade most of the corpus.
+
+      What would decide it: `socket_handshake(path='')` — attempt the app's
+      WebSocket/SSE upgrade directly and report whether it completes — or a
+      request log that retained response status. Until then the model judges it,
+      with the setup below giving it both halves to look at.
+    setup: >-
+      Look at the app's own copy for a realtime, live-sync or multiplayer claim —
+      the landing page, the table header, any "connected" or "live" badge. If it
+      makes one, open the browser console via `evaluate` and check whether a
+      WebSocket or EventSource connection is actually established: try
+      `() => typeof WebSocket` and look for a connection indicator in the UI.
+      Then grep the source for `WebSocket`, `socket.io` and `EventSource` to see
+      what the build intended. Report `unknown` unless you can see BOTH the claim
+      and a failed connection.

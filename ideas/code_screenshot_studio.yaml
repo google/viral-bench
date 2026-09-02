@@ -1,0 +1,47 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Carbon — https://github.com/carbon-app/carbon
+# Verified 36,074 GitHub stars on 2026-08-06.
+#
+# History: this idea passed the validity gate only 3 times in 17 runs while every
+# other web idea sat at 63-100%. That was NOT the idea's fault. 14 of the 17 runs
+# never produced a gradeable manifest, mostly because builds bolted a backend on
+# to satisfy the "add a wow feature" push, then wrote a smoke test against their
+# own port -- which the gate ran BEFORE starting the app, so it could never pass.
+# The gate ordering is fixed now. The wording below no longer says "fully
+# client-side" in a way that fights the runtime's API-proxy rules: a backend is
+# permitted, it is simply not needed.
+
+idea_id: code_screenshot_studio
+title: "CodeShot"
+pitch: "Turn a snippet of source code into a beautiful, shareable image in seconds."
+problem: "Plain code screenshots look messy in social posts and slides, while pasting code as raw text loses syntax coloring and visual appeal."
+target_user: "Developers and educators who want to share good-looking code snippets on social media, blogs, and slides."
+core_features:
+  - "Paste code and select its language for syntax highlighting"
+  - "Choose from multiple color themes and developer fonts"
+  - "Style the frame: window title bar, padding, and background color/gradient"
+  - "Live preview that updates as you edit the code and settings"
+  - "Export the result as a PNG image and copy it to the clipboard; no upload of the snippet is required"
+  - "Show the chosen language, theme, and image dimensions as text next to the preview, so the current settings are readable and not only visible"
+success_criteria: "Pasting a code snippet and selecting a language renders a syntax-highlighted card in the live preview, with the tokens visibly coloured by role; changing the theme changes that rendering; and the export control produces a downloadable PNG of the card."
+allowed_scope: client-app
+difficulty: easy
+
+ground_truth:
+  source: "Twitter/X"
+  metric: github_stars
+  value: 36074

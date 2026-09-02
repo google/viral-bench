@@ -1,0 +1,333 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for screenshot_to_code (Screenshot to Code). Never shown to the founder.
+rubric_version: 1
+idea_id: screenshot_to_code
+
+tier1:
+  - id: S1
+    text: >-
+      Uploading a screenshot and generating issues a real vision call carrying
+      THAT image.
+    points: 12
+    method: assert
+    expect: >-
+      >=1 request to the model endpoint whose POST body has an inline_data part
+      with an image mime type, and whose decoded base64 SHA-256 equals the
+      SHA-256 of the uploaded fixture.
+    setup: >-
+      Upload the fixture `screenshot.png` through the app's own file input, leave
+      the default target stack selected, and trigger the generate control exactly
+      once. Wait for it to finish — up to two minutes. To wait, run `evaluate`
+      with `() => new Promise(r => setTimeout(r, 15000))` and look again; do not
+      click generate a second time and do not reload. Do not use any built-in
+      sample, demo or example image.
+    note: >-
+      One assertion that defeats sample-substitution, canned output and
+      prompt-only calls at once. In one build NOT ONE of 30 agents uploaded an
+      image — every judgement of "does the preview resemble the input" was made
+      against a pricing page the founder shipped.
+
+      LIMITATION, and it is the gap between this item's `expect` and what the
+      primitive can do: `request_payload_hash` does not hash the request body.
+      Bodies are not retained (they can be megabytes), so it decides that an
+      outbound request carried a payload of at least `min_body` bytes and reports
+      the fixture digest alongside. screenshot.png is 908 bytes, so its base64 is
+      1,212 bytes and any request carrying it clears the floor; a prompt-only call
+      would have to ship a 1.2 KB prompt to pass, which is possible but is not the
+      shape this idea fails in — the sample-substituting builds make no call at
+      all. `url_matches` is left empty deliberately: builds split between posting
+      to their own `/api/...` proxy and calling the model host directly, and a
+      regex narrow enough to name the model endpoint would fail the honest half of
+      that split. The container has no other outbound traffic of this size.
+    check:
+      name: request_payload_hash
+      fixture: data/fixtures/screenshot.png
+      min_body: 1200
+  - id: S2
+    text: >-
+      The generated code is runnable markup for the selected stack and renders
+      with zero page errors.
+    points: 8
+    method: assert
+    setup: >-
+      Same state as S1: screenshot.png uploaded and one generation finished. Open
+      the app's code view or code tab if the code is not already showing, so the
+      generated source is rendered as visible text, and scroll it into view.
+    note: >-
+      Decided on the FIRST half only. "Renders with zero page errors" is F5's
+      claim, asserted there with `no_console_errors`, and "for the selected stack"
+      is F1's; asserting either again here would double-count one fault. What is
+      left is that the app emitted markup rather than prose, an apology or an empty
+      panel. The patterns read RENDERED text, so they match only because the code
+      is displayed as code — the app's own markup is not in `innerText`.
+    check:
+      name: text_matches
+      patterns:
+        - "<\\s*(div|section|main|header|nav|template|button|body|html|h1|p|span|ul|form|img)\\b"
+        - "</\\s*[A-Za-z][\\w.-]*\\s*>|/>"
+  - id: S3
+    text: "The live preview iframe actually renders the generated code."
+    points: 8
+    method: assert
+    expect: "iframe body textContent length > 50 and a distinctive token from the code string appears in the iframe DOM"
+    setup: >-
+      Same state as S1, with the live preview visible rather than a code-only
+      view. Let the preview finish rendering before stopping.
+    note: >-
+      Bespoke `js` because the item's own `expect` names a machine-readable
+      contract. Only its first half is decided — the length floor. The second half,
+      a distinctive token from the code string appearing in the iframe DOM, needs
+      the grader to carry a value from one extraction into another, which no
+      primitive does.
+
+      The srcdoc fallback is load-bearing, not belt-and-braces: a build that
+      sandboxes correctly (which is exactly what F4 rewards) has no
+      `allow-same-origin`, so `contentDocument` is null and reading only the live
+      document would fail every secure build. Falling back to the tag-stripped
+      `srcdoc` attribute means such a build is judged on the text the preview was
+      populated with. That is weaker than "rendered", and it is the lenient
+      direction.
+    check:
+      name: number_in_range
+      js: >-
+        () => { let n = 0; for (const f of document.querySelectorAll('iframe')) { let t = ''; try { const d = f.contentDocument; if (d && d.body) t = d.body.innerText || d.body.textContent || ''; } catch (e) { t = ''; } if (!t) { t = (f.getAttribute('srcdoc') || '').replace(/<[^>]*>/g, ' '); } n = Math.max(n, t.trim().length); } return n; }
+      low: 51
+  - id: S4
+    text: "Two different input images produce substantially different code."
+    points: 6
+    method: assert
+    setup: >-
+      Generate twice in one session, without reloading. First upload
+      `screenshot.png`, generate, wait for the code to finish appearing, bring the
+      code view on screen and call capture(label="before"). Then upload `photo.png`
+      — a different image entirely — over the top, generate again, wait for the new
+      code, and call capture(label="after") with the code view still on screen.
+    note: >-
+      LIMITATION: `value_changes` decides that the rendered text differs, not that
+      it differs SUBSTANTIALLY, so a build that returns near-identical code but
+      relabels the panel with the new filename passes.
+
+      The default `text` view is used rather than `full` deliberately. `full` also
+      carries every input value, and the grader changed the file input between the
+      two captures, so `full` would report a change on a build that never
+      regenerated at all.
+    check:
+      name: value_changes
+      before: before
+      after: after
+  - id: S5
+    text: >-
+      Iterative refinement mutates the code, with no failed request on the
+      refine path.
+    points: 6
+    method: assert
+    setup: >-
+      From the S1 state — screenshot.png generated once — bring the code view on
+      screen and call capture(label="before"). Then enter a refinement instruction
+      in the app's own refine or chat field, exactly `make the primary button red`,
+      submit it, and wait for the regeneration to finish. With the code view still
+      on screen, call capture(label="after").
+    note: >-
+      Refine fails in 3 of 10 working builds while initial generation succeeds — the weakest link in this idea.
+
+      Decided by EFFECT rather than by reading the console, and deliberately. The
+      "no failed request" half would need `no_failed_requests`, which reads
+      `drain_console()`, and `look` drains the same buffer
+      (`crowd/interaction/browser.py:523`), so a grader that looks at the page
+      after refining — the natural thing to do — hands the check a clean console on
+      exactly the build whose refine request aborted. A refine that 4xx'd, aborted
+      or hung produces no new code, which `value_changes` sees and no console read
+      can be trusted to.
+    check:
+      name: value_changes
+      before: before
+      after: after
+
+tier2:
+  - id: F1
+    text: >-
+      The stack selector is operable and changes the output language: React
+      yields a component, Vue yields a template.
+    points: 7
+    method: assert
+    setup: >-
+      With screenshot.png uploaded, change the target stack AWAY from the default
+      before generating: choose `React` by its accessible name, or `Vue` if React
+      is not offered. Then generate, wait for the code to finish, and leave the
+      code view on screen. If the stack control cannot be operated at all, leave
+      the app as it is — do not fall back to generating with the default stack.
+    note: >-
+      6 of 6 select attempts failed on the top build — so the crowd almost never changes stack and this feature is largely untested.
+
+      Both halves are decided together, through the OUTPUT. `className=`,
+      `<template`, `defineComponent` and `createApp` do not appear in HTML+Tailwind
+      output, so they are present only if the selection took effect; a selector
+      that cannot be operated leaves the default stack and matches nothing. The
+      selector's shape is not asserted directly, because stacks ship as `<select>`,
+      as radios, as tabs and as button cards, and any selector wide enough for the
+      honest shapes is already satisfied by the Generate button.
+
+      FALSE PASS, recorded: a build whose DEFAULT stack is React passes without its
+      selector ever working. Universal R4 (`controls_have_names`) still fires on an
+      unlabelled div standing in for the control.
+    check:
+      name: text_matches
+      patterns:
+        - "className=|<\\s*template\\b|defineComponent|createApp|export default"
+  - id: F2
+    text: >-
+      With no API key set, the app shows a clear error and produces NO code — it
+      does not silently serve a canned sample.
+    points: 7
+    method: probe
+    setup: >-
+      There is no way to unset the environment's key from inside the browser
+      session. Upload `screenshot.png`; if the app exposes its own key field or
+      settings panel, clear it there and generate, and report what appears.
+      Otherwise report `unknown`, not `fail`, so "the variant could not be run" is
+      never recorded as the app failing it.
+    note: >-
+      A gap in the current corpus: no run has been done with the key removed, so
+      "graceful report" and "returns a canned sample" are indistinguishable
+      today. The grader must run this variant.
+
+      NO CHECK — deciding it needs the harness to start the app a second time with
+      the model key stripped from the environment, which it does not do; universal
+      R7 concedes exactly this and settles for `key_optional`, decided from source.
+      `key_optional` cannot stand in here: it decides only that startup does not
+      crash when the key is unset, not that the failure is reported and no code is
+      produced, and binding it would pay for one source read twice. With a keyless
+      start available, the check would be `text_matches` with an error pattern in
+      `patterns` and the markup tokens of S2 in `absent`.
+  - id: F3
+    text: "The requested model id is one the environment provisions; the call returns 200."
+    points: 5
+    method: assert
+    setup: >-
+      Same state as S1. After triggering generation, wait using `evaluate` rather
+      than repeated `look` calls, then report what the app ended up showing: code,
+      a visible error, or nothing at all. Quote any status code the app displays.
+    note: >-
+      One build hardcodes a model no other build uses and returns 30x HTTP 502. Delight 1.17.
+
+      NO CHECK. Neither half is decidable today. The model-id half needs a fact the
+      corpus sheet does not carry — the list of model ids this environment actually
+      provisions — and no `source_present` pattern can be written without it. The
+      returns-200 half would be `no_failed_requests`, but it reads
+      `drain_console()` and `look` drains the same buffer
+      (`crowd/interaction/browser.py:523`), so a grader that looks after generating
+      is handed a clean console and the 502 build passes: a check that every build
+      passes decides nothing, and here it would silently award 5 points to the one
+      build the item exists to catch. It becomes bindable if `no_failed_requests`
+      reads the non-destructive request log instead of the console buffer.
+  - id: F4
+    text: "The preview iframe sandbox does not combine allow-scripts with allow-same-origin."
+    points: 3
+    method: assert
+    setup: >-
+      Same state as S1: one generation finished with the live preview on screen.
+      Leave the preview rendered — do not switch to a code-only view.
+    note: >-
+      Bespoke `js` because the item names a specific machine-readable contract, the
+      two sandbox tokens, and it is read literally. Two consequences, both lenient
+      and both recorded: a preview iframe carrying NO sandbox attribute — which is
+      same-origin with scripts, the identical hazard — passes, and so does a build
+      that renders the preview into a div with no iframe at all. Neither is what
+      the item's text says, so neither is failed here.
+    check:
+      name: value_equals
+      js: >-
+        () => { const bad = [...document.querySelectorAll('iframe')].some(f => { const s = (f.getAttribute('sandbox') || '').toLowerCase(); return s.includes('allow-scripts') && s.includes('allow-same-origin'); }); return bad ? 'unsafe' : 'safe'; }
+      expect: safe
+  - id: F5
+    text: "Zero uncaught page errors during upload and generation."
+    points: 3
+    method: assert
+    setup: >-
+      Run one clean upload-and-generate cycle inside this item's own phase: upload
+      `screenshot.png`, generate once, and wait for it to finish using `evaluate`
+      rather than repeated `look` calls — every `look` empties the console buffer
+      this item reads.
+    note: >-
+      Overlaps universal R3, which binds the same primitive to the primary flow,
+      and for this idea upload-and-generate IS the primary flow — so one uncaught
+      error costs 3 + 4 points. Recorded rather than resolved: the item stands in
+      the rubric at its own weight and `no_console_errors` is the only primitive
+      for its claim.
+    check:
+      name: no_console_errors
+
+penalties:
+  - id: A1
+    text: >-
+      Generation is demonstrated only from a built-in sample image; the user's
+      upload path is not wired or not reachable.
+    points: -8
+    method: assert
+    setup: >-
+      Same state as S1 — screenshot.png uploaded through the app's own file input
+      and generated once. Report whether the preview and the code describe the
+      screenshot that was uploaded or some other, built-in image.
+    note: >-
+      NO CHECK — this is the inverse of S1 and there is no inverse primitive.
+      `request_payload_hash` holds the right evidence with the wrong polarity: it
+      passes when a payload went out, and a penalty must pass when the bad thing is
+      present. What would decide it is `payload_absent(min_body=, url_matches='')`,
+      firing when NO outbound request in the item's phase carried a body of at
+      least `min_body` — precisely the shape of a build that generates from a
+      shipped sample.
+
+      The filename alternative was rejected rather than overlooked: `text_matches`
+      with `absent: ["screenshot\\.png"]` would fire on every honest build that
+      simply does not print the uploaded filename, at -8 across all 40 builds.
+  - id: A2
+    text: >-
+      A staged progress narrative implies a multi-step pipeline that does not
+      exist.
+    points: -5
+    method: agent
+    note: >-
+      One build narrates "Extracting visual hierarchy & color palette",
+      "Component boundary & responsive grid detection", "Synthesizing clean code
+      with Gemini Vision", "In-browser sandbox rendering" — four named stages
+      for what is one HTTP call — and renders a static "Gemini 3.5 Flash-Lite
+      (Active)" chip while its refine endpoint was aborting in the same run.
+  - id: A3
+    text: >-
+      A success message appears before the thing it reports exists (e.g. "copied
+      to clipboard" during the compile animation).
+    points: -5
+    method: agent
+  - id: A4
+    text: "Non-ASCII input or image bytes throw a Latin1 encoding error."
+    points: -6
+    method: assert
+    setup: >-
+      From the S1 state, enter the literal text `héllo 🎉 안녕하세요` into the app's
+      refine or instruction field and submit it. Report the exact console error if
+      one appears, quoting it verbatim.
+    note: >-
+      60x `Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range` — raw btoa instead of FileReader/TextEncoder.
+
+      NO CHECK. `console_errors_present` has the right polarity but no way to name
+      WHICH error. Bound here it would fire on any uncaught error in the phase,
+      making it the exact negation of F5 at double the weight: one unrelated
+      exception would swing 9 points and be reported as an encoding bug. It becomes
+      bindable with one small change — a `pattern:` parameter on
+      `console_errors_present` that fires only on errors matching it, e.g.
+      `pattern: "Latin1|btoa|InvalidCharacterError"`. The existing `allow:`
+      parameter cannot express this; it is an ignore-list, and "ignore everything
+      except X" is not one.

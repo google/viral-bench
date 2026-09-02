@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): drawDB — https://github.com/drawdb-io/drawdb
+# Verified 38,321 GitHub stars on 2026-08-06.
+
+idea_id: db_schema_designer
+title: "SchemaSketch"
+pitch: "Design a database schema visually in the browser and export the SQL."
+problem: "Designing a schema means either writing DDL blind or installing a heavyweight modelling tool, and neither lets you see the shape of your data while you think."
+target_user: "Developers and students sketching a relational schema before writing any migrations."
+core_features:
+  - "Add tables, then add fields to each with a name, type, and primary-key/nullable flags"
+  - "Define relationships between tables (one-to-many, many-to-many) and see them drawn between the boxes"
+  - "Edit and delete tables and fields, with the diagram updating live"
+  - "Export the design as runnable `CREATE TABLE` SQL, shown as copyable text"
+  - "Save and reload a design locally, so work survives a refresh with no account"
+success_criteria: "A user creates two tables with typed fields and a relationship between them, and the exported SQL contains correct `CREATE TABLE` statements for both, with the right column types and a foreign key expressing the relationship."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Twitter/X / Hacker News"
+  metric: github_stars
+  value: 38321

@@ -1,0 +1,445 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for typing_speed_test (Keyrace). Never shown to the founder.
+#
+# The lowest crowd-observable fraction of any idea (~25%) and the most
+# arithmetically checkable. Agents average 6-9 steps and never wait 15 seconds,
+# so the entire results screen — WPM, accuracy, raw counts, the mistyped list,
+# i.e. two core features and the whole success criterion — is never seen by the
+# crowd. Delight here is dominated by a Monkeytype-comparison prior, not by
+# defects. The rubric carries the whole load.
+rubric_version: 1
+idea_id: typing_speed_test
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes a persisted personal best a core feature and the success
+      criterion, so it is tested at Tier 2 weight in F2 rather than again here.
+
+tier1:
+  - id: S1
+    text: >-
+      The typing surface is a real, drivable control: visible, non-zero size,
+      pointer events enabled.
+    points: 6
+    method: assert
+    note: >-
+      43% of all type attempts failed. The dominant pattern is a hidden input
+      (`opacity-0 pointer-events-none w-0 h-0`) or a plain div with a keydown
+      listener — idiomatic for this product, and it makes the app unmeasurable.
+
+      Decided by `is_operable`, which was added for exactly this measurement. `is_real_control` checks only the tag, and measured
+      across 17 builds every offender is a genuine `<input>` — 154x19 at
+      opacity 0 with `pointer-events: none` — so it would pass the exact builds
+      the item exists to catch. `controls_have_names` fires only on the two
+      builds using a `div[role=textbox]`, and is already R4. Driving the
+      surface and looking for the text back is no better: Playwright's `fill`
+      succeeded on 11 of 13 builds including every pointer-events-none one, and
+      the typed string reappeared in the rendered text on only 6. What is
+      needed is a primitive that resolves the typing surface and asserts its
+      geometry and `pointer-events`, not merely its tag name.
+    check:
+      name: is_operable
+      selector: "textarea, input[type=text], input:not([type]), [contenteditable]"
+      min_size: 8
+  - id: S2
+    text: "The countdown decrements in real time."
+    points: 6
+    method: assert
+    expect: "after a keydown and 3s, the displayed time has fallen by 2-4 seconds"
+    note: >-
+      One build's `TIME: 30s` never decrements across any step of any agent.
+
+      The check compares two harness snapshots of the whole visible state
+      rather than the countdown digits alone, because a third of builds render
+      the countdown with no adjacent label and cannot be read numerically.
+      Measured on 14 builds: the 13 with a running clock all changed between
+      the two samples, and the one frozen build changed by nothing at all. The
+      residual blind spot is a build whose clock is frozen while some other
+      figure still ticks; none was observed.
+
+      It cannot tell a frozen clock from one that was never started, which is
+      why the setup insists on confirming the countdown is running first. Two
+      builds in the corpus gate the test behind an explicit `Start Test`
+      button, and both look identical to the frozen case if that button is not
+      clicked.
+    setup: >-
+      Get the countdown actually running first. Most builds start on the first
+      keystroke, so press a single letter key on the typing surface with
+      press_key (not type_text — a whole string at once distorts the figures);
+      a few instead require clicking a `Start` control before they accept
+      input, so click that first if one is there. Use look to confirm the
+      countdown has moved off its initial value before going on — if it has
+      not, the test is not running and nothing below measures anything.
+
+      Then call capture(label="before"). Then let real time pass without
+      touching the app, by calling evaluate with
+      `() => new Promise(r => setTimeout(() => r('ok'), 3500))`. Then call
+      capture(label="after"). Do not click, type or reload between the two
+      captures.
+    check:
+      name: value_changes
+      before: before
+      after: after
+      should_change: true
+  - id: S3
+    text: >-
+      WPM is arithmetically correct for a scripted input over a measured
+      interval, and is bounded.
+    points: 10
+    method: assert
+    expect: "|reported_net_wpm - (chars/5)/(seconds/60)| <= 1; raw_wpm >= net_wpm; after one keystroke 0 <= wpm <= 300"
+    note: >-
+      One build reports 12000, 6000, 4000 and 1333 WPM after a single keystroke
+      — exactly (1/5)/(elapsed_ms/60000) for elapsed of 1, 2, 3 and 9 ms. The
+      clock is started by the same keystroke it counts.
+
+      Only the bound is checked, not the full equality: the harness types with
+      `fill`, which delivers a whole string in one event, so the elapsed
+      interval a build measures is not something the grader can pin to the
+      1-WPM tolerance the text asks for. The bound is what discriminates.
+      Across 86 sampled page states the pattern read a WPM figure on 77 and
+      exceeded 300 on exactly five — 13868, 22851, 9960, 3545 and 1008 — with
+      no false positives. The nine unread states are builds that display no WPM
+      at all during a test, which is why the setup falls back to the results
+      screen for those.
+    setup: >-
+      Press exactly ONE letter key on the typing surface to start the clock
+      (use press_key — do NOT use type_text, which delivers a whole string at
+      once and inflates the figure legitimately). If the app gates its test
+      behind a `Start` control, click that first, then press the single key.
+      Then wait about two seconds by calling evaluate with
+      `() => new Promise(r => setTimeout(() => r('ok'), 2000))`, and leave the
+      live WPM reading on screen. Only if the app shows no WPM figure at all
+      during the test should you let the test run to completion so the results
+      screen's WPM is on screen instead.
+    check:
+      name: text_number_in_range
+      pattern: "\\d[\\d,]*(?:\\.\\d+)?(?=\\s*\\n?\\s*(?:LIVE\\s+|NET\\s+|RAW\\s+|CURRENT\\s+|AVG\\s+)?(?:WPM|WORDS?\\s*PER\\s*MINUTE)\\b)|(?:(?<=WPM)|(?<=WPM:)|(?<=MINUTE)|(?<=\\(WPM\\)))\\s{0,4}\\d[\\d,]*(?:\\.\\d+)?"
+      low: 0
+      high: 300
+  - id: S4
+    text: >-
+      Accuracy and character counts are arithmetically correct for a scripted
+      input containing a known number of errors.
+    points: 10
+    method: assert
+    expect: "10 substitutions in 100 characters -> accuracy 90% (+/-1), correct 90, incorrect 10, correct+incorrect == 100"
+    note: >-
+      LEFT TO THE MODEL, after an authored check was written, tested against
+      six builds and withdrawn. Reading the accuracy percentage is the easy
+      half; the hard half is that the grader cannot construct "100 characters
+      with exactly 10 substitutions" of a prompt it can only see as rendered
+      text. Fed a careful 90%-correct reconstruction, the six builds reported
+      25.4%, 100%, 100%, 71%, 100% and 0% — not one near 90. Two reasons, both
+      structural. Builds that render one element per character come back from
+      `innerText` as `i t s m a k e i t`, and builds that render the stream
+      unseparated come back as `randomjumprestpay`, so neither round-trips to
+      the string the app is diffing against. And `type_text` is a single `fill`
+      event, which the keydown-only builds ignore entirely — they sat at their
+      default 100%. A check that returns fail for every build regardless of its
+      arithmetic measures nothing.
+
+      The character counts are separately unreadable: `21 / 89 correct / total`,
+      `Correct: 25 / Errors: 85`, `5 / 69`, `8 / 63 CORRECT / INCORRECT` and
+      `100 | 5 correct / 95 wrong` were all observed, with no shape in common.
+
+      Re-examined against the number-range family that decides S3, since a
+      bound survives the reconstruction problem where an equality does not. It
+      is vacuous for this number: accuracy is correct/total, so it cannot leave
+      0-100 the way WPM leaves 0-300 when the elapsed interval is a
+      millisecond, and every accuracy figure ever recorded on this idea —
+      25.4%, 100%, 100%, 71%, 100%, 0% above, and F5's `ACCURACY 0%` — is
+      already inside it. A tighter bound (inject only wrong keystrokes, require
+      a low reading) false-fails an arithmetically perfect build, because the
+      primitive requires EVERY match of the label to be in range and the
+      personal best shares the results screen carrying its own accuracy —
+      `Personal Best (15s): -- WPM (0% accuracy)` is one such build, and a real
+      best would read 97% there.
+
+      What is needed is a primitive that owns both halves — one that types a
+      grader-chosen sequence as real key events, keeps the string it sent, and
+      compares the app's reported accuracy against the errors it knows it
+      injected. Splitting the typing between a navigating model and the
+      comparison between a text regex cannot work here.
+  - id: S5
+    text: "The mistyped list equals the set of injected errors."
+    points: 8
+    method: assert
+    note: >-
+      Set equality, not merely non-empty.
+
+      LEFT TO THE MODEL. The expected set cannot be written into a rubric: each
+      build generates its own random word stream, so the injected errors are
+      only known at grading time, and the list is rendered in mutually
+      incompatible shapes — `never → the` pairs, `'i': 9x` counts, and bare
+      word lists were all observed on the same corpus. Deciding this needs a
+      primitive that computes the expected set from the prompt and the string
+      the grader actually typed, then compares it to the rendered list as a
+      set; no existing primitive takes a grader-computed value as its
+      expectation.
+
+      `text_pattern_distinct` is the right primitive for a "shows N different
+      X" claim and does not rescue this one. It still needs a single pattern
+      that matches a mistyped entry, and the three observed shapes share no
+      token: an arrow-pair pattern reads the `never → the` builds and returns
+      nothing on the other two shapes, so it would score zero on correct
+      builds. Scoping it with `js` to the list element would make it
+      DOM-specific, which is the one thing a check here may not be. It would
+      also decide "at least N distinct entries", not the set equality the item
+      asks for.
+
+tier2:
+  - id: F1
+    text: >-
+      The results screen is state-gated: absent or hidden on first load, and
+      visible only after the test completes.
+    points: 6
+    method: assert
+    note: >-
+      One build renders the full results panel at step 0 before any interaction,
+      showing `ACCURACY 0%` beside `0 correct / 0 wrong`.
+
+      The pattern names the character breakdown rather than the word
+      "results", because half the corpus puts "results" in ordinary help text
+      ("Hit Enter once your results are up") and three builds' taglines say
+      "your real words per minute". A correct/incorrect character split cannot
+      be produced by prose. Measured over 80 untouched first-load pages it
+      fires on 4, every one of them a build that really does render its
+      breakdown at load; `innerText` already excludes a panel that is present
+      but hidden, which is what the item allows.
+    setup: >-
+      Load the app and do NOT interact with it at all — no clicks, no
+      keystrokes, no duration selection. Leave the untouched first-load page on
+      screen.
+    check:
+      name: dom_text_absent
+      pattern: "\\d+\\s*correct\\s*/|correct\\s*chars?\\b|incorrect\\s*chars?\\b|\\d+\\s*ok\\s*/\\s*\\d+\\s*bad|mistyped\\s+(?:words?|characters?|chars?)|raw\\s+characters?\\b|correct\\s*/\\s*(?:incorrect|wrong|total)"
+  - id: F2
+    text: >-
+      The personal best persists a NON-EMPTY numeric value across a reload.
+    points: 7
+    method: assert
+    expect: "pb matches /\\d+/ before the reload, and is byte-identical after"
+    note: >-
+      The numeric precondition is the entire point. The highest-scoring build of
+      this idea (delight 7.5, would_use 29/30) was awarded work_survived 30/30
+      for preserving the em-dash placeholder — no agent in that build ever saw a
+      WPM number, an accuracy number or a results screen at all.
+
+      The captured figure must start 1-9. That is stricter than the `\d+` in
+      `expect`, and deliberately: one build displays `PB: 4 WPM` on its results
+      screen and `PB: 0 WPM` after the reload, which is the same illusion in
+      numerals and would otherwise score full marks for losing the value. A
+      completed run with any typing at all scores above zero — the slowest
+      honest run measured was 4 WPM off 5 correct characters.
+
+      Byte-identity is not checked: nothing survives a reload byte-identically
+      here, since the word stream re-randomises and the clock resets. The
+      re-selection step in the setup exists because one build reverts to its
+      default duration on load and then displays that duration's empty slot.
+    setup: >-
+      Complete one full timed test at the 15-second duration so a real personal
+      best is recorded. Select 15s, click a `Start` control if the app has one,
+      then type some of the prompt words. Use press_key for individual letters
+      rather than type_text: several builds
+      listen only to key events and ignore a whole string delivered at once,
+      which leaves the score at zero and no personal best to persist. Check
+      with look that the WPM figure has actually moved off zero before you
+      stop. Then wait the test out by calling evaluate with
+      `() => new Promise(r => setTimeout(() => r('ok'), 16000))` and confirm a
+      numeric personal best is on screen. Then call reload_page, and re-select
+      the 15-second duration if the app came back on a different one. Leave the
+      personal best on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "(?:personal[\\s-]*best|\\bPB\\b|\\bbest\\b)\\s*(?:\\([^)]{0,12}\\))?\\s*[:\\-]?\\s*\\n?\\s*[1-9]\\d*"
+  - id: F3
+    text: >-
+      The duration selector is operable and sets the countdown's initial value
+      for each of 15, 30 and 60 seconds.
+    points: 6
+    method: assert
+    note: >-
+      26 select failures across 4 builds: duration is rendered as an unlabelled
+      button group.
+
+      Only 60 seconds is exercised, not all three. It is the one value that was
+      never a build's default in the corpus (defaults are 15 or 30), so a
+      selector that does nothing leaves the countdown on its default and fails,
+      whereas 15 or 30 would pass such a build by accident. `captures_monotonic`
+      across all three cannot replace this: 30 -> 30 -> 30 is non-increasing, so
+      a completely dead selector passes it.
+
+      Two builds of fourteen render the countdown as a bare number with no
+      adjacent label and cannot be read at all; they are recorded as "no number
+      matched" rather than as a wrong value. Against 14 builds the pattern read
+      the countdown on 12 and matched 60 on exactly those where the click
+      landed, never on an untouched page — the `15s 30s 60s` button labels do
+      not satisfy it.
+    setup: >-
+      On a fresh page, operate the duration control to choose 60 seconds — it
+      may be a button, a tab or a select. Do not start the test and do not type
+      anything: leave the countdown showing its initial value for that duration.
+    check:
+      name: text_number_equals
+      pattern: "(?:(?<=TIME)|(?<=TIME:)|(?<=LEFT)|(?<=LEFT:)|(?<=REMAINING)|(?<=REMAINING:))\\s{0,4}\\d{1,3}(?=\\s*s?\\b)|\\d{1,3}(?=\\s*s?\\s*\\n\\s*SECONDS?\\s*LEFT)"
+      expect: 60
+      tolerance: 0
+  - id: F4
+    text: "Live per-character marking distinguishes correct from incorrect during the test."
+    points: 4
+    method: assert
+    note: >-
+      LEFT TO THE MODEL. `computed_style_distinct` is the natural fit and does
+      not work here: measured on 14 builds, an untouched page already shows 3-9
+      distinct span colours from its theme alone, and typing with deliberate
+      errors adds only 0-3 more. Any threshold that clears the theme baseline
+      also fails builds that do mark characters, and `min_distinct: 3` passes
+      13 of 14 builds before a single key is pressed. There is no DOM-agnostic
+      selector for the character run itself — no id, class or role is shared.
+      Deciding this needs a primitive that scopes the colour survey to the
+      characters the grader typed and compares them against the untyped
+      remainder.
+
+      Re-checked against the current catalogue: nothing has been added that
+      scopes a style survey to a subset of elements, and the 2026-08-28
+      harness fixes do not touch `computed_style_distinct`, so the 14-build
+      measurement above still stands. `computed_style_changes` is not a
+      substitute — typing changes the text, so its captures differ for a build
+      that marks nothing.
+  - id: F5
+    text: >-
+      Zero-keystroke guard: with no input, accuracy reads 100% or a
+      non-numeric placeholder, never 0%.
+    points: 2
+    method: assert
+    note: >-
+      The pattern requires the label before the value. One build shows
+      `Personal Best (15s): -- WPM (0% accuracy)` on load, which is a placeholder
+      for a personal best that does not exist yet, not a claim that the current
+      test scored zero; reading percentages in either order would fail it for
+      the wrong reason. Label-first, the pattern fires on 6 of 80 untouched
+      first-load pages, each of which really does show `ACCURACY 0%` before any
+      keystroke.
+    setup: >-
+      Load the app and do NOT interact with it at all. Leave the untouched
+      first-load page on screen, with whatever accuracy figure it shows.
+    check:
+      name: text_matches
+      absent:
+        - "\\baccuracy\\b[^0-9a-z%]{0,14}0(?:\\.0+)?\\s*%"
+
+penalties:
+  - id: A1
+    text: "A reported WPM is physically impossible."
+    points: -10
+    method: assert
+    note: >-
+      Fires on a WPM of four digits or more, which is unarguable against a
+      sustained-typing record of about 216 — the observed
+      liars print 13868, 22851, 9960, 3545, 2400 and 1008, all of them
+      (chars/5)/(elapsed_ms/60000) with the clock started by the keystroke it
+      is counting. A three-digit exaggeration is left to S3's 0-300 bound
+      rather than doubled up here. Across 86 sampled page states the pattern
+      fires on 5, every one a genuine case, and on none of 80 untouched
+      first-load pages.
+    setup: >-
+      Same state as S3: click a `Start` control if the app has one, press
+      exactly ONE letter key with press_key to start the clock, wait about two
+      seconds with `() => new Promise(r => setTimeout(() => r('ok'), 2000))`,
+      and leave the live WPM reading on screen. Do not use type_text —
+      delivering a whole string in one event inflates the figure legitimately
+      and would make this penalty fire on an honest build.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b\\d{4,}\\s*\\n?\\s*(?:LIVE\\s+|NET\\s+|RAW\\s+|CURRENT\\s+|AVG\\s+)?(?:WPM|WORDS?\\s*PER\\s*MINUTE)\\b|(?:WPM|WORDS?\\s*PER\\s*MINUTE)\\s*[:(]?\\s*\\n?\\s*\\d{4,}"
+  - id: A2
+    text: "The countdown never decrements."
+    points: -8
+    method: assert
+    note: >-
+      The exact inverse of S2 and it shares S2's instrument, so it inherits
+      S2's limitation: it compares the whole visible state, and a build whose
+      clock is frozen while some other figure ticks would escape. Captures are
+      cleared per item, so this item must take its own pair.
+
+      The false positive to guard against is a test that was never started
+      rather than a clock that does not tick. Two builds gate the test behind
+      an explicit `Start Test` button; skip it and this penalty fires on an app
+      whose countdown is perfectly sound, at -8 points. Hence the confirmation
+      step, which is not optional here.
+    setup: >-
+      Same as S2, with its own captures. Start the test the way this app
+      requires — press a single letter key with press_key, first clicking a
+      `Start` control if the app has one — and use look to CONFIRM the
+      countdown has moved off its initial value. Only then call
+      capture(label="before"), let real time pass by calling evaluate with
+      `() => new Promise(r => setTimeout(() => r('ok'), 3500))`, and call
+      capture(label="after"). Do not click, type or reload in between. If you
+      could not get the test running at all, report unknown rather than leaving
+      captures that would read as a frozen clock.
+    check:
+      name: value_changes
+      before: before
+      after: after
+      should_change: false
+  - id: A3
+    text: >-
+      "Persistence" is verified against an empty placeholder: the personal best
+      is non-numeric both before and after the reload.
+    points: -8
+    method: assert
+    note: >-
+      The inverse of F2's precondition, and it requires a personal-best label
+      to be on screen before it fires: a build with no personal best anywhere
+      is not passing a placeholder off as persistence, it simply has not built
+      the feature. Placeholders observed after a completed run and a reload:
+      `—`, `--`, `N/A`, `(no run yet)`, and `PB: 0 WPM` from a build whose own
+      results screen had just said 4.
+    setup: >-
+      Same state as F2: complete one full 15-second test so a real personal
+      best is recorded — typing with press_key, and confirming with look that
+      the WPM moved off zero before the clock runs out — then call reload_page,
+      re-select the 15-second duration if the app came back on a different one,
+      and leave the personal-best area on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "personal[\\s-]*best|\\bPB\\b|\\bbest\\b"
+      absent:
+        - "(?:personal[\\s-]*best|\\bPB\\b|\\bbest\\b)\\s*(?:\\([^)]{0,12}\\))?\\s*[:\\-]?\\s*\\n?\\s*[1-9]\\d*"
+  - id: A4
+    text: "The results panel is present in the DOM before any interaction, showing zeroed values."
+    points: -5
+    method: assert
+    note: >-
+      The inverse of F1, with the "zeroed values" half added as a second
+      required pattern so a panel showing a real previous result does not fire
+      it. Both halves were present together on 4 of 80 untouched first-load
+      pages, one of them verbatim `Results New personal best! WPM 0 ACCURACY 0%
+      PERSONAL BEST 0 CORRECT CHARS 0 INCORRECT CHARS 0`.
+    setup: >-
+      Same state as F1: load the app and do NOT interact with it at all. Leave
+      the untouched first-load page on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\d+\\s*correct\\s*/|correct\\s*chars?\\b|incorrect\\s*chars?\\b|\\d+\\s*ok\\s*/\\s*\\d+\\s*bad|mistyped\\s+(?:words?|characters?|chars?)|raw\\s+characters?\\b|correct\\s*/\\s*(?:incorrect|wrong|total)"
+        - "(?<![\\d.])0\\s*(?:%|WPM\\b|correct|chars?\\b)|:\\s*0\\b"
