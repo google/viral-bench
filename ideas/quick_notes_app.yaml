@@ -1,0 +1,47 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): memos — https://github.com/usememos/memos
+# Verified 62,056 GitHub stars on 2026-08-06.
+#
+# Multi-user note: this has the strongest A-acts/B-sees flow in the corpus. A
+# public memo is visible to another visitor with NO intervening handshake — no
+# invite, share link, or permission grant — so the shared instance the crowd runs
+# is exercised the moment two agents use the app.
+#
+# Previously specced as a client-side app ("local-first storage"), which did not
+# match its reference: memos is a self-hosted server with accounts and a public
+# Explore feed, and the client-side framing quietly removed the very property
+# that made it worth benchmarking.
+
+idea_id: quick_notes_app
+title: "QuickMemo"
+pitch: "A lightweight, self-hosted spot to jot down quick markdown notes — and share the ones you want to."
+problem: "Heavyweight note apps are overkill for fast capture and lock your notes inside a proprietary cloud, while the lightweight ones give you no way to let anyone else see a note."
+target_user: "People who want a fast, self-hosted place to capture short notes, with the option of making some of them public."
+core_features:
+  - "Sign up and sign in; each account has its own notes"
+  - "Create and edit short notes written in Markdown, rendered on the timeline"
+  - "Tag notes and filter by tag, plus full-text search across your own notes"
+  - "Mark a note public or private; public notes appear on a shared Explore timeline"
+  - "Another signed-in user can read and comment on a public note, and cannot see private ones"
+success_criteria: "One signed-in user posts a public markdown note with a tag and a private note; a second, separate user signs in, sees ONLY the public note on the Explore timeline with its markdown rendered, finds it by search, and comments on it — and the first user sees that comment."
+allowed_scope: full-stack-app
+difficulty: medium
+
+ground_truth:
+  source: "Reddit / Hacker News"
+  metric: github_stars
+  value: 62056

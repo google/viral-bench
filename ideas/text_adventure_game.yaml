@@ -1,0 +1,43 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): A Dark Room — https://github.com/doublespeakgames/adarkroom
+# Verified 8,208 GitHub stars on 2026-08-06.
+#
+# Observability note: this is the strongest DOM-observability fit in the corpus.
+# The game IS text — every state change surfaces as words and labelled buttons,
+# so a reviewer can verify the mechanics are real rather than inferring from
+# pixels. Its viral run (a #1 iOS paid app that began as a browser game) came
+# from exactly that restraint.
+
+idea_id: text_adventure_game
+title: "Emberfall"
+pitch: "A minimalist text game that starts with a single button and slowly unfolds into something much larger."
+problem: "Browser games demand attention with animation and sound; there is almost nothing that rewards curiosity quietly and works on any device."
+target_user: "Players who want a thoughtful, low-key game they can pick up in a browser tab."
+core_features:
+  - "Start from a nearly-empty screen with one action, and reveal new actions as the player progresses"
+  - "A resource the player gathers and spends, with the current amounts always shown as text"
+  - "Actions on cooldown timers, so pacing matters and clicking faster does not help"
+  - "An event log that narrates what just happened, newest first"
+  - "Progress persists to local storage, so closing the tab does not lose the game"
+success_criteria: "A new player sees a single starting action; taking it changes the visible state and, after the described conditions are met, unlocks a further action; resource counts update correctly as they are gathered and spent, and progress survives a page reload."
+allowed_scope: client-app
+difficulty: easy
+
+ground_truth:
+  source: "Hacker News / Reddit"
+  metric: github_stars
+  value: 8208

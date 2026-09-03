@@ -1,0 +1,532 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for markdown_editor (Scribepad). Never shown to the founder.
+#
+# Several items share state, so the fixtures are fixed here and referenced by
+# name rather than restated in each setup:
+#
+#   the S2 document   the seven-syntax document typed in S2; S3 reads its
+#                     fenced `python` block and F3 copies its rendered HTML
+#   VBLIVE7391        typed in S1 to prove the preview updates as you type
+#   VBDRAFT7391       the autosave nonce, shared by S4 and A2, which are exact
+#                     inverses of one another
+#   VBEXPORT7391      the two-line document S5 exports byte-for-byte
+#   VBBOLD7391        the two words F1 wraps, one per shortcut, kept distinct so
+#   VBITAL7391        `**` and `*` cannot be mistaken for one another
+#   VBALPHA7391       the BODIES of F2's two drafts; their titles say Alpha and
+#   VBBRAVO7391       Bravo, so the body nonces alone decide which is on screen
+#   VBGCODE7391       the content of F5's unknown-language fence
+#
+# ON READING THE PREVIEW. Every item whose claim is about the RENDERED output
+# reads `document.body.innerText`, which does not report a `<textarea>`'s value
+# — so the raw Markdown sitting in the source pane cannot stand in for a preview
+# that never rendered. The cost is recorded rather than hidden: a build whose
+# source pane is a contenteditable puts its raw Markdown into innerText too, so
+# those items over-credit that build rather than failing it. Items whose claim is
+# about the SOURCE (F1) read the default user-visible text instead, which does
+# include field values.
+rubric_version: 1
+idea_id: markdown_editor
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes autosave an explicit success criterion, so it is tested at
+      Tier 1 weight in S4 rather than as a general robustness item. Scoring it in
+      both places would double-count the corpus's single biggest discriminator.
+
+tier1:
+  - id: S1
+    text: >-
+      Split view shows Markdown source and a rendered preview, and the preview
+      updates as you type with no button press.
+    points: 8
+    method: assert
+    expect: "appending text updates the preview within 500ms with no click"
+    setup: >-
+      Clear the app's Markdown source completely — none of its seeded welcome
+      document may remain — and type the single line `Live preview VBLIVE7391`
+      into it. Then, in the source pane, press Space and then BackSpace, so a
+      real keystroke reaches the app without changing the text. Do NOT click any
+      render, preview, update or refresh control and do not press a save button.
+      Leave the preview on screen.
+    note: >-
+      The nonce is read from `document.body.innerText`, so it can only be there
+      because the preview rendered it.
+
+      The Space/BackSpace pair is load-bearing rather than decorative:
+      `type_text` fills the field and dispatches a single `input` event, so a
+      build that re-renders on `keyup` would otherwise be failed for a preview
+      that works perfectly for a real user. The pair is a no-op wherever the
+      caret happens to sit, so it cannot corrupt the text either.
+
+      Two halves are not asserted. No primitive times a render, so the 500ms in
+      `expect` is out of reach; and the split-view LAYOUT is carried by F4 plus
+      the transcript rather than here, because "source on one side, preview on
+      the other" has no build-independent signature. "With no button press" is
+      enforced by the setup forbidding one, not by the check.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "VBLIVE7391"
+  - id: S2
+    text: >-
+      Common syntax renders correctly: heading, bold, italic, inline code, list,
+      link and table.
+    points: 10
+    method: assert
+    expect: "exactly one h1; one strong; one em; one code; one ul with 2 li; one a with the right href; one table with the right cells"
+    setup: |-
+      Clear the app's Markdown source completely — none of its seeded welcome
+      document may remain — and type exactly this document, then let it render:
+
+      # Scribepad VB7391
+
+      This line has **bold**, *italic* and `inline code`.
+
+      - First item
+      - Second item
+
+      [Reference](https://example.com/vb)
+
+      | Key | Value |
+      | --- | ----- |
+      | a   | 1     |
+
+      ```python
+      def greet(name):
+          return f"hello {name}"
+      ```
+
+      Leave the rendered preview on screen. Do not switch to a source-only or a
+      preview-only view.
+    note: >-
+      A single `:has()` chain, so one count decides every clause at once: the
+      body matches only if all seven constructs are present, and 0 otherwise.
+      Every selector names a standard HTML tag the Markdown must produce, not a
+      build's own markup, so it survives the variation between builds.
+
+      PRESENCE, not the literal "exactly one" of `expect`, and deliberately so.
+      A formatting toolbar routinely ships `<strong>B</strong>` and
+      `<em>I</em>` as its own button glyphs, and an app chrome routinely ships a
+      `ul` of links; requiring exact counts would fail those builds for having a
+      toolbar. `strong, b` and `em, i` are both accepted because renderers
+      disagree on which tag they emit, and grading that choice would grade the
+      library rather than the app. The one exact assertion is the link's `href`,
+      which nothing but a parsed `[Reference](...)` can produce.
+
+      LIMITATION: a build that renders its preview into an `<iframe>` puts the
+      whole structure outside `document.querySelectorAll` and is failed here.
+      That shape has not been observed in this corpus, but it would be a false
+      failure if it appeared.
+    check:
+      name: dom_count
+      selector: 'body:has(h1):has(strong, b):has(em, i):has(code):has(ul li):has(table td):has(a[href="https://example.com/vb"])'
+      op: ">="
+      n: 1
+  - id: S3
+    text: >-
+      A fenced code block renders with real syntax highlighting — a pre/code
+      carrying a language class and containing at least 2 highlight spans.
+    points: 8
+    method: assert
+    note: >-
+      A pre with a class but zero spans means highlighting is a no-op.
+
+      That is exactly what is counted: the spans, which are the discriminating
+      half. The language-class half is not asserted, because requiring a class
+      name would grade whichever of hljs, Prism or Shiki the build happens to
+      use — and Shiki emits inline-styled spans with no language class at all,
+      which is real highlighting by any reading of the item.
+
+      LIMITATION: spans that are all one flat colour pass here. That is the
+      shape an ORB-blocked theme produces, and `computed_style_distinct` on the
+      same selector (as markdown_slides S3 uses) is the stricter alternative. It
+      is not used here because this item's own text asks for spans rather than
+      for distinct colours, and because a legitimately monochrome theme would
+      fail it.
+    setup: >-
+      With the S2 document loaded and rendered — retype it if the source no
+      longer holds it — bring its fenced `python` block into view. Do not switch
+      themes and do not collapse the block.
+    check:
+      name: dom_count
+      selector: "pre span, code span"
+      op: ">="
+      n: 2
+  - id: S4
+    text: >-
+      A user-authored draft survives a reload: a typed nonce is present in the
+      editor after refresh, and the restored content is the user's text, not the
+      seeded welcome document.
+    points: 8
+    method: assert
+    note: >-
+      The decisive item for this idea. 18 of 19 live builds get it right; the one
+      that does not scored 3.33 with 0/30 work_survived — "not an editor, a trap
+      door". The nonce check is essential because every build seeds a "Welcome
+      to Scribepad" doc that makes the list non-empty regardless.
+
+      The reload is performed by the harness, not by the model, so the item
+      cannot be earned by reporting a refresh that never happened — which
+      matters here because R1 is not applicable for this idea and this is the
+      only Tier 1 reload item. The nonce is read from the user-visible text,
+      which includes `textarea.value`, so a draft restored into the editor
+      counts even though `innerText` alone would not see it.
+
+      The "not the seeded welcome document" half is carried by the nonce: a
+      build that restores the welcome doc instead does not have VBDRAFT7391
+      anywhere. The residual case — the nonce lingering in a sidebar while the
+      editor holds the welcome doc — passes here and is what universal P3 and
+      A2 are for.
+    setup: >-
+      Clear the app's Markdown source completely, or create a new empty draft,
+      so that none of the seeded "Welcome to Scribepad" document remains. Type a
+      short document whose body contains the literal nonce VBDRAFT7391. Wait
+      until the app's own indicator says the work is saved, or a few seconds if
+      it shows none. Then stop — the harness performs the hard reload itself.
+    check:
+      name: survives_reload
+      nonce: VBDRAFT7391
+  - id: S5
+    text: "Export returns a .md file whose bytes are identical to the source."
+    points: 6
+    method: assert
+    expect: "filename ends .md; sha256(downloaded) == sha256(source); no BOM, no HTML"
+    setup: |-
+      Clear the app's Markdown source completely and type exactly this two-line
+      document, with no blank line between the lines and nothing after them:
+
+      # Export VBEXPORT7391
+      Byte fidelity probe for Scribepad.
+
+      Then use the app's export / download control to save it as a `.md` file,
+      and wait for the download to finish. Do not rename the document and do not
+      add a title line of your own.
+    note: >-
+      Deliberately a two-line document with no list, link or fence. The item is
+      about byte fidelity, not syntax coverage — S2 covers that — and a build
+      that auto-continues lists or auto-closes brackets would corrupt a richer
+      fixture and be failed for the wrong reason. Omitting the blank line avoids
+      the one remaining ambiguity, a contenteditable editor that renders an
+      empty line as one `<br>` or two.
+
+      The comparison strips leading and trailing whitespace, so a trailing
+      newline is forgiven and nothing else is. A BOM is not whitespace to
+      Python's `str.strip`, so the "no BOM" half of `expect` is decided; an HTML
+      export, a prepended title line, or the seeded welcome text all fail
+      outright.
+
+      The `.md` extension itself is NOT asserted: `download_matches_text` reads
+      bytes, not the filename, and `download(extension: ".md")` cannot also
+      compare them. A build that writes the right bytes under the wrong
+      extension passes here.
+    check:
+      name: download_matches_text
+      text: |-
+        # Export VBEXPORT7391
+        Byte fidelity probe for Scribepad.
+
+tier2:
+  - id: F1
+    text: >-
+      Toolbar actions work, and Ctrl+B / Ctrl+I wrap the current selection in
+      the correct markers.
+    points: 6
+    method: assert
+    note: >-
+      The crowd never tests this: 7 keypresses across 630 agents.
+
+      Only the shortcut half is decided, and the omission is deliberate rather
+      than an oversight. A toolbar button's accessible name varies across builds
+      ("Bold", "B", "Format bold"), and clicking one blurs the textarea — so a
+      build whose toolbar correctly preserves the selection and one that has no
+      toolbar at all would be indistinguishable from a build that merely lost
+      focus, which is a false failure on an honest build. What is left is the
+      half `expect`-style precision can be had on: the exact markers.
+
+      Both markers are accepted in either spelling (`**` or `__`, `*` or `_`)
+      and tolerate a stray space swept into the selection by word-wise
+      selection. The italic pattern excludes the doubled form, so a build that
+      emits `**` for Ctrl+I cannot pass on bold's marker. Read from the
+      user-visible text, which includes `textarea.value` — this item is a claim
+      about the SOURCE, not the preview.
+    setup: >-
+      Clear the app's Markdown source completely and type the single line
+      `VBBOLD7391 VBITAL7391`. Then, without clicking anywhere else: in the
+      source pane press Control+Shift+ArrowLeft to select the last word and
+      press Control+i; then press Control+Home, press Control+Shift+ArrowRight
+      to select the first word, and press Control+b. If the selection will not
+      move by keyboard, set it instead with `evaluate` using `setSelectionRange`
+      on the source element. Leave the source on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "(\\*\\*|__)\\s*VBBOLD7391\\s*(\\*\\*|__)"
+        - "(?<![*_])[*_]\\s*VBITAL7391\\s*[*_](?![*_])"
+  - id: F2
+    text: >-
+      A document list holds several drafts; switching restores the correct body
+      for each; deleting one leaves the other intact.
+    points: 6
+    method: assert
+    note: >-
+      One read decides all three clauses, which is why the two bodies carry
+      different nonces from their titles. VBALPHA7391 present proves that
+      switching restored Alpha's OWN body and that deleting Bravo left it
+      intact; VBBRAVO7391 absent proves the two drafts are not one shared buffer
+      and that the delete really removed it. A build that shows the same text
+      for every document fails on the second pattern rather than passing on the
+      first.
+
+      Reading the user-visible text rather than `innerText` is correct here: the
+      restored body legitimately lives in a textarea.
+    setup: |-
+      Using the app's own new-document control, create two drafts. The first:
+
+      # Alpha 7391
+
+      VBALPHA7391
+
+      The second:
+
+      # Bravo 7391
+
+      VBBRAVO7391
+
+      Then switch back to the Alpha draft from the document list, so its body is
+      the one on screen. Finally delete the Bravo draft — from the document list
+      if the app allows it, otherwise by opening Bravo, deleting it, and
+      returning to Alpha. Finish with Alpha open and its body visible, and do
+      not use an undo or restore control.
+    check:
+      name: text_matches
+      patterns:
+        - "VBALPHA7391"
+      absent:
+        - "VBBRAVO7391"
+  - id: F3
+    text: "Copy rendered HTML places the rendered markup on the clipboard, with no script tags."
+    points: 4
+    method: assert
+    note: >-
+      Only the "something was really copied" half is decided — the half that
+      separates a working copy control from a decorative "Copied!" toast, which
+      is the failure the item exists for and one no crowd agent can perform.
+
+      The other two halves cannot be expressed. `clipboard_equals` compares for
+      equality, and rendered HTML has no build-independent exact form to compare
+      against, so neither "the markup is the RENDERED HTML rather than the
+      Markdown source" nor "no script tags" can be asserted. A
+      Decided by `clipboard_matches`, the regex form of `clipboard_equals`.
+      Equality cannot express this item: the exact HTML a build emits varies,
+      so what is asserted is shape — real rendered markup present, no script
+      tag. A build writing a `ClipboardItem` whose `text/html` flavour is the
+      markup will still hand `readText()` a plain-text flavour, so the patterns
+      accept either a tag or the rendered text, and only the script tag is
+      forbidden outright.
+    setup: >-
+      With the S2 document loaded and rendered — retype it if the source no
+      longer holds it — use the app's copy-rendered-HTML control once and let
+      any confirmation appear. Do not copy anything else afterwards.
+    check:
+      name: clipboard_matches
+      patterns:
+        - "<(h1|h2|p|ul|li|table|strong|em|code)\\b|VBCOPY7391"
+      absent:
+        - "<script"
+  - id: F4
+    text: >-
+      The source pane is a real editable control (textarea or contenteditable)
+      with an accessible name.
+    points: 4
+    method: assert
+    note: >-
+      46x `could not type into 'Markdown source': Element is not an <input>...` — a div pretending to be an editor.
+
+      Counted structurally rather than resolved by name. The source pane's
+      accessible name differs in almost every build, so `is_real_control` with
+      any fixed target — including the `Markdown source` in the quoted failure —
+      would report "not found" on builds that are perfectly fine, and the
+      primitive records that as a definite failure rather than an abstention.
+
+      The accessible-name half is not lost, it is already owned: universal R4
+      (`controls_have_names`, `max_unnamed: 0`) fails any visible control
+      without a name, and asserting it again here would double-count one fault.
+      What is left is the half R4 cannot see — that the editing surface is a
+      real fillable element rather than a styled div. The cost is that some
+      other textarea on screen would satisfy it, which is why the setup asks for
+      the editor alone.
+    setup: >-
+      Open the app so the Markdown source pane is on screen and focused, with no
+      export dialog, search palette or settings panel open.
+    check:
+      name: dom_count
+      selector: 'textarea, [contenteditable=""], [contenteditable="true"]'
+      op: ">="
+      n: 1
+  - id: F5
+    text: >-
+      A fence tagged with an unknown language degrades to plain text with no
+      console error.
+    points: 5
+    method: assert
+    expect: "```gcode renders as plain pre/code; no `Unknown language: \"gcode\"` error"
+    note: >-
+      Read from `document.body.innerText`, so the raw Markdown in a source
+      textarea cannot stand in for a preview that never rendered: the fence's
+      own content has to come back out of the preview. That is what "degrades to
+      plain text" means here, and it is also what a highlighter that throws on
+      an unknown language destroys — an uncaught error mid-render leaves the
+      block, and usually the whole preview, empty.
+
+      The absent pattern adds the build that catches the error and prints it
+      into the preview instead. A build that merely LOGS
+      `Unknown language: "gcode"` and renders correctly passes here and is
+      caught by universal R3 (`no_console_errors`), so the console half of the
+      item is covered without being asserted twice.
+    setup: |-
+      Clear the app's Markdown source completely and type exactly this document,
+      then let it render:
+
+      # Fence VB7391
+
+      ```gcode
+      G1 X10 Y10 VBGCODE7391
+      ```
+
+      Leave the rendered preview on screen.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "VBGCODE7391"
+      absent:
+        - "unknown language"
+
+penalties:
+  - id: A1
+    text: "Raw HTML in the source reaches the preview unescaped."
+    points: -10
+    method: assert
+    expect: "`<img src=x onerror=alert(1)>` must not produce an img[onerror]; `<script>window.__pwned=1</script>` must leave window.__pwned undefined"
+    note: >-
+      31x `One of your code blocks includes unescaped HTML. This is a potentially serious security risk.`
+
+      Fires on the presence of an `img` carrying an `onerror` ATTRIBUTE, which
+      can only exist if the source's raw HTML was parsed rather than escaped.
+      Verified in Chromium: a build that escapes renders the literal text
+      `<img src=x onerror="...">` and yields zero matches, so a correct build
+      cannot fire this.
+
+      The `window.__pwned` half of `expect` is deliberately NOT the check, and
+      the reason is measured rather than assumed: a `<script>` element inserted
+      through `innerHTML` is never executed by the browser, so on a genuinely
+      vulnerable build `window.__pwned` stays `undefined` and a `value_equals`
+      reading it would return no — an under-fire that reads as safety. The
+      `img onerror` payload does run, which is why it is the one used. The
+      handler body is an assignment rather than `alert(1)` for a practical
+      reason: a modal dialog blocks the harness, and the check reads the
+      attribute, not what it does.
+
+      The `<img src=x>` fetch 404s against the app's own origin. It is confined
+      to this item because penalties are graded after Tier 3, so R9
+      (`no_failed_requests`) has already drained the console.
+    setup: |-
+      Clear the app's Markdown source completely and type exactly this document,
+      then let it render and wait a moment:
+
+      # Raw HTML VB7391
+
+      <img src=x onerror="window.__pwned=1">
+
+      Leave the preview on screen. Do not dismiss, disable or "trust" any
+      security warning the app offers.
+    check:
+      name: dom_count
+      selector: "img[onerror]"
+      op: ">="
+      n: 1
+  - id: A2
+    text: 'A "Saved" indicator is displayed while the work does not survive a reload.'
+    points: -8
+    method: assert
+    note: >-
+      One build shows `Saved` with work_survived at 0.033; another sticks on `Saving...` after reload.
+
+      Fires only when both halves hold after the reload: the user's nonce is
+      gone AND the app is still advertising that work is saved. The nonce clause
+      is the interlock — a build that restores the draft cannot fire this
+      however it labels its indicator — which is what lets the label pattern be
+      broad enough to catch "Saved", "Saving...", "Autosaved" and "Auto-save on"
+      without risking an honest build.
+
+      Two limitations. The indicator is read AFTER the reload rather than
+      before, because a check sees only the final state; a build that shows
+      "Saved" while editing and then renders no status at all after the reload
+      is missed. That is the safe direction for a penalty.
+
+      And this sits next to universal P3 (`default_restored`) without
+      duplicating it: P3 fires when something was restored but not the user's
+      work, this fires when the app claims to have saved work it lost. A build
+      that both restores a demo document and labels it Saved pays both, which is
+      two distinct false claims rather than one counted twice.
+    setup: >-
+      Same document as S4 — clear the source, type a draft containing the
+      literal nonce VBDRAFT7391, and wait until the app's own indicator says the
+      work is saved. Then reload the page yourself and let it settle. Leave
+      whatever the app renders on screen: do not retype the nonce, do not open a
+      different document, and do not use an undo or restore control.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bsaved\\b|\\bsaving\\b|auto[\\s-]?sav(e|ed|es|ing)\\b"
+      absent:
+        - "VBDRAFT7391"
+  - id: A3
+    text: "Non-ASCII or CJK text renders as tofu or replacement characters in the preview."
+    points: -5
+    method: assert
+    expect: "`# 안녕하세요 🍣 café` -> h1 textContent exactly that, zero U+FFFD"
+    note: >-
+      Fires on the PRESENCE of corruption, which is why it is not
+      `no_mojibake`: that primitive returns yes when the text round-trips
+      intact, the wrong way round for a penalty. Universal R6 is the positive
+      form and reads the user-visible text including the source field; this
+      reads `document.body.innerText` only, so corruption confined to the
+      preview — the case the item names — is caught even while the source pane
+      still holds the correct bytes.
+
+      The pattern is U+FFFD, which `expect` names outright, plus the classic
+      UTF-8-decoded-as-Latin-1 markers from the harness's own mojibake list.
+      Listing only the accented and emoji forms is sufficient rather than
+      partial: an encoding fault is a property of the path, not of one
+      character, so a build that mangles 안녕하세요 mangles café and 🍣 in the
+      same string.
+
+      LIMITATION: the "tofu" half is undetectable. A missing glyph is a font
+      substitution and renders as a box that `innerText` reports as the correct
+      code point, so no primitive can see it.
+    setup: >-
+      Clear the app's Markdown source completely and type the single line
+      `# 안녕하세요 🍣 café` into it, then let the preview render. Leave the
+      rendered preview on screen.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "\\uFFFD|Ã©|Ã¨|Ã¡|Ã³|Ãº|Ã±|â€|ð"

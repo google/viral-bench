@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): screenshot-to-code — https://github.com/abi/screenshot-to-code
+# Verified 73,873 GitHub stars on 2026-08-06.
+
+idea_id: screenshot_to_code
+title: "Screenshot to Code"
+pitch: "Drop in a screenshot of any UI and get clean front-end code back."
+problem: "Turning a design mockup or a screenshot of an existing UI into working front-end code is slow and tedious."
+target_user: "Front-end developers and designers who want to prototype from a visual quickly."
+core_features:
+  - "Upload a screenshot (or paste an image) of a UI"
+  - "Pick a target stack (e.g. HTML+Tailwind, React, or Vue)"
+  - "A vision-capable LLM generates matching markup and styles"
+  - "Live in-browser preview of the generated UI"
+  - "Iterative refinement: describe a change and regenerate"
+success_criteria: "Given a screenshot, the app produces runnable front-end code whose rendered preview visibly resembles the input."
+allowed_scope: client-app
+difficulty: hard
+
+ground_truth:
+  source: "Twitter/X / Hacker News"
+  metric: github_stars
+  value: 73873

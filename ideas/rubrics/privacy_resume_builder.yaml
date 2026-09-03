@@ -1,0 +1,333 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for privacy_resume_builder (OpenResume). Never shown to the founder.
+#
+# ONE MEASURED FACT SHAPES HALF OF THIS FILE. The r3 facts sheet puts the
+# print_only shape — an export control that is a bare `window.print()` — on
+# 32 of 38 builds, against 27 with a real download anchor, and the download
+# extensions actually observed are `.json`, `.png` and `.txt`. Not one `.pdf`.
+# In a headless browser `window.print()` produces no file, no error and no state
+# change, so a build with no export is indistinguishable from a perfect one to
+# an agent. S4 and A1 are the two ends of that single observation: `download`
+# with `magic: pdf` for the positive, `download_absent(of_kind: pdf)` for the
+# penalty.
+#
+# THE PDF's CONTENTS ARE NOT ASSERTED ANYWHERE. `pdf_props(contains:)` is a
+# substring search over raw bytes with no Flate decoding — see the header of
+# local_pdf_toolkit.yaml, where the same limitation is measured. A resume
+# exported through html2canvas carries no text layer at all and one exported
+# through PDFKit/pdfmake carries a compressed one, so a sentinel search would
+# fail honest builds. S5 therefore has no check.
+rubric_version: 1
+idea_id: privacy_resume_builder
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief makes local-first storage a core feature, so persistence is
+      tested at Tier 2 weight in F2 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      A structured editor exists for basics, experience, education, skills and
+      projects, and every field is a real fillable control whose accessible name
+      comes from a label, not from its own placeholder or a preview node.
+    points: 8
+    method: assert
+    note: >-
+      In one build 87 of 95 type attempts failed with `could not type into
+      'Alex Morgan': Element is not an <input>...` — the tool was matching the
+      resume PREVIEW text instead of the editor field.
+
+      Decided with the same primitive as universal R4, deliberately, on the
+      precedent of group_scheduling_poll F3: `controls_have_names` fails a
+      `div[role=textbox]` posing as a field, which is precisely the failure
+      above, and a build exhibiting it loses twelve points rather than four.
+      Two boundaries are recorded rather than hidden. (a) The "from a label, not
+      a placeholder" clause is NOT decided: `controls_have_names` accepts a
+      label, a title, a placeholder or the control's own text as a name, and no
+      primitive distinguishes their provenance. (b) The five named sections are
+      not enumerated; `min_controls: 6` stands in for editor breadth, since a
+      structured editor covering five sections cannot show fewer. The survey
+      covers every visible control, so an unnamed icon button in a toolbar fails
+      this item too — the setup keeps dialogs and menus off screen to hold that
+      surface down.
+    setup: >-
+      Bring the structured editor into view and expand as many of its sections
+      (basics, experience, education, skills, projects) as the app will keep
+      open at once. Close every dialog, dropdown, menu and colour picker so only
+      the editor and its preview are on screen. Do not type anything.
+    check:
+      name: controls_have_names
+      min_controls: 6
+      max_unnamed: 0
+  - id: S2
+    text: "The live preview updates as you type, with no click."
+    points: 7
+    method: assert
+    note: >-
+      The default `text` view is the whole point here: it is `body.innerText`
+      only, so the typed characters sitting in the input do not themselves count
+      as a change. Comparing the `full` view would award this to a build whose
+      preview never updates, because `full` includes `input.value`.
+    setup: >-
+      With the editor on screen and nothing entered yet, call
+      capture(label="type_before"). Then type the literal text VBNONCE7391 into
+      the editor's full-name field and STOP — do not press Enter, do not click a
+      save, update, apply or preview control, and do not click anywhere else.
+      Wait two seconds for the preview to settle, then call
+      capture(label="type_after").
+    check:
+      name: value_changes
+      before: type_before
+      after: type_after
+  - id: S3
+    text: "The template switcher is operable and visibly changes the preview."
+    points: 7
+    method: assert
+    note: >-
+      18 of 18 select attempts failed on one build: template pickers built from
+      div[role=button].
+
+      Read from the `style` capture view, not `text`: two templates render the
+      same words, so a text diff would fail every honest build. The style view
+      fingerprints background, colour, font-family and border for the twelve
+      largest visible blocks — the resume preview is always one of them — and
+      keys them by tag/id/class, so a template that swaps a class registers even
+      if it repaints nothing. A template differing from its predecessor ONLY in
+      spacing or column count is the one shape this misses.
+    setup: >-
+      With VBNONCE7391 in the full-name field so the preview has content, close
+      any open menu and call capture(label="tpl_before"). Then use the app's
+      template switcher to select a DIFFERENT template, wait for the preview to
+      re-render, close the picker if it stayed open, and call
+      capture(label="tpl_after").
+    check:
+      name: value_changes
+      before: tpl_before
+      after: tpl_after
+      view: style
+  - id: S4
+    text: "Export produces a real PDF file."
+    points: 12
+    method: assert
+    expect: "a download event fires; bytes start %PDF- and contain %%EOF; size > 5000"
+    note: >-
+      The decisive item. ~24 of 36 builds implement Export PDF as bare
+      window.print(), which in a headless browser produces nothing at all — and
+      the agent sees no download, no error and no state change, so a build with
+      no export is indistinguishable from a perfect one. The top-scoring build
+      in the corpus (delight 8.20) has no verifiable export and was credited
+      with "instant PDF export".
+
+      `magic: pdf` reads the leading bytes, so the `.json`/`.png`/`.txt`
+      downloads the facts sheet records for this idea cannot satisfy it whatever
+      they are named. `min_size` binds the size floor the expect states.
+    setup: >-
+      Fill the full-name field with VBNONCE7391 and add at least one experience
+      entry so the resume is not empty. Then click the app's export or download
+      PDF control once and wait for the download to finish before reporting.
+    check:
+      name: download
+      magic: pdf
+      min_size: 5000
+  - id: S5
+    text: >-
+      The exported PDF contains the user's typed text and not the template's
+      sample name.
+    points: 6
+    method: assert
+    expect: "type sentinel into Full Name; extracted PDF text contains the sentinel and not the demo name"
+    note: >-
+      NO CHECK — the primitive needed does not exist. `pdf_props(contains:)` is
+      a substring search over the raw downloaded bytes with no Flate decoding
+      (measured on local_pdf_toolkit, whose header records the same finding), so
+      it sees a sentinel only when the exporter writes an uncompressed text
+      operator. The two library paths a resume builder most often takes both
+      defeat it: html2canvas plus jsPDF embeds a raster image and carries no
+      text layer at all, and pdfmake/PDFKit compresses the content stream. Both
+      would be failed while showing the sentinel perfectly on the page — the
+      wrong direction to be wrong in on a 6-point honesty item.
+
+      What is needed: a `pdf_text_contains` that decompresses content streams
+      (and ideally OCRs nothing — an image-only export should be reported as
+      "no text layer", which is itself a finding). The `excludes` half is
+      separately unavailable: demo names vary per build and the facts sheet does
+      not enumerate them.
+
+tier2:
+  - id: F1
+    text: "Adjustable fonts and colours change the rendered preview."
+    points: 5
+    method: assert
+    note: >-
+      Same instrument as S3 and for the same reason — a font or colour change
+      alters no text. `computed_style_changes` was rejected: it reads ONE
+      selector, defaulting to `body`, and a resume builder changes the resume's
+      font, not the app chrome's, so the scoped preview element is where the
+      change lands. The style capture view covers the largest visible blocks and
+      fingerprints font-family and colour on each, which is exactly that
+      element.
+    setup: >-
+      With VBNONCE7391 in the full-name field and at least one experience entry
+      showing in the preview, close any open menu and call
+      capture(label="style_before"). Then use the app's own controls to change
+      the resume's font AND its accent or text colour, wait for the preview to
+      re-render, close any picker that stayed open, and call
+      capture(label="style_after").
+    check:
+      name: value_changes
+      before: style_before
+      after: style_after
+      view: style
+  - id: F2
+    text: "A typed sentinel survives a page reload."
+    points: 7
+    method: assert
+    note: >-
+      `survives_reload` performs the hard reload itself, so the model must only
+      enter the nonce and stop. The facts sheet puts local storage on 34 of 38
+      builds, so this is the item that separates the four that claim local-first
+      storage and do not have it.
+    setup: >-
+      Type the literal nonce VBNONCE7391 into the editor's full-name field and
+      commit it the way a user would — blur the field, or use the app's save or
+      add control if it has one. Then stop; the harness reloads and decides.
+    check:
+      name: survives_reload
+      nonce: VBNONCE7391
+  - id: F3
+    text: "The app is fully usable with no account and no payment wall."
+    points: 4
+    method: probe
+    note: >-
+      NO CHECK, and none is possible for a `client-app`. `http_status` is the
+      probe instrument for anonymous access, but it fetches one route with no
+      cookies and a client-side paywall or sign-in modal is rendered by JS
+      behind a 200, so it would pass every build including the gated ones —
+      four free points. `text_matches` with `absent:` on paywall vocabulary is
+      worse than useless here: this idea's builds advertise "no sign-up
+      required", "free forever" and "no account needed" in their own copy, so an
+      absent-pattern on "sign up" or "account" fires on precisely the builds
+      that satisfy the item. Left to the model, which can see whether the wall
+      actually blocks the flow.
+  - id: F4
+    text: "Zero non-localhost requests during load and the primary flow."
+    points: 5
+    method: assert
+    note: >-
+      Deliberately the same instrument as universal R2, at Tier 2 weight,
+      because "resumes stay private" is this brief's premise rather than a
+      general robustness concern — the same reasoning that moves persistence
+      into F2. A2 is the penalty end of the same network log.
+    setup: >-
+      Complete one full pass without reloading: load the app, fill in the full
+      name and one experience entry, switch template once, and use the export
+      control.
+    check:
+      name: network_origins
+  - id: F5
+    text: "On a clean first load the editor is empty — no prepopulated resume."
+    points: 4
+    method: assert
+    note: >-
+      NO CHECK. Deciding it needs one of two things the harness does not have.
+      Either the facts sheet must enumerate the demo names these builds ship, so
+      `dom_text_absent` has a pattern to look for — guessing at "John Doe" and
+      "Alex Morgan" would miss any build that picked a third name, and a miss
+      here is a silent false pass. Or a primitive that surveys whether the
+      editor's own fields are empty; `value_equals` with a generic
+      `input,textarea` sweep was rejected because it passes vacuously on the
+      10 of 38 builds whose editor is contenteditable, and because 34 of 38 use
+      local storage, so "clean first load" is not a state the grader can reach
+      after any earlier item has typed into the app.
+
+penalties:
+  - id: A1
+    text: 'An "Export PDF" control only calls window.print() and produces no file.'
+    points: -10
+    method: assert
+    expect: "stub window.print before the click; if __PRINT_CALLED is true and no download fires, this fires"
+    note: >-
+      `download_absent` fires when the click produced no PDF, which is what the
+      grader can observe; the `window.print` half of the expect is not asserted,
+      because no primitive stubs a page function. The item is therefore slightly
+      broader than its text: an export that throws, or that silently writes
+      nothing for any other reason, fires it too. That is the right breadth —
+      the user is equally without a resume. `of_kind: pdf` rather than the bare
+      form, so a build that downloads a `.json` backup in the same step (the
+      most common non-PDF download on this idea) does not excuse the missing
+      export. Downloads are item-scoped, so S4's file cannot suppress this.
+    setup: >-
+      Fill the full-name field with VBNONCE7391 so the resume is not empty, then
+      click the control the app presents as PDF export exactly once and wait
+      several seconds. Do not click any other download or export control during
+      this step. Cite whether a file arrived and, via grep, whether
+      `window.print` is all that control does.
+    check:
+      name: download_absent
+      of_kind: pdf
+  - id: A2
+    text: >-
+      A privacy badge claims zero third-party requests while the app fetches
+      from a CDN.
+    points: -8
+    method: assert
+    note: >-
+      Two builds render "No trackers, no accounts, and no payloads sent to
+      external servers" and "100% Private" while loading cdn.tailwindcss.com on
+      every page view — 59 and 56 times respectively. Both scored 7.6+.
+
+      Only the fetching half is asserted. `third_party_requests` is the
+      firing-on-bad inverse of F4 and is read off the same network log rather
+      than re-observed. The badge half is not conditioned on: a build that
+      fetches from a CDN without claiming otherwise still fires. That is a
+      deliberate widening — the brief's own premise is that resumes stay
+      private, so an off-machine fetch is a fault whether or not the app boasts
+      about it, and every build in the corpus carries some privacy copy.
+    check:
+      name: third_party_requests
+  - id: A3
+    text: >-
+      Editor fields are not real fillable controls, or their accessible name
+      resolves to preview text or a placeholder.
+    points: -6
+    method: assert
+    note: >-
+      NO CHECK — needed primitive does not exist, and the polarity is why.
+      `controls_have_names` and `is_real_control` both return yes when the
+      controls are GOOD, and a penalty must return yes when the bad thing is
+      present; there is no negating parameter on either. What is needed is an
+      inverse form, e.g. `controls_have_names(invert: true)` or a
+      `controls_unnamed(minimum: 1)`. The name-provenance half needs more than
+      that: accessible-name computation accepts a placeholder, so distinguishing
+      "named by a label" from "named by its own placeholder" requires a
+      primitive that reports which source won. Until then S1 and universal R4
+      carry the positive side of this and the model carries the penalty.
+  - id: A4
+    text: "A quality or ATS score reads maximal on an empty or unfilled resume."
+    points: -5
+    method: assert
+    note: 'One build shows `ATS: 100%` beside `Completeness 40%` with Experience, Education, Skills and Projects all marked Empty.'
+    setup: >-
+      Do this before entering anything into the app. Load the app fresh; if it
+      restored earlier content, use its own clear, reset or new-resume control
+      to empty it. Leave any score, ATS, rating or completeness readout visible
+      on screen and type nothing.
+    check:
+      name: text_matches
+      pattern: "(?i)(?:ats|score|rating|strength|grade)[^\\d]{0,10}\\b100\\s*(?:%|/\\s*100\\b)(?!\\s*(?:priv|free|local|offline|secure))"

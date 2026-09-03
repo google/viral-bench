@@ -1,0 +1,186 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[project]
+name = "viral-bench"
+version = "0.1.0"
+description = "A benchmark for evaluating large language models (LLMs)."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    # The model SDKs the provider layer needs. `openai` is not optional: ten of
+    # the fourteen registered providers speak the OpenAI wire format and go
+    # through it, including OpenAI itself, OpenRouter, Groq, a local Ollama and
+    # any custom endpoint. Anthropic needs no SDK, because that adapter posts
+    # the Messages API over urllib.
+    "openai>=1.109.1",
+    "google-genai>=2.10.0",
+    "python-dotenv>=1.2.2",
+    "pyyaml>=6.0",
+    # Crowd app-interaction: drive single-page apps in a real (headless) browser
+    # so agents test them like a human. Driven against the *system* Chrome
+    # (channel="chrome"), so no bundled-browser download is required at run time;
+    # imported lazily so the static-HTTP fallback still works if it is absent.
+    "playwright>=1.40",
+    "uvicorn>=0.51.0",
+    "starlette>=1.3.1",
+    "reportlab>=5.0.0",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    # Was held at >=10.4.0, on 17 advisories, by the optional `crowd` extra.
+    # camel-ai pinned `pillow<11.0.0` and uv resolves every extra into ONE
+    # universal lock, so an optional adapter dictated the base install's image
+    # library. The note here used to say the fix was to move the crowd stack out
+    # of the shared lock rather than take a camel-ai downgrade. That is now done
+    # -- see [project.optional-dependencies] -- and pillow is free.
+    #
+    # Worth knowing before anyone tries to put camel-ai back: no version of it
+    # works. Releases up to 0.2.80 cap `pillow<11.0.0`; 0.2.82 lifted that but
+    # caps `pydantic<=2.12.0`, and google-genai has required `pydantic>=2.12.5`
+    # since 2.10.0. camel-ai and the Gemini SDK therefore cannot both be
+    # satisfied in one resolution at ANY pair of versions, which is what turned
+    # "bump camel-ai" from a fix into a dead end.
+    "pillow>=12.3.0",
+    "python-multipart>=0.0.32",
+    "pydantic>=2.13.4",
+    # NOTE: python-jose was removed here. It was the only route to `ecdsa`,
+    # whose Minerva timing advisory (GHSA-wj6h-64fc-37mp) has no fixed version
+    # upstream and so could never be resolved by upgrading -- and `pyjwt` below
+    # already covers the same ground. Nothing in this package imported either
+    # one: both are here so a MODEL-WRITTEN app can import them, and that path
+    # is unaffected, because founder/provision.py maps `jose -> python-jose` and
+    # installs it into the app's own container environment from the app's own
+    # imports, never from this environment.
+    "pyjwt>=2.13.0",
+    "jinja2>=3.1.6",
+    "alembic>=1.19.1",
+    "email-validator>=2.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "flask>=3.1.3",
+    "gunicorn>=26.1.0",
+    "markdown>=3.10.3",
+    "sqlalchemy>=2.0.52",
+    "bcrypt>=5.0.0",
+]
+
+# There is deliberately no `crowd` extra, and no camel-ai anywhere in this lock.
+#
+# It used to be here, holding a single optional adapter's dependency over the
+# whole project: uv resolves every extra into ONE universal lock, so camel-ai's
+# `pillow<11.0.0` applied to a plain `uv sync` too, and pillow sat on 17 open
+# advisories because of a package most installs never used. Nor is that fixable
+# by choosing a better version -- camel-ai up to 0.2.80 caps pillow, 0.2.82 and
+# later cap `pydantic<=2.12.0`, and google-genai has needed `pydantic>=2.12.5`
+# since 2.10.0, so camel-ai and the Gemini SDK cannot both be satisfied at any
+# pair of versions.
+#
+# Nothing is lost by its absence, because the crowd SIMULATION never ran from
+# here. It runs in `.venv-crowd`, a separate Python 3.11 environment built by
+# scripts/setup_crowd_env.sh from config/crowd-requirements.txt, where
+# camel-oasis brings its own camel-ai and resolves against its own pins. What
+# lived in the extra was only the CAMEL FunctionTool adapter, imported lazily by
+# viral_bench.crowd.interaction.toolkit, and the handful of tests that exercise
+# it -- which already skipped on any machine that had not asked for the extra,
+# CI included. To work on the adapter, install camel-ai into a scratch
+# environment by hand; do not add it back here.
+
+[project.urls]
+Homepage = "https://github.com/google/viral-bench"
+Repository = "https://github.com/google/viral-bench"
+Issues = "https://github.com/google/viral-bench/issues"
+
+[project.scripts]
+viral-bench = "viral_bench.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "pre-commit>=3.8",
+    # Analysis only. scripts/score_robustness.py re-weights the stored component
+    # matrix across ~10^5 weightings, which is not a stdlib-sized job. The
+    # scoring layer itself stays dependency-free.
+    "numpy>=2.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
+
+# Resolve packages from public PyPI. This pins the index explicitly so CI
+# (and any contributor) resolves the same public packages regardless of any
+# machine-local default index configuration.
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.uv.workspace]
+# Deliberately EMPTY, with builds/ excluded.
+#
+# A founder agent runs `uv sync` / `uv add` inside builds/work/<id>/app. uv walks
+# up, finds this file, and registers that app as a member of the BENCHMARK's own
+# workspace -- rewriting this list. Two builds whose app dir is called `app` then
+# collide and every `uv run` in the repo dies with "Two workspace members are
+# both named `app`", which took out 15 cells of a 48-cell fleet as `no_record`
+# and would have kept doing so for every subsequent run.
+#
+# The exclusion makes that impossible: nothing under builds/ can become a member,
+# so a build can no longer break the harness for the builds that follow it, nor
+# leave its own directory committed into the repo's configuration.
+members = []
+exclude = ["builds/**"]
+
+# ----------------------------------------------------------------------
+# Tooling configuration
+# ----------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# A sensible, beginner-friendly default rule set.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.pytest.ini_options]
+# viz/tests holds the trajectory viewer's suite. It needs listing explicitly:
+# testpaths is not a glob, so without this entry a bare `pytest` collects zero
+# of them and the viewer looks tested when it is not.
+testpaths = ["tests", "viz/tests"]
+addopts = "-ra --cov=viral_bench --cov=viz --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["viral_bench", "viz"]

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TileMerge - Sliding Number Puzzle</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between text-slate-100 select-none overflow-x-hidden touch-none">
+
+  <!-- Header & Controls Section -->
+  <header class="w-full max-w-md mx-auto px-4 pt-4 pb-2 flex-none">
+    <div class="flex justify-between items-center mb-3">
+      <div>
+        <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent flex items-center gap-2">
+          <span>TileMerge</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 tracking-normal" id="theme-badge">Classic</span>
+        </h1>
+        <p class="text-xs text-slate-400">Slide, merge, and reach the target!</p>
+      </div>
+      
+      <!-- Sound and Menu Controls -->
+      <div class="flex items-center gap-2">
+        <button id="btn-sound" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition-colors" title="Toggle Sound">
+          <svg id="sound-icon-on" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+          </svg>
+          <svg id="sound-icon-off" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6L4.72 12l2.25 2.25M15.75 8.25l-4.72 4.72a.75.75 0 01-1.28-.53V3.31a.75.75 0 011.28-.53l4.72 4.72H13.5m-9 0H3a.75.75 0 00-.75.75v5.25c0 .414.336.75.75.75h1.5" />
+          </svg>
+        </button>
+        <button id="btn-open-theme-creator" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition-colors flex items-center gap-1" title="Create Custom Theme">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122l9.37-9.37a2.25 2.25 0 113.182 3.182l-9.37 9.37a4.5 4.5 0 01-2.24 1.324l-4.04 1.01a.728.728 0 01-.869-.869l1.01-4.04a4.5 4.5 0 011.324-2.24z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 10.5l3 3" />
+          </svg>
+          <span class="text-xs font-semibold hidden sm:inline pr-1">Theme</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scores and Quick Action Panel -->
+    <div class="grid grid-cols-3 gap-2 mb-2">
+      <!-- Live Score -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 text-center flex flex-col justify-center relative overflow-hidden group">
+        <span class="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Score</span>
+        <span id="score" class="text-xl sm:text-2xl font-black text-white transition-all duration-100">0</span>
+        <div id="score-addition" class="absolute inset-0 flex items-center justify-center font-bold text-violet-400 opacity-0 pointer-events-none text-lg select-none">+0</div>
+      </div>
+      <!-- Best Score -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 text-center flex flex-col justify-center">
+        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Best</span>
+        <span id="best-score" class="text-xl sm:text-2xl font-black text-white">0</span>
+      </div>
+      <!-- Undo & Reset Buttons -->
+      <div class="grid grid-rows-2 gap-1.5">
+        <button id="btn-undo" class="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700 text-xs font-bold transition-all disabled:opacity-40 disabled:pointer-events-none py-1" disabled>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+          </svg>
+          <span>Undo (<span id="undo-count">3</span>)</span>
+        </button>
+        <button id="btn-restart" class="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-md shadow-violet-900/20 transition-all py-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          <span>Restart</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Game Area -->
+  <main class="flex-grow flex items-center justify-center px-4 py-2 w-full max-w-md mx-auto relative">
+    
+    <!-- Game Container with Background Grid and Active Tiles Overlay -->
+    <div id="game-container" class="relative w-full aspect-square rounded-3xl bg-slate-900 p-3.5 border border-slate-800 shadow-2xl shadow-slate-950/80 flex flex-col justify-between">
+      
+      <!-- Static Background Grid (4x4) -->
+      <div class="grid grid-cols-4 grid-rows-4 gap-3 w-full h-full absolute inset-0 p-3.5 pointer-events-none">
+        <!-- 16 empty cells -->
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+        <div class="bg-slate-950/40 border border-slate-800/30 rounded-2xl w-full h-full"></div>
+      </div>
+
+      <!-- Active Animated Tiles Container -->
+      <div id="tile-container" class="relative w-full h-full">
+        <!-- Dynamic tiles will be rendered here via javascript -->
+      </div>
+
+      <!-- Game State Overlays -->
+      
+      <!-- Win Overlay -->
+      <div id="overlay-win" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300 opacity-0 pointer-events-none scale-95">
+        <div class="w-16 h-16 bg-gradient-to-tr from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-amber-500/20 mb-4 animate-bounce">
+          🏆
+        </div>
+        <h2 class="text-3xl font-extrabold text-white mb-2 bg-gradient-to-r from-yellow-300 to-amber-400 bg-clip-text text-transparent">Congratulations!</h2>
+        <p class="text-sm text-slate-300 mb-6 max-w-xs">You successfully merged up to the ultimate target tile! You are a master of TileMerge.</p>
+        
+        <div class="flex flex-col gap-2.5 w-full max-w-xs">
+          <button id="btn-share-win" class="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold py-3 transition-all transform hover:scale-[1.02] shadow-lg shadow-violet-500/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+            <span>Share Board Result</span>
+          </button>
+          <div class="flex gap-2">
+            <button id="btn-win-continue" class="flex-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2.5 transition-all text-sm">
+              Keep Playing
+            </button>
+            <button id="btn-win-restart" class="flex-1 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 transition-all text-sm">
+              Restart
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="overlay-gameover" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300 opacity-0 pointer-events-none scale-95">
+        <div class="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center text-3xl border border-slate-700 mb-4">
+          💀
+        </div>
+        <h2 class="text-3xl font-extrabold text-white mb-2 bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">No More Moves!</h2>
+        <p class="text-sm text-slate-300 mb-6 max-w-xs">You ran out of moves with a final score of <span id="gameover-final-score" class="font-extrabold text-violet-400">0</span>.</p>
+        
+        <div class="flex flex-col gap-2.5 w-full max-w-xs">
+          <button id="btn-share-gameover" class="w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 border border-slate-700 transition-all transform hover:scale-[1.02]">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+            <span>Share Board Result</span>
+          </button>
+          <button id="btn-gameover-restart" class="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold py-3 transition-all transform hover:scale-[1.02] shadow-lg shadow-violet-500/20">
+            Try Again
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- How to Play & Footer Section -->
+  <footer class="w-full max-w-md mx-auto px-4 pb-4 pt-1 flex-none text-center">
+    <div class="bg-slate-900/50 border border-slate-900 rounded-2xl p-3 mb-2 flex items-center gap-3">
+      <div class="text-xl bg-slate-800 p-2 rounded-xl text-violet-400">💡</div>
+      <p class="text-left text-[11px] text-slate-400 leading-normal">
+        <strong class="text-slate-200">How to play:</strong> Use your <strong class="text-slate-300">Arrow keys / WASD</strong> or <strong class="text-slate-300">swipe</strong> on mobile to slide tiles. Matching tiles merge! Create the target tile to win.
+      </p>
+    </div>
+    <div class="text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
+      <span>Crafted by Founder-Engineer</span>
+      <span class="w-1 h-1 rounded-full bg-slate-700"></span>
+      <span class="text-slate-400">TileMerge v1.0</span>
+    </div>
+  </footer>
+
+  <!-- Theme Creator Modal -->
+  <div id="theme-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-40 opacity-0 pointer-events-none transition-all duration-300 scale-95">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-1.5">
+            <span class="text-xl">🎨</span> Custom Theme Creator
+          </h3>
+          <p class="text-[11px] text-slate-400">Design custom tile progression & share!</p>
+        </div>
+        <button id="btn-close-theme-modal" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Inputs for 11 tiles) -->
+      <div class="p-4 overflow-y-auto space-y-3 flex-grow max-h-[55vh]">
+        <p class="text-xs text-violet-300 bg-violet-950/30 border border-violet-800/30 rounded-xl p-2.5 leading-normal">
+          Type an emoji or a short word (max 8 chars) for each progression stage. Keep them fun & thematic!
+        </p>
+        
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">2:</span>
+            <input type="text" id="tile-input-2" value="🌱" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">4:</span>
+            <input type="text" id="tile-input-4" value="🌿" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">8:</span>
+            <input type="text" id="tile-input-8" value="🌳" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">16:</span>
+            <input type="text" id="tile-input-16" value="🌲" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">32:</span>
+            <input type="text" id="tile-input-32" value="🍄" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">64:</span>
+            <input type="text" id="tile-input-64" value="🌰" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">128:</span>
+            <input type="text" id="tile-input-128" value="🌸" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">256:</span>
+            <input type="text" id="tile-input-256" value="🌼" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">512:</span>
+            <input type="text" id="tile-input-512" value="🌻" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-xs font-bold text-slate-500 w-6">1024:</span>
+            <input type="text" id="tile-input-1024" value="🍁" class="bg-transparent text-sm text-white font-semibold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+          <div class="flex items-center bg-slate-950/50 border border-violet-900/50 rounded-xl px-2.5 py-2.5 col-span-2 shadow-inner bg-violet-950/10">
+            <span class="text-xs font-bold text-violet-400 w-16">2048 (Goal):</span>
+            <input type="text" id="tile-input-2048" value="🍂" class="bg-transparent text-sm text-violet-200 font-extrabold outline-none w-full border-b border-transparent focus:border-violet-500">
+          </div>
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button id="btn-preset-nature" class="flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition-colors border border-slate-700/40">
+            🌿 Nature
+          </button>
+          <button id="btn-preset-dev" class="flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition-colors border border-slate-700/40">
+            💻 Dev Stack
+          </button>
+          <button id="btn-preset-crypto" class="flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition-colors border border-slate-700/40">
+            🪙 Crypto
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-800 flex gap-3 bg-slate-950/40">
+        <button id="btn-reset-theme-creator" class="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition-all">
+          Reset Classic
+        </button>
+        <button id="btn-apply-theme" class="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold transition-all shadow-md shadow-violet-900/20">
+          Generate & Load Theme
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Action Notification Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-slate-800 text-slate-100 px-4 py-2.5 rounded-2xl shadow-xl shadow-black/80 flex items-center gap-2 z-50 transition-all duration-300 opacity-0 scale-90 translate-y-2 pointer-events-none">
+    <div class="text-violet-400 text-sm" id="toast-icon">✨</div>
+    <span class="text-xs font-semibold" id="toast-message">Board copied to clipboard!</span>
+  </div>
+
+  <!-- Audio Loader Activation Overlay (for modern browsers requiring user interaction first) -->
+  <div id="audio-opt-in" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 pointer-events-none opacity-0 transition-opacity duration-300">
+    <!-- Click anywhere allows sound initialization seamlessly without intrusive boxes -->
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

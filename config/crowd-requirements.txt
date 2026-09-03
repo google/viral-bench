@@ -1,0 +1,49 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Pinned dependencies for the isolated crowd-simulation environment (.venv-crowd).
+#
+# OASIS (camel-oasis) requires Python >=3.10,<3.12 and hard-pins camel-ai,
+# pandas, torch (via sentence-transformers), etc. -- incompatible with the main
+# project's Python 3.12 + light dependency set. So the crowd simulation runs in a
+# DEDICATED Python 3.11 virtualenv, kept fully separate from the main project.
+#
+# Create/refresh this env with:  scripts/setup_crowd_env.sh
+#   uv venv --python 3.11 .venv-crowd
+#   uv pip install --python .venv-crowd -r config/crowd-requirements.txt
+#
+# The crowd runner imports the viral_bench source directly via PYTHONPATH=src
+# (NOT a pip install), so viral_bench's own requires-python (>=3.12) never gates
+# this 3.11 env. Only the third-party libraries below are installed here.
+
+# The OASIS social-simulation engine (pulls camel-ai==0.2.78, pandas==2.2.2,
+# sentence-transformers==3.0.0 -> torch, igraph, etc.).
+camel-oasis==0.2.5
+
+# camel-ai 0.2.x does `from mcp.server import FastMCP` at import time, which is
+# the mcp 1.x API. mcp 2.0 renamed FastMCP to MCPServer and dropped the old path,
+# and camel-oasis pins camel-ai but not mcp -- so a fresh install resolved mcp 2.x
+# and every crowd run died on `ImportError: cannot import name 'FastMCP'` before
+# reaching an agent. setup_crowd_env.sh still exited 0, so the break only showed
+# up at the first run. Unpin when camel-ai supports mcp 2.
+mcp<2
+
+# Drive single-page apps in a real browser for the "trier" agents (same lib the
+# main env uses; system Chrome via channel="chrome", no bundled download).
+playwright>=1.40
+
+# Native Gemini SDK. The crowd drives Gemini through google-genai (not CAMEL's
+# OpenAI-compat GeminiModel) so recent Gemini multi-turn tool calling round-trips the
+# required thought_signature. See viral_bench.crowd.sim.gemini_native.
+google-genai>=2.10

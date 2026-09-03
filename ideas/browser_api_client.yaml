@@ -1,0 +1,38 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Hoppscotch — https://github.com/hoppscotch/hoppscotch
+# Verified 79,985 GitHub stars on 2026-08-06.
+
+idea_id: browser_api_client
+title: "ReqBench"
+pitch: "A fast, in-browser API client for building, sending, and inspecting HTTP requests — a lightweight Postman alternative."
+problem: "Heavyweight desktop API clients are slow to install, increasingly push mandatory cloud sign-in, and are overkill for quickly testing an endpoint."
+target_user: "Developers who need to test and debug HTTP/REST APIs without installing a heavy desktop app."
+core_features:
+  - "Compose a request: method, URL, query params, headers, and body"
+  - "Send the request and view status code, response time, size, and a prettified body"
+  - "Keep a history of past requests for quick reuse"
+  - "Organize saved requests into named collections"
+  - "Define environment variables (e.g. base URL, tokens) reusable across requests"
+  - "Include a built-in sample target (a bundled mock response or a tiny local endpoint) so a full send/inspect cycle works offline without any external service"
+success_criteria: "A user can build and send a request against the built-in sample target (no external service needed), inspect the formatted response with status and timing, then save it to a collection and re-run it from history."
+allowed_scope: client-app
+difficulty: hard
+
+ground_truth:
+  source: "Hacker News / Reddit"
+  metric: github_stars
+  value: 79985

@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): JSON Crack — https://github.com/AykutSarac/jsoncrack.com
+# Verified 44,278 GitHub stars on 2026-08-06.
+
+idea_id: json_graph_viewer
+title: "JSONScape"
+pitch: "Paste messy JSON and instantly see it as a graph you can actually read."
+problem: "Deeply nested JSON is nearly unreadable as text, and a pretty-printer only reformats it — you still cannot see how the pieces relate."
+target_user: "Developers debugging API responses and config files who need to understand a payload's shape fast."
+core_features:
+  - "Paste or type JSON and see it parsed into a node graph, with each object and array as a labelled node"
+  - "Clear, specific error messages for malformed JSON, pointing at the offending line"
+  - "Collapse and expand a node to hide or reveal its children"
+  - "Search for a key or value and highlight the matching nodes"
+  - "A formatted/validated text view alongside the graph, and a copy-to-clipboard button"
+success_criteria: "Pasting a nested JSON document renders a graph in which the object's keys and values are individually visible as labelled nodes; searching for a nested key highlights it; and pasting malformed JSON produces a clear parse error rather than a blank screen."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Twitter/X / Hacker News"
+  metric: github_stars
+  value: 44278

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crowd trajectory viewer · ViralBench</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="app">
+
+<div class="topbar">
+  <div class="brand">Viral<span>Bench</span></div>
+  <nav class="navlinks">
+    <a href="/">Home</a>
+    <a href="/founder">Founder</a>
+    <a href="/crowd" class="active">Crowd</a>
+    <a href="/rubric">Rubric</a>
+  </nav>
+  <div class="picker">
+    <input id="runInput" placeholder="paste a crowd run id, or a build id to list its runs…" spellcheck="false">
+    <button id="loadBtn" class="primary">Load</button>
+    <button id="browseBtn">Browse all runs…</button>
+  </div>
+  <div class="spacer"></div>
+  <button id="founderBtn" title="Open the founder build this crowd tested" disabled>Founder build</button>
+  <button id="rescueBtn" title="Copy this run's screenshots out of /tmp into the viewer cache" disabled>Save shots</button>
+  <button id="dlJson" disabled>JSON ↓</button>
+  <button id="dlZip" disabled>Zip ↓</button>
+</div>
+
+<div id="head" class="section"></div>
+<div id="transport" class="section"></div>
+
+<div class="main">
+  <div class="col pane" id="leftPane" style="flex:0 0 30%">
+    <div class="section"><h2>Social graph <span class="count" id="graphCount"></span></h2></div>
+    <div class="graph-wrap"><canvas id="graph" height="380"></canvas></div>
+    <div class="legend" id="legend"></div>
+    <div class="section" style="border-top:1px solid var(--line)">
+      <h2>The crowd <span class="count" id="agentCount"></span></h2>
+    </div>
+    <div class="scroll" id="agents"></div>
+  </div>
+
+  <div class="col pane" id="midPane" style="flex:0 0 34%">
+    <div class="tabs" id="midTabs"></div>
+    <div class="scroll" id="midBody"><div class="empty">Load a crowd run to begin.</div></div>
+  </div>
+
+  <div class="col" id="rightPane" style="flex:1 1 36%">
+    <div class="tabs" id="tabs"></div>
+    <div class="scroll" id="tabBody"></div>
+  </div>
+</div>
+
+<div class="overlay" id="browser" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <input id="searchInput" placeholder="filter by run id, build id, model…" spellcheck="false">
+      <label class="hint"><input type="checkbox" id="okOnly" checked style="min-width:auto"> healthy runs only</label>
+      <button id="closeBrowse">Close</button>
+    </div>
+    <div class="modal-body scroll" id="browseBody"></div>
+  </div>
+</div>
+
+<script type="module" src="/static/js/crowd.js"></script>
+</body>
+</html>

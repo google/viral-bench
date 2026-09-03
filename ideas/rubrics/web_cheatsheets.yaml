@@ -1,0 +1,431 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for web_cheatsheets (Cheatdeck). Never shown to the founder.
+#
+# The healthiest idea surveyed — 10 of 12 recent runs valid — and content
+# accuracy is genuinely good across builds, so it is a weak discriminator. The
+# real discriminators are the offline claim, whether search is truly fuzzy, and
+# whether the clipboard is actually written.
+rubric_version: 1
+idea_id: web_cheatsheets
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      A read-only reference tool: the user searches and copies, and authors
+      nothing. The brief never asks for persistence.
+
+tier1:
+  - id: S1
+    text: >-
+      Zero network calls: every request during load and use is same-origin, and
+      the page renders identically after going offline and hard-reloading.
+    points: 12
+    method: assert
+    note: >-
+      The brief's fifth core feature and the end of its success criterion. One
+      build fetches its entire stylesheet from a CDN — 60 occurrences of the
+      Tailwind production warning, every agent on both load and reload — while
+      rendering an "Offline Ready" badge. See A1.
+
+      Only the request half is asserted. The harness cannot drop the network, so
+      "renders identically after going offline" is approximated by a real reload
+      inside the item: a build whose stylesheet or renderer comes from a CDN
+      re-fetches it on that reload and the request log records it. Judged over
+      the whole session rather than this item's phase, and deliberately — the
+      fetch that matters happens at first page load, long before the grader
+      reaches S1, so a phase-only window would miss the only request there is.
+    setup: >-
+      Exercise the whole app before reporting: open a cheat sheet from the
+      index, type a query into the search box, and click a copy control. Then
+      reload the page and let it render again. Leave it on whatever it shows.
+    check:
+      name: network_origins
+  - id: S2
+    text: "The index covers all five topics named in the brief: shell, git, regex, CSS, SQL."
+    points: 6
+    method: assert
+    note: >-
+      One build substitutes Kubernetes/Python/JS; another ships no SQL sheet at
+      all.
+
+      Each topic is matched by its common aliases rather than an exact label, so
+      a "Bash" or "Terminal" sheet counts as the shell one and "PostgreSQL"
+      counts as SQL — the item is about coverage, not naming. Read from the
+      rendered index, which means a build hiding its sheet list behind an
+      unopened menu can fail here; the setup asks for the full list on screen
+      for exactly that reason.
+    setup: >-
+      Leave the app on its top-level index — the view listing the cheat sheets
+      it ships. If the list is behind a menu, a drawer or a collapsed section,
+      open it so every sheet name is on screen at once. Clear the search box if
+      anything is in it.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bshell\\b|\\bbash\\b|\\bzsh\\b|\\bterminal\\b|command[ -]line"
+        - "\\bgit\\b"
+        - "\\bregex\\b|regular expressions?"
+        - "css\\b"
+        - "sql\\b"
+  - id: S3
+    text: >-
+      Search filters as you type: a real query returns a strict subset whose
+      entries all match, and a nonsense query returns zero results with a
+      rendered empty state.
+    points: 8
+    method: assert
+    note: >-
+      Decided on the nonsense-query half, which carries both of the item's
+      claims at once: the entries have to be gone (the filter really ran) and an
+      empty state has to be rendered in their place (the app says so rather than
+      showing a blank panel). A build whose search does nothing keeps `git
+      commit` on screen and fails the `absent` half; a build that filters but
+      renders nothing at all fails the empty-state half.
+
+      `value_changes` over a before/after capture was rejected, and the reason
+      is worth recording because it is not obvious. The harness snapshot is
+      `USER_VISIBLE_JS`, which appends every `input.value` to the page text, so
+      typing a query into the search box changes the snapshot by itself. The
+      check would return yes for every build in the corpus, including one whose
+      search filters nothing — precisely the build this item exists to catch. It
+      would not be a weak check; it would be a check that awards 8 points
+      unconditionally.
+
+      The "strict subset whose entries all match" half is therefore not
+      asserted: deciding it needs a structural read of what an entry *is*, which
+      no primitive has. What is asserted is that filtering happens at all and
+      that zero results are rendered as such.
+    setup: >-
+      From the index, type the nonsense query `zzqqxvw` into the app's search
+      box and let the list update. Do not press Enter — the item is about
+      filtering as you type. Leave the app showing whatever the search produced.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bno\\s+(results?|match|matches|matching|entries|snippets?|commands?|cheat)|nothing\\s+(found|match)|\\b0\\s+(results?|matches|entries|snippets?)"
+      absent:
+        - "git\\s+commit|\\bchmod\\b|SELECT\\s+\\*"
+  - id: S4
+    text: >-
+      Search is genuinely fuzzy: a transposed or misspelt query still returns
+      the intended entry.
+    points: 6
+    method: assert
+    expect: "`gti comit` returns the `git commit` entry"
+    note: >-
+      This is what separates fuzzy search, which the brief asks for, from
+      substring matching.
+
+      Two halves, and they guard each other. `git commit` must be on screen, and
+      the empty state must not be — a substring matcher shows "No results found
+      for gti comit" and fails both. The `absent` guard on a SQL/CSS entry
+      catches the remaining loophole: a build that renders every entry all the
+      time and filters nothing would otherwise pass on the strength of an index
+      it never touched. Where a build ships no such entry the guard is a no-op,
+      so it can only under-fire, never fail an honest build.
+
+      8 of 104 surveyed builds ship no `git commit` entry at all and will fail
+      here for absence rather than for matching badly. Recorded rather than
+      worked around: the rubric's own `expect` names that entry.
+    setup: >-
+      From the index with the search box empty, type `gti comit` into it exactly
+      as written — the transposition and the missing `m` are the point — and let
+      the results settle. Do not correct the spelling and do not press Enter.
+    check:
+      name: text_matches
+      patterns:
+        - "git\\s+commit"
+      absent:
+        - "\\bno\\s+(results?|match|matches|matching|entries|snippets?|commands?|cheat)|nothing\\s+(found|match)"
+        - "SELECT\\s+\\*|flex-direction"
+  - id: S5
+    text: "Copy places the snippet's exact text on the clipboard."
+    points: 8
+    method: assert
+    expect: "navigator.clipboard.readText() === the snippet element's textContent"
+    note: >-
+      The only check that defeats a decorative toast, and no crowd agent can
+      perform it. Where agents clicked Copy, feedback fired ~100% of the time —
+      proving only that the toast fired.
+
+      The expected text is read off the page rather than hard-coded, which is
+      what `expect` asks for: the js takes the shortest leaf element whose
+      normalised text begins with `git commit`, which is the snippet element
+      itself rather than a card wrapping it and its description. Generic HTML
+      tags only, no ids or classes, so it survives forty different builds.
+
+      It degrades safely. If no such element is on screen — 8 of 104 builds ship
+      no `git commit` entry — the js returns the empty string, `clipboard_equals`
+      falls back to requiring a non-empty clipboard, and the item still separates
+      a real write from a toast. A leading `$` prompt sigil also drops it to that
+      fallback, deliberately: a build that strips the sigil when copying is doing
+      the right thing, and the sigil itself is F3's business, not this item's.
+
+      Seeding a sentinel first matters because the browser context is shared
+      across items: without it, a clipboard left populated by an earlier item
+      would let a build with a dead copy button pass.
+    setup: >-
+      First put a known value on the clipboard so a stale one cannot be mistaken
+      for a fresh write: `evaluate` with
+      `() => navigator.clipboard.writeText('CLEARBOARD7741')`. Then search for
+      `commit`, find the entry whose snippet is a `git commit` command, and click
+      that entry's copy control. Wait for its confirmation, and leave the entry
+      on screen — the check reads the snippet off the page.
+    check:
+      name: clipboard_equals
+      js: |-
+        () => {
+          const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+          const hits = Array.from(
+            document.querySelectorAll('code,pre,kbd,samp,span,div,td,li,p')
+          )
+            .map((e) => norm(e.textContent))
+            .filter((t) => /^git commit\b/.test(t) && t.length <= 80);
+          hits.sort((a, b) => a.length - b.length);
+          return hits[0] || '';
+        }
+
+tier2:
+  - id: F1
+    text: >-
+      Every entry has both a non-empty snippet and a distinct non-empty
+      description.
+    points: 6
+    method: assert
+    note: >-
+      NO CHECK — no primitive can decide this, and a wrong one here would be
+      worse than none. The claim is quantified over *entries*, and nothing in
+      the catalogue can see an entry: `dom_count` needs a selector, which is
+      build-specific by construction, and the DOM-agnostic reads
+      (`text_matches`, `text_number_*`) see one flat string in which the
+      boundary between one entry's description and the next entry's snippet is
+      invisible.
+
+      What is needed is the structural analogue of `controls_have_names` —
+      something like `entries_are_paired(min_entries, max_incomplete)` that
+      surveys repeated sibling containers, and for each one asserts a code-ish
+      child with text and a sibling text node that is non-empty and not a copy
+      of the snippet. Until it exists the item falls back to the model, which
+      can at least read a sheet and count the bare ones.
+    setup: >-
+      Open one cheat sheet — git or shell — so a full page of entries is
+      rendered. Read down the list and judge whether every entry carries both a
+      snippet and a description, and whether the description says something the
+      snippet does not merely repeat. Cite the tool call showing the list.
+  - id: F2
+    text: >-
+      Opening a sheet from the index lists its entries, and the advertised entry
+      count equals the number actually rendered.
+    points: 6
+    method: assert
+    note: >-
+      Only the first half is decided. Three distinct git commands having to
+      appear after the sheet is opened is a real assertion that entries were
+      listed — a sheet that opens to an empty pane, or to its own title alone,
+      fails it — and it is read from rendered text, so it holds across builds
+      that share no markup.
+
+      The count half is not asserted. Deciding it means comparing a number the
+      app prints against the number of entry elements on screen, and counting
+      those needs a selector; every candidate (`.entry`, `li`, `tr`, `article`)
+      grades one build and returns nothing for the rest. What is needed is
+      `advertised_count_matches(pattern)` — pull the claimed count from the
+      rendered text, count repeated entry-shaped siblings structurally, compare
+      in Python. A build that advertises 30 entries and renders 12 passes here
+      today.
+    setup: >-
+      Start from the index and open the git cheat sheet by clicking it. Let the
+      sheet render fully and leave its entries on screen. Do not use the search
+      box for this one — the item is about opening a sheet from the index.
+    check:
+      name: text_matches
+      patterns:
+        - "git\\s+commit"
+        - "git\\s+(status|log|diff|show)"
+        - "git\\s+(push|pull|clone|checkout|branch|merge|fetch)"
+  - id: F3
+    text: >-
+      Snippets are copy-pasteable verbatim: no leading prompt sigils, no
+      collapsed whitespace, no missing separators.
+    points: 6
+    method: assert
+    note: >-
+      One build renders `git add.` — missing the space — which is not
+      copy-pasteable, and copy-pasteable is the entire product promise.
+
+      Two of the three failure modes are asserted, both as `absent` patterns on
+      the rendered text. A line beginning `$ ` followed by a command is the
+      prompt sigil; `\$\s+` rather than a bare `$` so that `echo $HOME` and
+      `$PATH` do not fire it, and `#` and `%` are left out because a comment
+      line and a percentage are ordinary snippet content.
+      A line that is exactly a command word followed by a full stop is the
+      missing separator, anchored to a whole line so that a description ending
+      "…stage everything with git add." does not fire it.
+
+      "No collapsed whitespace" is not asserted. Rendered text cannot show it:
+      a snippet whose two spaces became one reads as correct, and the only way
+      to see it would be to compare the served source against the DOM.
+    setup: >-
+      Open the git cheat sheet, then the shell one, so as many snippets as
+      possible have been rendered. Leave the shell sheet on screen with its
+      entries listed — it is where prompt sigils appear if they appear at all.
+    check:
+      name: text_matches
+      absent:
+        - "(?m)^\\s*\\$\\s+\\S"
+        - "(?m)^\\s*(git|npm|yarn|docker|kubectl|cd|rm|ls|cp|mv|grep|chmod|chown|tar)\\s+[a-z-]+\\.\\s*$"
+  - id: F4
+    text: "Content is correct on a canonical sample of git and shell entries."
+    points: 4
+    method: assert
+    expect: "`git reset --soft HEAD~1` described as keeping changes staged; `--hard` described as discarding them"
+    note: >-
+      Each pattern is conditional: it is satisfied either by the entry being
+      absent from the page entirely, or by its description carrying the right
+      sense within the entry. That is deliberate. 26 of 104 surveyed builds ship
+      no `git reset --hard` entry, and a cheat sheet that does not mention a
+      command has not described it wrongly — this item is for catching content
+      that is wrong, not content that is missing, and 4 points should not turn
+      on curation.
+
+      The window after each snippet stops at the next `reset --`, which is what
+      keeps the two entries from covering for each other: without it a build
+      that swaps the two descriptions passes, because `--soft` finds the word
+      "keeping" sitting in `--hard`'s line a few characters later.
+
+      Only the snippet-then-description order is matched. A build that prints
+      the description first is not credited, which is a real limitation of
+      reading proximity out of flat text.
+    setup: >-
+      Search for `reset`, or open the git sheet and scroll to the reset entries,
+      so that `git reset --soft` and `git reset --hard` are both on screen with
+      their descriptions. Leave them there.
+    check:
+      name: text_matches
+      patterns:
+        - "^(?![\\s\\S]*reset\\s+--soft)|reset\\s+--soft(?:(?!reset\\s+--)[\\s\\S]){0,160}?(keep|kept|stag|preserv|retain|intact|index)"
+        - "^(?![\\s\\S]*reset\\s+--hard)|reset\\s+--hard(?:(?!reset\\s+--)[\\s\\S]){0,160}?(discard|destroy|delete|remov|lose|lost|permanent|eras|wipe|throw|blow)"
+  - id: F5
+    text: "Zero uncaught page errors."
+    points: 3
+    method: assert
+    note: >-
+      The console buffer is drained by every `look`, so this check sees only
+      what the page threw since the grader last looked. The setup asks for a
+      reload followed by as few looks as possible for that reason; an error
+      thrown at first load and already reported to the model in an earlier item
+      cannot be counted twice. The Tailwind CDN production warning is ignored by
+      the primitive itself — 687 occurrences corpus-wide discriminate nothing.
+    setup: >-
+      Reload the page so it starts fresh inside this item, then exercise it
+      using targets you already know from the earlier items: type a query into
+      the search box, open a sheet, click a copy control. Keep `look` calls to a
+      minimum — each one drains the error log the harness reads.
+    check:
+      name: no_console_errors
+
+penalties:
+  - id: A1
+    text: >-
+      An offline or no-network-calls badge is displayed while the app fetches
+      third-party assets.
+    points: -10
+    method: assert
+    note: >-
+      The highest-value check for this idea: fully deterministic, and no agent
+      noticed it. Self-certification must cost more than silence, so this fires
+      in addition to the S1 failure.
+
+      Fires on the third-party fetch alone; the badge half is not separately
+      asserted, and the cost of that is small — shipping bundled and working
+      offline is the brief's fifth core feature, so essentially every build in
+      the corpus makes the claim somewhere in its copy. `third_party_requests`
+      rather than `network_origins` because a penalty must return yes when the
+      bad thing is present, and it reads the whole session's request log, so the
+      CDN fetch at first page load counts even though the grader arrives here
+      last.
+    setup: >-
+      Nothing new to reach: the request log covers the whole session, and S1
+      already loaded, reloaded and exercised the app. Before reporting, note
+      whether the app displays an offline, "no network", "works offline" or
+      "100% local" badge anywhere, and leave it on screen if it does.
+    check:
+      name: third_party_requests
+  - id: A2
+    text: "A page error prevents the sheets from rendering."
+    points: -8
+    method: assert
+    note: >-
+      `Unexpected identifier 'pattern'` x60 — an unescaped literal inside the
+      bundled regex sheet — left the entire page reading just `Cheatdeck`, and
+      the validity gate passed it.
+
+      Fires when no cheat-sheet content of any kind is in the rendered body:
+      not one git command, not one of the stock shell commands, not a SQL
+      `SELECT`. Read from `body.innerText` rather than the user-visible text so
+      that a query still sitting in the search box cannot mask an empty page.
+
+      Two limitations. The error itself is not part of the condition — a build
+      that renders nothing for some other reason fires this too, which is
+      over-firing on a fault of the same severity rather than a false accusation.
+      And it under-fires by design: any one of those tokens appearing anywhere
+      clears it, so a build that renders its index but no entries is not caught
+      here.
+    setup: >-
+      Load the app at its home view and try to open the git cheat sheet from the
+      index. If the index does not render, or clicking does nothing, leave the
+      app on whatever it shows — do not reload repeatedly and do not navigate
+      away to a settings or help screen.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      absent:
+        - "git\\s+(commit|status|add|log|push|clone|checkout|diff|branch)|\\bchmod\\b|\\bgrep\\b|\\bSELECT\\b"
+  - id: A3
+    text: "A copy control shows confirmation feedback without writing to the clipboard."
+    points: -6
+    method: assert
+    note: >-
+      Read the clipboard through `text_matches`'s `js` hook rather than
+      `clipboard_equals`, because the polarity has to be inverted:
+      `clipboard_equals` returns *no* on an empty clipboard, and a penalty has to
+      return yes when the bad thing is present. The pattern matches a clipboard
+      that is empty, or that still holds the sentinel the setup seeded — either
+      way, the copy control wrote nothing.
+
+      The sentinel is what makes this honest across items. The browser context is
+      shared, so S5's successful copy would otherwise still be sitting on the
+      clipboard and this penalty would never fire. If the grader skips seeding
+      it, the check degrades to "the clipboard is empty", which is right in the
+      common case and under-fires rather than over-fires.
+
+      The feedback half is not asserted — no primitive can bind "this toast
+      belongs to that button". The setup carries it instead, and the corpus makes
+      the omission cheap: where agents clicked Copy, feedback fired ~100% of the
+      time. A build with no feedback and no write fires this too, which is a
+      worse fault, not a false one.
+    setup: >-
+      Seed the clipboard with a sentinel first: `evaluate` with
+      `() => navigator.clipboard.writeText('CLEARBOARD7741')`. Then click a
+      snippet's copy control and wait for whatever confirmation the app shows —
+      a toast, a tick, a label change. Do not press Ctrl+C and do not select any
+      text by hand; the only thing that may touch the clipboard is the app.
+    check:
+      name: text_matches
+      js: "() => navigator.clipboard.readText()"
+      patterns:
+        - "^\\s*(CLEARBOARD7741)?\\s*$"

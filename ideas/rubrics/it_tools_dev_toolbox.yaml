@@ -1,0 +1,359 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for it_tools_dev_toolbox (DevToolbox). Never shown to the founder.
+#
+# The idea where the rubric adds the most. Measured: across 660 recent agent
+# traces, NOT ONE agent verified a single computed value. Agents type something,
+# see something appear, and rate 8. A wrong SHA-256, a JWT decoder that silently
+# truncates, a UUID that is not v4 — none of it would cost a single delight point.
+#
+# ON READING A CONVERTER'S OUTPUT. The default text source is
+# `document.body.innerText`, which does NOT report a `<textarea>`'s value — and
+# a dev toolbox puts its output in a textarea with a copy button as often as in
+# a `<pre>`. Every item that reads a computed result therefore passes the shared
+# `&page_text` harvester below: body text plus the value of every VISIBLE input
+# and textarea. It names tag names only, no ids or classes, so it survives the
+# forty builds equally. Reusing one anchor rather than pasting eight copies
+# keeps them from drifting apart.
+rubric_version: 1
+idea_id: it_tools_dev_toolbox
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      A catalogue of single-shot converters. The brief asks for search, run,
+      correct output; it never asks for durable work. Some builds persist via
+      URL hash and the crowd credits it, but that is a crowd preference.
+
+tier1:
+  - id: S1
+    text: >-
+      Search filters the catalogue: a query matches only tools whose name or
+      tags contain it, and a no-match query shows a non-empty empty state rather
+      than a blank grid.
+    points: 8
+    method: assert
+    setup: >-
+      Start on the catalogue's home view. Type the query `zqxwvn` into the
+      search box and wait for the list to settle. Leave that query in the box
+      and leave whatever the app shows in place of results on screen — do not
+      clear it and do not navigate away.
+    note: >-
+      Only the empty-state half is decided here, and deliberately so. The "only
+      matching tools" half wants an absent-list of the tool names that should
+      have been filtered out, but many builds keep a full, unfiltered tool list
+      in a persistent sidebar beside the filtered grid, so an absent-list would
+      false-fail them for markup they are entitled to ship. The conjunction
+      still bites: a build that does not filter at all shows twenty cards and no
+      empty state and fails, and a build that filters to a blank grid fails too.
+      Only a build that filters AND says so passes.
+    check:
+      name: text_matches
+      patterns:
+        - "(?i)no (?:tools?|results?|matches|matching)|nothing (?:found|match)|no match|0 (?:tools?|results?)|couldn.t find|could not find|try (?:a )?different"
+  - id: S2
+    text: >-
+      JSON formatter correctness: a known document formats to exact indented
+      output and minifies back byte-identically.
+    points: 8
+    method: assert
+    expect: 'input {"b":1,"a":[1,2,{"c":null}]} indent 2 -> exact 2-space form; minify -> byte-identical to input'
+    setup: >-
+      Open the JSON formatter/beautifier. Clear its input and enter exactly
+      {"b":1,"a":[1,2,{"c":null}]} — one line, no trailing whitespace. If the
+      tool offers an indent size, set it to 2 spaces. Run format/beautify, wait
+      for the output to appear, and leave both input and output on screen.
+    note: >-
+      The two patterns pin the indent width and the nesting depth: a top-level
+      key preceded by a newline and exactly two spaces cannot exist under
+      4-space or tab indentation, and `"c": null` at six spaces can only be
+      reached through the array-of-object. It also catches a formatter that
+      drops nulls. Key order is deliberately not required — a build that sorts
+      keys alphabetically is still correctly formatted, and failing it would
+      measure a preference.
+
+      The minify half is not decided. One check reads one page state, and
+      minified output is a second state; asserting it would need a
+      `captures_equal`-style primitive comparing a later snapshot back to the
+      grader's own input string.
+    check:
+      name: text_matches
+      js: &page_text |-
+        () => {
+          const out = [document.body ? document.body.innerText : ''];
+          document.querySelectorAll('input,textarea').forEach((e) => {
+            const r = e.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0 && e.value) out.push(e.value);
+          });
+          return out.join('\n');
+        }
+      patterns:
+        - "\\n {2}\"b\": ?1"
+        - "\\n {6}\"c\": ?null"
+  - id: S3
+    text: >-
+      Base64 correctness including UTF-8 safety: ASCII round-trips, and
+      non-Latin-1 input encodes correctly rather than throwing or mangling.
+    points: 8
+    method: assert
+    expect: '"hello" -> aGVsbG8=; "héllo" -> aMOpbGxv (NOT aOlsbG8=); "유성민 🚀" -> 7Jyg7ISx66+8IPCfmoA=; round-trip identical'
+    note: >-
+      A confirmed live bug: one build's decoder used raw atob and choked on
+      CJK/UTF-8. An i18n persona caught it and five others echoed it — the only
+      correctness bug the crowd has ever found in this idea.
+
+      The check asserts the hardest of the three cases only, which is the whole
+      point of the item: `btoa` on that string throws InvalidCharacterError, so
+      a build taking the naive path produces an empty box or an exception rather
+      than this string. There is exactly one right answer and the grader holds
+      it. The ASCII case and the decode leg are second and third page states and
+      are not asserted.
+    setup: >-
+      Open the Base64 tool in encode mode. Clear the input and enter exactly
+      this text, including the space and the emoji: 유성민 🚀
+      Wait for the encoded output to appear and leave it on screen.
+    check:
+      name: text_matches
+      js: *page_text
+      patterns:
+        - "7Jyg7ISx66\\+8IPCfmoA"
+  - id: S4
+    text: "Hash correctness, exact, for known inputs."
+    points: 8
+    method: assert
+    expect: 'sha256("abc")=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad; sha256("")=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; md5("abc")=900150983cd24fb0d6963f7d28e17f72; md5("")=d41d8cd98f00b204e9800998ecf8427e'
+    setup: >-
+      Open the hash tool. Enter exactly `abc` — three characters, no trailing
+      space or newline. If the tool has an algorithm selector, choose SHA-256.
+      Wait for the digest and leave it on screen.
+    note: >-
+      Only the SHA-256("abc") case is asserted. Builds split between showing
+      every digest at once and offering a selector, so also requiring the MD5
+      value in the same state would fail the selector builds for their UI rather
+      than for their arithmetic. The empty-string cases are a second state.
+      Case-insensitive: an uppercase digest is the same digest.
+    check:
+      name: text_matches
+      js: *page_text
+      patterns:
+        - "(?i)ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  - id: S5
+    text: >-
+      JWT decoder shows the header and payload claims of the canonical token,
+      and states that the signature is not verified.
+    points: 8
+    method: assert
+    expect: 'header {"alg":"HS256","typ":"JWT"}; payload sub=1234567890, name=John Doe, iat=1516239022; a 2-segment string yields a specific error, not blank output'
+    setup: >-
+      Open the JWT decoder and paste this token as the input, exactly and with
+      no line breaks:
+      eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+      Wait for it to decode and leave the header and payload panes on screen.
+    note: >-
+      None of these strings appear in the token itself — it is base64 — so a
+      match can only come from a decode that actually ran. `iat` accepts either
+      the raw epoch or a humanised date containing 2018, because rendering the
+      timestamp for a human is a feature, not a truncation.
+
+      The "states the signature is not verified" half is NOT decided: the
+      wording is unbounded ("signature not verified", "unverified", a red
+      padlock, a "verify" input that is simply left empty) and no pattern
+      separates a build that says so from one that says nothing without
+      false-failing honest builds. A2 and the model still see it.
+    check:
+      name: text_matches
+      js: *page_text
+      patterns:
+        - "HS256"
+        - "1234567890"
+        - "John Doe"
+        - "1516239022|2018"
+
+tier2:
+  - id: F1
+    text: >-
+      The catalogue is grouped by category and each category's displayed count
+      equals the number of cards it actually contains.
+    points: 5
+    method: assert
+    note: >-
+      NO CHECK — the claim is an equality between a rendered number and a count
+      of sibling elements, and nothing in the catalogue crosses that gap
+      DOM-agnostically. `text_pattern_count` would only confirm that some counts
+      are displayed, which passes precisely the build the item exists to catch:
+      one whose badge says 6 over a group of 4. Needs a primitive along the
+      lines of `group_counts_match(heading_pattern, card_selector)` that, per
+      heading, parses the badge and counts the cards under it — or a corpus fact
+      recording a card container convention shared across builds.
+  - id: F2
+    text: >-
+      Generators are correct: a UUID matches the v4 pattern and 100 generations
+      are 100 distinct values; a ULID matches its charset and two generated in
+      order sort ascending as strings.
+    points: 6
+    method: assert
+    expect: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    setup: >-
+      Open the UUID generator and click its generate button once. If it offers a
+      quantity, leave it at the default. Wait for the value and leave it on
+      screen.
+    note: >-
+      The version and variant nibbles are the whole assertion: `4` in position
+      13 and one of 8/9/a/b in position 17. A v1 UUID, a nil UUID and a
+      `Math.random()` hex string all fail it, and those are the ways this gets
+      built wrong.
+
+      The 100-distinct half and the ULID half are NOT decided. Distinctness
+      needs repeated generation with the values accumulating on screen, which
+      most builds do not do (the new value replaces the old), so
+      `text_pattern_distinct` would false-fail correct builds; the sheet does
+      not record how many builds offer a bulk/quantity control, which is the
+      fact that would settle it. RESIDUAL on the half that is decided: a build
+      printing an example v4 UUID in its own description text would pass without
+      generating anything.
+    check:
+      name: text_matches
+      js: *page_text
+      patterns:
+        - "(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b"
+  - id: F3
+    text: "URL encoding is encodeURIComponent semantics."
+    points: 5
+    method: assert
+    expect: '"a b&c=d" -> a%20b%26c%3Dd (a "+" for space is a fail)'
+    setup: >-
+      Open the URL encode tool in encode mode. Clear the input and enter exactly
+      `a b&c=d` — with the single space, and no quotes. Wait for the encoded
+      output and leave it on screen.
+    note: >-
+      The pattern is the exact encodeURIComponent output, so the `+`-for-space
+      form (`a+b%26c%3Dd`, which is `application/x-www-form-urlencoded`, not
+      what the brief names) simply does not match and the item fails — no
+      separate absent-list is needed, and adding one would have false-failed the
+      builds that legitimately show both variants side by side. Hex case is
+      accepted either way: `%3d` and `%3D` are the same octet, and failing one
+      would measure formatting.
+    check:
+      name: text_matches
+      js: *page_text
+      patterns:
+        - "(?i)a%20b%26c%3Dd"
+  - id: F4
+    text: >-
+      Each tool is reachable by a stable URL fragment, and reloading that
+      fragment lands on the same tool.
+    points: 5
+    method: assert
+    setup: >-
+      Start on the catalogue's home view and open one specific tool from it —
+      the Base64 encoder. Check that the browser URL gained something naming
+      that tool (a `#...` fragment or a path segment). Leave every input empty,
+      then call capture(label="before"). Now hard-reload the page, wait for it
+      to finish loading, and WITHOUT clicking or typing anything call
+      capture(label="after").
+    note: >-
+      Polarity is deliberate: `should_change: false` passes when the page after
+      the reload reads the same as the page before it, which is what "landing on
+      the same tool" means. A build with no routing lands back on the catalogue
+      index, whose text is nothing like the tool's, and fails.
+
+      The fragment's existence is confirmed by the grader in setup but is not
+      separately asserted — `value_matches` on `location.hash` would pass a
+      build that writes a hash purely as a scroll anchor and restores nothing,
+      which is the failure this item is about. RESIDUAL: a build whose text is
+      nondeterministic across a reload (a rotating tip, a clock, a "recently
+      used" list) false-fails; keeping the inputs empty removes the common case.
+    check:
+      name: value_changes
+      before: before
+      after: after
+      should_change: false
+  - id: F5
+    text: >-
+      Zero non-localhost requests during load and during one operation of every
+      tool in the catalogue.
+    points: 4
+    method: assert
+    setup: >-
+      Load the app fresh, then run one real operation in each of the core tools,
+      returning to the catalogue between them: format some JSON, encode a
+      string as base64, URL-encode a string, hash a string, generate a UUID, and
+      decode a JWT. Do not open any link that leaves the app.
+    note: >-
+      "Every tool in the catalogue" is exercised as the six core tools the brief
+      names. A stub in the long tail that phones home only when opened would be
+      missed — A2 owns the stubs — but load-time CDN fetches, which is how this
+      actually fails, are caught whatever the grader clicks.
+    check:
+      name: network_origins
+
+penalties:
+  - id: A1
+    text: >-
+      The page displays a self-certified privacy claim while the app fetches
+      third-party assets.
+    points: -8
+    method: assert
+    note: >-
+      Builds render `0 network requests`, `0 KB Transferred`, `100% Private`,
+      `📋 Get my privacy receipt` — and agents quote the numerals back as proof
+      ("verified by both the built-in monitor and network tab") while 60 real
+      `subresource-failed: cdn.tailwindcss.com (csp)` events fired in the same
+      runs. The app grades its own privacy and the crowd believes it.
+
+      Only the network half is machine-decided, and it has to be: a blocked
+      request never appears in `performance.getEntriesByType('resource')`, so
+      the in-page JS that would let one check AND both halves together is blind
+      to exactly the CSP-blocked fetches the note describes. The harness sees
+      them. The claim half is therefore assumed rather than re-observed — it is
+      in the brief itself ("no input leaves the browser"), so a build fetching
+      from a CDN is contradicting its own spec whether or not it prints a badge.
+      This fires as the inverse of F5, off the same network log.
+    setup: "Same cycle as F5: load the app and run one operation in each core tool."
+    check:
+      name: third_party_requests
+  - id: A2
+    text: "A catalogue entry opens a tool that is a stub or produces no output."
+    points: -5
+    max_total: -10
+    method: agent
+    note: "20 tools listed, roughly 3 ever exercised by the crowd."
+  - id: A3
+    text: "Invalid input produces silent empty output rather than a specific error."
+    points: -4
+    method: assert
+    setup: >-
+      Open the JSON formatter/validator. Clear its input and enter the
+      deliberately broken document {"a": 1, — with the trailing comma and no
+      closing brace. Trigger format/validate, wait a moment for the app to
+      respond, and leave the screen exactly as it is, whether or not anything
+      appeared.
+    note: >-
+      Penalty polarity: `text_matches` with only an `absent:` list passes — the
+      penalty FIRES — when none of these words is anywhere on the page, which is
+      what "silent" means. A build that says `Invalid JSON`, `Unexpected token`
+      or `Unterminated string` does not fire.
+
+      The word list is intentionally confined to words that only occur in error
+      copy. Generic ones a UI ships as button labels — "parse", "failed",
+      "cannot" — were left out: a JSON tool with a "Parse" button would have
+      suppressed the penalty on every build. The remaining bias is towards NOT
+      firing, which is the right direction for a penalty.
+    check:
+      name: text_matches
+      js: *page_text
+      absent:
+        - "(?i)invalid|error|unexpected|malformed|syntax|unterminated|not valid|expected|line \\d+|position \\d+|column \\d+"

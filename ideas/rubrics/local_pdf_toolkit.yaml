@@ -1,0 +1,432 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for local_pdf_toolkit (PDF Workshop). Never shown to the founder.
+#
+# The highest-variance idea in the corpus (delight 1.37 to 7.87) and the least
+# observable brief. The crowd has ONE 1-page 637-byte PDF fixture, cannot drag,
+# and cannot inspect a downloaded file — so merge, reorder, split and every
+# export are structurally untestable by it. Roughly 25-30% of this brief is
+# reachable by a crowd agent; the grader must carry the rest.
+#
+# TWO MEASURED CONSTRAINTS SHAPE EVERY CHECK BELOW. Both were verified against
+# the real fixture and a real vendored pdf-lib, not assumed.
+#
+# 1. `pdf_props(pages=N)` IS UNUSABLE ON THIS IDEA. It counts pages by regexing
+#    `/Type /Page` out of the raw bytes, and pdf-lib's `save()` defaults to
+#    `useObjectStreams: true`, which Flate-compresses every page dictionary into
+#    an /ObjStm. Measured: merging two copies of document.pdf with pdf-lib and
+#    saving with defaults yields a correct 2-page 951-byte PDF in which the
+#    regex counts ZERO pages — so `pages: 2` would fail every honest build. Of
+#    60 builds surveyed, 59 either set `useObjectStreams: true` explicitly or
+#    take the default; exactly one mentions `false` anywhere. `/Rotate` and
+#    `/MediaBox` disappear the same way, which is why S4 has no check at all.
+#    What DOES survive is the content stream: `contains:` on the fixture's own
+#    sentence works on merge, rotate, delete, extract and compress output, and
+#    is the strongest artefact-level assertion available here.
+#
+# 2. ONE PDF FIXTURE EXISTS. document.pdf is one page, 637 bytes, MediaBox
+#    [0 0 612 792], and its only text is "ViralBench sample document. The quick
+#    brown fox jumps over it." Two distinct PDFs cannot be merged and page
+#    ORDER cannot be observed, because every page the grader can produce carries
+#    identical text. Items resting on those facts say so in their own note.
+rubric_version: 1
+idea_id: local_pdf_toolkit
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief never asks for persistence, and most builds correctly do not
+      claim it. Do not penalise silence here. A "Saved" indicator that lies is
+      still caught by P3.
+
+tier1:
+  - id: S1
+    text: >-
+      Attaching a PDF loads it: the page-count indicator is correct, a thumbnail
+      appears, and no processing indicator remains after 10 seconds.
+    points: 7
+    method: assert
+    note: >-
+      Two live failure modes: a build still reading `Loaded PDFs: 0` after a
+      successful attach, and one that hangs on `Processing...` forever with zero
+      error logging. The check encodes both directly — the absent patterns are
+      those two strings' generalised forms.
+
+      PARTIAL: the thumbnail half is not asserted. Only one primitive decides an
+      item, and between "the count is right" and "an image exists" the count is
+      the discriminating half — it is the one with a recorded failure mode, and
+      `dom_count` on `img,canvas` would pass on any decorative logo.
+    setup: >-
+      Attach the fixture `document.pdf` through the app's file input. Wait at
+      least 10 seconds after it appears to accept the file, so any processing
+      indicator has had time to clear. Leave the loaded state on screen; do not
+      start any conversion.
+    check:
+      name: text_matches
+      patterns:
+        - "document\\.pdf"
+        - "\\b1\\s*pages?\\b|pages?\\b\\D{0,12}\\b1\\b|\\b1\\s*/\\s*1\\b"
+      absent:
+        - "\\b0\\s*pages?\\b|pages?\\s*[:=]\\s*0\\b|loaded pdfs?\\s*[:=]?\\s*0"
+        - "processing\\s*(\\.\\.\\.|…)|loading\\s*(\\.\\.\\.|…)|please wait"
+  - id: S2
+    text: >-
+      Merging two PDFs produces a valid PDF whose page count is the sum and
+      whose extracted text is in the correct order.
+    points: 12
+    method: assert
+    expect: 'magic %PDF-; pypdf page count 3; text order ["Page A","Page B1","Page B2"]'
+    note: >-
+      LIMITATION, recorded rather than hidden. The `expect` above describes a
+      three-page merge of two distinct documents; neither half of it is
+      reachable with the fixtures that exist, so what is actually asserted is
+      weaker than what is written.
+
+      (a) There is one PDF fixture, so the merge is document.pdf with a second
+      copy of itself. Both inputs carry the same sentence, so "text order" is
+      unobservable in principle — not merely unimplemented.
+      (b) The page count is not asserted either, and deliberately. `pdf_props`
+      counts `/Type /Page` in the raw bytes; pdf-lib's default object-stream
+      save hides those dictionaries, and a correct 2-page merge measures as
+      zero. `pages: 2` would fail nearly every honest build, which is worse than
+      not asking.
+
+      What remains is still the strongest artefact assertion available and is
+      not weak: the downloaded bytes must be a real, untruncated PDF that still
+      contains the user's own uploaded text. That fails an export button
+      producing nothing (the corpus's most common export failure), a corrupt
+      writer, a canned demo file, and any merge that rasterises the page and
+      destroys its text. It passes a build that merely echoes one input back —
+      the one hole, and it needs a page count to close.
+    setup: >-
+      Reload the app so nothing is loaded. Attach `document.pdf`, then attach
+      `document.pdf` a second time so two documents are queued for merging (use
+      whatever the app calls adding another file). Merge them, wait for it to
+      finish, then click the control that writes the merged file so a download
+      actually fires.
+    check:
+      name: pdf_props
+      contains: "ViralBench sample document"
+  - id: S3
+    text: "Reordering pages changes the extracted text order correspondingly."
+    points: 7
+    method: assert
+    expect: 'move page 3 to position 1 -> ["Page B2","Page A","Page B1"]'
+    note: >-
+      Every build advertises drag-to-reorder; no crowd agent has ever done it,
+      because the harness has no drag verb. Drive the programmatic control.
+
+      LIMITATION: extracted text order cannot be checked at all here. With one
+      fixture every page the grader can produce carries the identical sentence,
+      so no permutation of them is distinguishable from any other — this is a
+      fixture gap, not a primitive gap. What is asserted instead is the
+      necessary precondition: operating the reorder control must visibly change
+      the page view. That fails the recorded failure mode (a reorder affordance
+      that is decorative) and passes a build whose reordering is real but
+      wrong. Both snapshots are taken by the harness, so the model states no
+      value it is judged on.
+    setup: >-
+      Attach `document.pdf` and then attach a second copy of it, so the app's
+      page view holds at least two pages. Wait for both to render, then call
+      capture(label="before_reorder"). Now move the LAST page to the first
+      position using the app's own reorder controls — an up/down button, a
+      context menu, or a position field. Do not attempt to drag. Wait for the
+      view to update, then call capture(label="after_reorder").
+    check:
+      name: value_changes
+      before: before_reorder
+      after: after_reorder
+      should_change: true
+  - id: S4
+    text: "Rotating a page by 90 degrees sets /Rotate on that page and leaves the MediaBox unchanged."
+    points: 7
+    method: assert
+    note: >-
+      NO CHECK, deliberately — this item needs a primitive that does not exist,
+      and a wrong check here would be worse than falling back to the model.
+
+      Measured: rotating document.pdf with pdf-lib and saving with defaults
+      produces a correct PDF in which the strings `/Rotate`, `/Rotate 90` and
+      `/MediaBox` are all absent from the raw bytes, because the page dictionary
+      is Flate-compressed inside an /ObjStm. `pdf_props(contains: "/Rotate 90")`
+      would therefore fail essentially every honest build, and
+      `excludes: "792 612"` — the obvious way to catch a build that swaps the
+      box instead of setting /Rotate — cannot see the box either. Saving with
+      `useObjectStreams: false` does expose all three, but exactly one of 60
+      surveyed builds mentions that flag.
+
+      The weaker fallbacks were rejected on alignment, not on difficulty:
+      `pdf_props(contains: "ViralBench sample document")` after a rotate proves
+      only that the export path works, so it would award 7 points to a build
+      whose rotate control does nothing. See the report for the primitive this
+      needs.
+  - id: S5
+    text: "Deleting a page yields the correct page count and extracted text."
+    points: 7
+    method: assert
+    note: >-
+      LIMITATION: neither half of the item's claim is checkable against the
+      produced file. The page count is hidden by the object-stream problem
+      described at the top of this file, and the text is identical on every page
+      the grader can produce, so "the right page was removed" has no observable
+      signature.
+
+      What is asserted is that the delete control actually mutates the page
+      view. `text_matches` on a post-delete count was rejected: it depends on the
+      app accepting a second copy of the fixture to reach two pages, and
+      false-PASSES on a dead delete button whenever it does not — the wrong
+      direction to be wrong in. A capture pair is robust to both the 2->1 and
+      1->0 cases and fails a decorative control either way.
+    setup: >-
+      Attach `document.pdf`, and add a second copy of it if the app allows more
+      than one, so the page view shows as many pages as you can get it to show.
+      Wait for the view to settle, then call capture(label="before_delete").
+      Delete ONE page using the app's own delete/remove control for that page.
+      Wait for the view to update, then call capture(label="after_delete").
+    check:
+      name: value_changes
+      before: before_delete
+      after: after_delete
+      should_change: true
+
+tier2:
+  - id: F1
+    text: "Extracting a subset of pages produces a PDF containing exactly those pages."
+    points: 6
+    method: assert
+    note: >-
+      "Exactly those pages" is not asserted, and cannot be: the page count is
+      unreadable from an object-stream save, and with one fixture every
+      candidate page carries the same text, so any subset looks like any other.
+      What is asserted is that extraction wrote a real, untruncated PDF still
+      carrying the user's own text — which fails the empty-export and
+      canned-output cases the corpus actually exhibits.
+    setup: >-
+      Reload the app. Attach `document.pdf`, then attach a second copy so the
+      app holds two pages. Use the app's extract or split feature to take only
+      the FIRST page, then click the control that writes the file so a download
+      fires.
+    check:
+      name: pdf_props
+      contains: "ViralBench sample document"
+  - id: F2
+    text: >-
+      Image-to-PDF: a PNG converts to a valid 1-page PDF whose aspect ratio
+      matches the source, and a second valid PNG is also accepted.
+    points: 6
+    method: assert
+    note: >-
+      A live bug: one build "rejects valid PNGs in the converter" — the only
+      images the crowd can supply.
+
+      The check inspects the download produced from the SECOND PNG, which is
+      what makes the "a second valid PNG is also accepted" clause real: a
+      converter that rejects screenshot.png fires no download and fails here.
+      The page count and aspect-ratio clauses are not asserted — a pdf-lib
+      image-to-PDF save exposes neither `/Type /Page` nor `/MediaBox` in its raw
+      bytes. `min_size` stands in for "the image is really in there": a PDF
+      embedding a 320x240 or 908-byte PNG cannot be a few hundred bytes.
+    setup: >-
+      Reload the app and open its image-to-PDF converter. Convert `photo.png`
+      first and let it finish. Then convert `screenshot.png` and click the
+      control that writes THAT result, so the last download is the one produced
+      from the second PNG.
+    check:
+      name: download
+      magic: pdf
+      min_size: 500
+  - id: F3
+    text: >-
+      PDF-to-image export produces bytes with valid PNG or JPEG magic, or a ZIP
+      containing exactly one entry per page.
+    points: 5
+    method: assert
+    note: >-
+      The item is a three-way disjunction and no primitive can express one:
+      `download` takes a single `magic`, and nothing inspects ZIP entries. The
+      setup therefore steers to PNG, which the item explicitly allows, and
+      `image_props` is used rather than `download(magic: png)` because it also
+      rejects a 1x1 or degenerate render — an export that fires a download
+      carrying no picture.
+
+      UNDER-CREDITED: a build that only ever emits JPEG, or that always zips
+      even for a single page, fails this despite satisfying the item as written.
+      The report names what would fix it.
+    setup: >-
+      Reload the app. Attach `document.pdf` and wait for it to load, then use
+      the app's PDF-to-image / export-as-image feature. If it offers a choice of
+      output format, choose PNG. Click the control that actually writes the file
+      so a download fires.
+    check:
+      name: image_props
+  - id: F4
+    text: >-
+      Compression returns a valid PDF with page count and text preserved, output
+      no larger than input, and any claimed percentage matching the real ratio.
+    points: 5
+    method: assert
+    note: >-
+      Byte-identical output while claiming a reduction is a fail.
+
+      Of the four clauses only "valid PDF with text preserved" is checkable, and
+      it is the sharp one here: the common cheap "compression" is to rasterise
+      each page and re-embed it, which destroys the text and correctly fails.
+
+      The size and percentage clauses are unreachable, for a measured reason
+      rather than an oversight. document.pdf is 637 bytes and incompressible —
+      a pdf-lib load-and-save round trip returns 770 bytes, i.e. LARGER, and any
+      rasterising implementation returns tens of kilobytes, so no build can
+      honestly claim a reduction at all. `download_size_matches` cannot exploit
+      that: its slack is `max(actual * tolerance, 1024)`, and at this file size
+      the 1024-byte floor swallows every possible claim. A larger PDF fixture
+      would turn this into the same arithmetic-honesty trap photo.png gives
+      image_compressor.
+    setup: >-
+      Reload the app, attach `document.pdf`, run the compress feature and let it
+      finish, then click the control that writes the compressed file so a
+      download fires. Leave any reported size or percentage on screen.
+    check:
+      name: pdf_props
+      contains: "ViralBench sample document"
+  - id: F5
+    text: >-
+      A corrupt file produces a specific user-visible error, no uncaught
+      exception, and the app remains operable for a subsequent upload.
+    points: 3
+    method: assert
+    note: >-
+      No corrupt-PDF fixture exists, so `data.csv` stands in: it is not a PDF by
+      any test, carries no `%PDF-` magic, and a file input's `accept` attribute
+      does not stop the harness from setting it. That exercises the reject path
+      but not the harder truncated-or-damaged-PDF path, where a build gets far
+      enough into parsing to throw.
+
+      Only the first clause is asserted. "No uncaught exception" is already R3's
+      job on the universal sheet, and "remains operable" is not verified: many
+      builds surface the rejection as a self-dismissing toast, so instructing the
+      model to upload again afterwards would routinely read the page after the
+      message had vanished and fail an app that behaved correctly. The setup
+      stops at the message for that reason.
+    setup: >-
+      Reload the app so nothing is loaded. Attach `data.csv` — not a PDF —
+      through the app's PDF input. Wait a few seconds for the app to react, then
+      STOP: leave whatever message it shows on screen and do not dismiss it, do
+      not navigate, and do not upload anything else.
+    check:
+      name: text_matches
+      patterns:
+        - "invalid|not a (valid )?pdf|unsupported|corrupt|damaged|failed|unable to|could ?n[o']t|error|only .{0,15}pdf"
+
+penalties:
+  - id: A1
+    text: >-
+      The rendered UI contains literal placeholder text ("(Placeholder)",
+      "coming soon", "TODO", "lorem ipsum").
+    points: -10
+    method: assert
+    note: >-
+      One build shipped a landing page where every functional section was
+      labelled `(Placeholder)`. It passed the smoke gate and scored delight
+      1.37 — "pure vaporware", said four separate agents.
+
+      Fires on presence, per the penalty convention — `text_matches(patterns:)`
+      and not `dom_text_absent`, which returns yes when the string is MISSING
+      and would fire this on every honest build. Read from rendered text, so a
+      `placeholder=` attribute on a real input does not trip it.
+    setup: >-
+      Load the app's entry page and let it render fully, without attaching any
+      file. Then open each of the app's main tool sections in turn (merge,
+      split/extract, rotate, convert, compress), stopping on the first one whose
+      content is visibly unfinished. If none is, return to the entry page.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bplaceholder\\b|coming soon|\\bTODO\\b|lorem ipsum"
+  - id: A2
+    text: "A success toast is shown when no file was actually produced."
+    points: -8
+    method: assert
+    note: >-
+      `Export Complete! Your PDF has been saved securely.` is printed by a path
+      that in sibling builds throws `Cannot read properties of undefined
+      (reading 'node')`. The toast is decoupled from the outcome.
+
+      The literal conjunction — success claimed AND no file written — needs two
+      primitives, so it is reformulated into a state where no file CAN have been
+      produced: the export is triggered with nothing loaded. A correct build
+      disables the control or says "add a file first", and does not fire. The
+      pattern is deliberately narrow to completion wording; a bare "success" or
+      "✓" would match the privacy badges ("✓ Files never leave your browser")
+      that nearly every build of this idea renders as static copy.
+    setup: >-
+      Reload the app so no file is loaded. Without attaching anything, activate
+      the app's primary export / download / merge action. If the control is
+      disabled and cannot be activated, leave it alone and stop. Otherwise leave
+      whatever the app displays on screen and do not dismiss any toast.
+    check:
+      name: text_matches
+      patterns:
+        - "(export|download|merge|split|extract|conversion|compression|rotation)\\s+(is\\s+)?(complete|completed|successful|succeeded|done)\\b|successfully\\s+(exported|downloaded|merged|split|saved|created|converted|compressed|rotated)|your\\s+(pdf|file|document)\\s+(has\\s+been|was)\\s+(saved|downloaded|created|exported|generated)"
+  - id: A3
+    text: >-
+      A locality claim ("0 Bytes Uploaded", "files never leave your browser")
+      while the app fetches third-party assets.
+    points: -8
+    method: assert
+    note: >-
+      Two builds render `ZERO NETWORK 0` / `Privacy Certificate` while loading
+      pdf-lib from unpkg.com and Tailwind from a CDN. No agent caught it.
+
+      ASSUMED, not verified: only the network half is measured. The locality
+      claim is taken as given because the brief's own fifth core feature is
+      "files never leave the browser", so a build that does not claim it has not
+      built the idea; A3 would need a second primitive to confirm it. Fires as
+      the inverse of R2 on the universal sheet and reads the whole session's
+      request log, so no separate observation is made.
+    setup: >-
+      Reload the app, then complete one full cycle with `document.pdf`: attach
+      it, run any one operation, and export the result. That exercises both the
+      startup assets and any library the app loads lazily on first use.
+    check:
+      name: third_party_requests
+  - id: A4
+    text: "Uploading a valid PDF throws an uncaught error or hangs indefinitely."
+    points: -8
+    method: assert
+    note: >-
+      35x `Cannot perform Construct on a detached ArrayBuffer` in one build.
+
+      Fires as the exact inverse of S1: after a VALID PDF has been attached and
+      given 20 seconds, neither the filename nor a page count of 1 appears
+      anywhere the user can see, so the attach either threw or never completed.
+      `no_console_errors` cannot be used — it passes when the page is CLEAN,
+      which is backwards for a penalty.
+
+      Conservative by construction: both absent patterns must be missing, so it
+      fires only on a total failure to load. TWO VARIANTS ARE MISSED — a build
+      that hangs on a spinner while still displaying the filename, and one that
+      throws in the console but renders a correct page count anyway. The second
+      needs a `console_errors_present` primitive; see the report.
+    setup: >-
+      Reload the app. Attach the fixture `document.pdf` — a valid, well-formed
+      one-page PDF — and then wait at least 20 seconds without clicking
+      anything, so a slow-but-working build has time to finish. Leave the result
+      on screen.
+    check:
+      name: text_matches
+      absent:
+        - "document\\.pdf"
+        - "\\b1\\s*pages?\\b|pages?\\b\\D{0,12}\\b1\\b|\\b1\\s*/\\s*1\\b"

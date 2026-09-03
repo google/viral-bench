@@ -1,0 +1,372 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for markdown_slides (DeckMD). Never shown to the founder.
+#
+# Only 27% of crowd agents ever typed a slide; the rest presented the app's own
+# seeded deck, so "write your own deck" — the premise — is largely unverified by
+# the crowd. Keyboard navigation is advertised constantly and exercised twice in
+# 630 agent-runs.
+rubric_version: 1
+idea_id: markdown_slides
+
+tier1:
+  - id: S1
+    text: >-
+      A three-slide Markdown deck renders exactly 3 slides, with a slide counter
+      that reflects the count.
+    points: 10
+    method: assert
+    note: >-
+      `0 slides` on valid input is the signature catastrophic outcome for this
+      idea, caused by an ORB-blocked CDN renderer. See A1.
+
+      The count is read from the app's own counter rather than by counting slide
+      elements. Forty builds of this idea share no slide-container convention —
+      section, div, article, a virtualised list — so any selector would grade
+      one build and silently return nothing for the rest. The cost is recorded
+      rather than hidden: a build that renders three slides and shows no counter
+      anywhere cannot be credited here.
+    setup: |-
+      Clear the app's Markdown source completely — none of its seeded demo deck
+      may remain — and enter exactly this deck, then let it render:
+
+      # Alpha
+
+      Opening slide.
+
+      ---
+
+      # Bravo
+
+      ```python
+      def greet(name):
+          return f"hello {name}"
+      ```
+
+      ---
+
+      # Charlie
+
+      Closing thoughts.
+
+      <!-- NOTEONLY42 pause here -->
+
+      For that last line use whatever speaker-notes syntax the app documents,
+      keeping the literal token NOTEONLY42; if it documents none, leave it as
+      the HTML comment above. Then leave the app on the first slide with the
+      slide counter on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b1\\s*/\\s*3\\b|\\b1\\s+of\\s+3\\b|\\b3\\s+slides?\\b"
+  - id: S2
+    text: >-
+      Slide separation is correct: `---` on its own line splits, but not inside
+      a fenced code block and not as YAML front matter.
+    points: 6
+    method: assert
+    note: >-
+      A naive `split(/^---$/m)` passes S1 and fails here, which is what the six
+      points buy: the front matter alone yields an empty leading slide and the
+      fenced `---` cuts Echo in two, so the counter reads 5 or 6 rather than 3.
+      Decided from the counter for the same reason as S1.
+    setup: |-
+      Replace the Markdown source entirely with exactly this deck and let it
+      render:
+
+      ---
+      title: Quarterly Review
+      theme: default
+      ---
+
+      # Delta
+
+      First real slide.
+
+      ---
+
+      # Echo
+
+      ```text
+      before
+      ---
+      after
+      ```
+
+      ---
+
+      # Foxtrot
+
+      Last real slide.
+
+      Leave the app on the first slide with the slide counter on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b1\\s*/\\s*3\\b|\\b1\\s+of\\s+3\\b|\\b3\\s+slides?\\b"
+  - id: S3
+    text: >-
+      Code blocks render with real syntax highlighting: a language class plus at
+      least 2 spans with distinct computed colours.
+    points: 8
+    method: assert
+    note: >-
+      Builds ship 5-9 themes while the highlight.js theme CSS is ORB-blocked 35
+      times — the themes are literally not loading.
+
+      Only the colour half is asserted, and deliberately: a language class with
+      no colours behind it is a no-op, and an ORB-blocked theme produces exactly
+      that — spans present, every one of them inheriting the same flat colour.
+      Counting distinct computed colours therefore fails both the unhighlighted
+      case and the class-only case, while requiring a class name would grade
+      whichever of hljs, Prism or Shiki a build happens to use.
+    setup: >-
+      With the three-slide deck from S1 loaded, navigate to the second slide
+      (Bravo), the one holding the fenced `python` block, so the highlighted
+      code is on screen. Do not switch themes.
+    check:
+      name: computed_style_distinct
+      selector: "pre span, code span"
+      prop: color
+      min_distinct: 2
+  - id: S4
+    text: >-
+      Keyboard navigation advances and reverses slides and clamps at both ends,
+      without scrolling the page instead.
+    points: 8
+    method: assert
+    expect: "ArrowRight/Space/PageDown advance 1/3 -> 2/3; ArrowLeft/PageUp go back; Home -> 1/3; End -> 3/3; ArrowRight at 3/3 does not reach 4/3"
+    note: >-
+      Four rights then one left is chosen so that every wrong behaviour lands on
+      a different number: a build that clamps ends on 2/3, one that wraps ends
+      on 1/3, one that runs off the end ends on 4/3, and one whose keys do
+      nothing never leaves 1/3. A single end-state read therefore decides
+      advance, reverse and the clamp at once.
+
+      Two limitations, recorded rather than hidden: "without scrolling the page
+      instead" is not asserted, because no primitive reads scroll position; and
+      position comes from the app's own counter, as in S1.
+    setup: >-
+      With the three-slide deck from S1 loaded and the app showing slide 1,
+      click once on the slide area to give it keyboard focus, then press
+      ArrowRight four times and ArrowLeft once, letting the counter settle after
+      each press. Leave the counter on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b2\\s*/\\s*3\\b|\\b2\\s+of\\s+3\\b"
+      absent:
+        - "\\b[4-9]\\s*/\\s*3\\b|\\b[4-9]\\s+of\\s+3\\b"
+  - id: S5
+    text: "PDF export produces a real PDF whose page count equals the slide count."
+    points: 8
+    method: assert
+    expect: "bytes begin %PDF-; page count 3; page 1 text contains the first slide's heading"
+    note: >-
+      The heading half of `expect` is not asserted. PDF page text lives in a
+      Flate-compressed content stream, so a literal substring search over the
+      downloaded bytes would fail honest builds and pass only the ones that
+      happen to write uncompressed streams. Page count is counted from
+      `/Type /Page` objects, which is enough to separate a real three-page
+      export from the two things builds actually ship: one page with the whole
+      deck squashed onto it, and no file at all (see A2).
+    setup: >-
+      With the three-slide deck from S1 loaded, use the app's PDF export control
+      and wait for the download to finish before reporting.
+    check:
+      name: pdf_props
+      pages: 3
+
+tier2:
+  - id: F1
+    text: >-
+      Speaker notes are excluded from the rendered slide and shown in the
+      presenter view.
+    points: 6
+    method: assert
+    note: >-
+      Only the exclusion half is decided here; the presenter view itself is F2,
+      which is agent-judged for exactly this reason. A build that silently
+      discards notes instead of routing them to a presenter pane passes this
+      half — that is the honest boundary between the two items, not an
+      oversight.
+
+      Read from `body.innerText` rather than the default user-visible text, so
+      the raw Markdown sitting in a source textarea is not mistaken for the note
+      leaking onto the slide. A build whose editor is a contenteditable would
+      still leak it, which is why the setup asks for the source to be off
+      screen.
+    setup: >-
+      With the three-slide deck from S1 loaded — including the NOTEONLY42
+      speaker note on the Charlie slide — put the app into its presentation
+      view so the Markdown source is no longer on screen, then navigate to the
+      third slide and leave the rendered slide showing.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      patterns:
+        - "Charlie"
+      absent:
+        - "NOTEONLY42"
+  - id: F2
+    text: >-
+      The presenter view is real: it shows the current slide, the NEXT slide's
+      content, the notes, and a timer or slide index.
+    points: 7
+    method: agent
+    note: "A single panel showing only the current slide, labelled presenter view, is a stub."
+  - id: F3
+    text: "Switching theme changes the rendered appearance (computed colours change)."
+    points: 5
+    method: assert
+    note: >-
+      NO CHECK — no primitive can decide this, and a wrong one here would be
+      worse than none. Deciding it needs a before/after sample of computed CSS.
+      `computed_style_distinct` measures variety inside a single snapshot, not a
+      change between two. `value_changes` compares harness snapshots of visible
+      *text*, which a theme switch does not alter, so it would fail every honest
+      build — and where it did pass it would pass for the wrong reason, because
+      `USER_VISIBLE_JS` includes `select.value`, so a theme dropdown that does
+      nothing at all still changes the snapshot. That is precisely the build
+      this item exists to catch: 5-9 themes whose CSS never loads.
+
+      What is needed is `computed_style_changes(selector, prop, before, after)`
+      — the capture-based analogue of `computed_style_distinct`, with the
+      harness recording computed styles at `capture` time alongside the text.
+      Until then the item falls back to the model, which can at least look.
+    setup: >-
+      With the three-slide deck from S1 loaded, capture(label="theme_a"), switch
+      the app to a different theme, wait for it to apply, then
+      capture(label="theme_b"). Judge whether the rendered slide's colours
+      actually changed — read them with `evaluate` on `getComputedStyle` — and
+      not merely whether the theme control's label changed.
+    check:
+      name: computed_style_changes
+      prop: background-color
+  - id: F4
+    text: "Click navigation works and the slide counter matches."
+    points: 4
+    method: assert
+    note: >-
+      Two forward then one back, so a dead "previous" control cannot pass on the
+      strength of a working "next". Position is read from the counter, as in S1.
+    setup: >-
+      With the three-slide deck from S1 loaded and the app showing slide 1, use
+      the app's on-screen next control twice and then its previous control once.
+      If it offers no such controls, click the right-hand side of the slide area
+      twice and the left-hand side once. Leave the counter on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b2\\s*/\\s*3\\b|\\b2\\s+of\\s+3\\b"
+  - id: F5
+    text: >-
+      Zero non-localhost requests: the Markdown renderer and the highlight theme
+      are bundled, not fetched.
+    points: 3
+    method: assert
+    note: >-
+      Judged over the whole session rather than this item's phase: a CDN
+      renderer is fetched at page load, long before the grader reaches F5, so a
+      phase-only window would miss the only request that matters. A1 is the
+      downstream symptom of failing this.
+    setup: >-
+      With the three-slide deck from S1 loaded, page through all three slides
+      and then export the deck, so every code path the app has is exercised
+      before the request log is read.
+    check:
+      name: network_origins
+
+penalties:
+  - id: A1
+    text: "The deck renders 0 slides on valid input."
+    points: -10
+    method: assert
+    note: >-
+      Two builds died exactly this way: `marked.js` and `markdown-it` fetched
+      from a CDN, blocked by ORB, leaving `markdownit is not defined` and a
+      permanently empty deck. "A masterclass in code that scales to zero because
+      it literally does not work."
+
+      Fires when none of the deck's three headings appears anywhere in the
+      rendered body. Read from `body.innerText`, so a source textarea still
+      holding the Markdown does not mask the failure — `innerText` does not
+      report a textarea's value. A contenteditable editor would mask it, which
+      makes the penalty fail-safe: it under-fires rather than accusing a working
+      build.
+    setup: >-
+      Same state as S1 — the three-slide deck entered and given time to render.
+      Leave the app showing the deck; do not clear the source and do not switch
+      to a settings or help screen.
+    check:
+      name: text_matches
+      js: "() => document.body.innerText || ''"
+      absent:
+        - "Alpha|Bravo|Charlie"
+  - id: A2
+    text: 'An "Export PDF" control calls window.print() and produces no file.'
+    points: -8
+    method: assert
+    note: >-
+      Clicks return ok with no download, no dialog and no state change. The
+      letter of "export the deck to PDF" is satisfied; nothing the user asked
+      for is produced, and the crowd cannot tell.
+
+      NO CHECK — the primitive needed does not exist. This fires exactly when
+      the item's phase produced no downloaded bytes, which is the `download`
+      primitive's *failure* branch ("no download fired"). Penalties fire on
+      `passed: true`, so `download` is the wrong way round and cannot be used.
+      What is needed is its inverse: a `no_download` primitive, or a
+      `download(expect_absent: true)` flag, returning yes when nothing was
+      written. `source_present` on `window\.print\(` was rejected as a
+      substitute — a build may legitimately offer a print fallback beside a real
+      export, and the penalty's whole claim is that no file appeared — and
+      `value_changes(should_change: false)` was rejected because a correct
+      export also leaves the page text unchanged, so it would fire on the good
+      builds.
+    setup: >-
+      With the three-slide deck from S1 loaded, click the app's PDF export
+      control once and wait. Then establish and cite three things: whether any
+      file was actually downloaded, whether anything on the page changed, and
+      whether `grep` finds `window.print` behind that control. Fire this only
+      when an export control exists, produces no file, and printing is all it
+      does.
+    check:
+      name: download_absent
+  - id: A3
+    text: "Export produces a format other than PDF while presented as PDF export."
+    points: -6
+    method: assert
+    note: >-
+      One top-3 build (delight 8.03) downloads a standalone HTML file instead.
+
+      NO CHECK — the primitive needed does not exist. Deciding this means "a
+      download fired AND its bytes are not a PDF", and every download primitive
+      is written the right way round for a positive item: `download(magic: pdf)`
+      and `pdf_props` both return *no* on the HTML file, which is the wrong
+      polarity for a penalty. What is needed is a negated form, e.g.
+      `download(magic: pdf, invert: true)`. Narrowing it to
+      `download(extension: ".html")` would fit the one build observed and
+      silently excuse a `.pptx`, `.md` or `.txt` export, while also taking the
+      item away from the model — who can at least read the filename off the
+      download.
+    setup: >-
+      With the three-slide deck from S1 loaded, use the control the app presents
+      as PDF export and let the download finish. Cite the downloaded file's name
+      and, via `grep` or `read_file`, what that control actually writes — a
+      Blob of `text/html`, a `.pptx`, or real PDF bytes.
+    check:
+      name: download_absent
+      of_kind: pdf

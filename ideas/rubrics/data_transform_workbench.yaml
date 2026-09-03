@@ -1,0 +1,514 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for data_transform_workbench (ByteKitchen). Never shown to the founder.
+#
+# ONE FIXTURE CHAIN CARRIES S3, S4, S5 AND F4, and every value in it was computed
+# rather than guessed (see the derivation below). The input pasted into the app is
+#
+#   B  = Z2V0ZmVkZmx5Mzkx
+#
+# and the three recipes the success criteria name produce three exact, distinct,
+# printable strings:
+#
+#   [Base64-Decode]              -> getfedfly391    the S4 intermediate
+#   [Base64-Decode, ROT13]       -> trgsrqsyl391    the S3 two-step answer
+#   [ROT13, Base64-Decode]       -> 3b4321399fld    the S5 reordered answer
+#   getfedfly391 -> [To Base64]  -> Z2V0ZmVkZmx5Mzkx  F4's auto-update probe
+#
+# The third line is the load-bearing one and it is why B is not an arbitrary
+# string. ROT13 maps the base64 alphabet onto itself, so reordering the two steps
+# always decodes to *something* -- but for almost every input that something is
+# binary garbage, which no build can display and no check can assert. B was
+# searched for: `b64decode(rot13(b64encode(P)))` is an involution, and B is
+# composed of three-byte groups chosen so that both sides of it land in
+# [A-Za-z0-9]. That is what makes S5 an exact-value item rather than a
+# did-something-change item.
+#
+# Nonces used elsewhere:
+#   VBINPUT7391    S1 types it, to prove the input pane is really fillable
+#   VBRECIPE7391   A3's persistence nonce
+#
+# ON READING THE OUTPUT PANE. Every transform item reads the default
+# user-visible text, which is `body.innerText` PLUS every `input`/`textarea`
+# value. That is deliberate and not the markdown_editor convention: a large share
+# of builds of this idea render the output into a `<textarea readonly>`, which
+# `innerText` does not report at all, so an innerText-only read would fail
+# correct builds for their choice of element. The cost is that the input pane is
+# in scope too, which is why every asserted value is a string that cannot appear
+# in the input: `getfedfly391` and `trgsrqsyl391` are not `Z2V0ZmVkZmx5Mzkx`.
+rubric_version: 1
+idea_id: data_transform_workbench
+
+tier1:
+  - id: S1
+    text: "The input pane is a real editable control and accepts typed text."
+    points: 4
+    method: assert
+    note: >-
+      14x `could not type into 'Input': Element is not an <input>, <textarea>, <select> or [contenteditable]`.
+
+      A typed nonce decides both halves at once, and does so without naming a
+      control. `is_real_control` needs a fixed target name, which differs in
+      almost every build ("Input", "Input data", "Source", unnamed), and the
+      primitive records a name it cannot resolve as a definite failure rather
+      than an abstention -- so it would fail builds that are perfectly fine.
+      What is asserted instead is the consequence: the nonce is read back from
+      the user-visible text, which includes `textarea.value` and a
+      contenteditable's `innerText` but NOT the text content of an inert `div`.
+      A div posing as an editor cannot be typed into, so the nonce is not there.
+
+      The accessible-name half is already owned by universal R4
+      (`controls_have_names`), and asserting it again here would count one fault
+      twice.
+
+      COST: some other field on screen would satisfy this if the model typed into
+      it, which is why the setup forbids the operation search box explicitly.
+    setup: >-
+      Clear the app's input pane completely -- none of any seeded sample data may
+      remain -- and type the literal text VBINPUT7391 into it with ordinary
+      typing. Do not set it with `evaluate`, do not use a file/upload control,
+      and do not type it into the operation search box, the recipe pane, or any
+      other field. Leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "VBINPUT7391"
+  - id: S2
+    text: "Single operation, exact: Base64-Decode of `SGVsbG8gV29ybGQ=` outputs exactly `Hello World`."
+    points: 8
+    method: assert
+    expect: "Hello World"
+    note: >-
+      The one item whose fixture the rubric text fixes, so it is used verbatim
+      rather than folded into the S3 chain.
+
+      The setup's insistence on emptying the recipe and the sample input first is
+      load-bearing, not tidiness: `Hello World` is the single most likely string
+      to be sitting in a build's shipped demo, and a check that read it out of a
+      demo pane would credit a build whose decode never ran. With the seeded
+      state cleared, the only thing that can put it on screen is the decode.
+
+      RESIDUAL: a build that keeps `Hello World` in static chrome -- a tagline, a
+      tooltip, an example under the operation's description -- passes without
+      decoding anything. No pattern can separate that from a real output,
+      because the correct output is exactly the string the chrome would contain.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe, so that none of the app's seeded sample input or demo recipe
+      remains. Then type exactly `SGVsbG8gV29ybGQ=` into the input pane and add a
+      single Base64-Decode (From Base64) operation. Let the output settle and
+      leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bHello World\\b"
+  - id: S3
+    text: "A two-step recipe (Base64-Decode then ROT13) outputs the exactly correct string."
+    points: 10
+    method: assert
+    expect: "Z2V0ZmVkZmx5Mzkx -> [Base64-Decode, ROT13] -> trgsrqsyl391"
+    note: >-
+      `trgsrqsyl391` is ROT13 of `getfedfly391`, which is what
+      `Z2V0ZmVkZmx5Mzkx` decodes to. Neither intermediate nor input can produce
+      the string by accident, so a build that runs only the first step, only the
+      second, or neither, fails on the value rather than on a judgement call.
+
+      A build that displays every step's output as well as the final one still
+      passes, and correctly: the item asks what the recipe outputs, not that
+      nothing else is on screen.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type exactly `Z2V0ZmVkZmx5Mzkx` into the input pane, then build a
+      two-step recipe: Base64-Decode (From Base64) first, ROT13 second, in that
+      order. If the app only recomputes on an explicit Run / Bake / Execute
+      control, click it once. Let the output settle and leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "trgsrqsyl391"
+  - id: S4
+    text: "Removing step 2 immediately updates the output to the exact intermediate value."
+    points: 9
+    method: assert
+    expect: "after removing ROT13: getfedfly391"
+    note: >-
+      Continues S3's state, so the only action being graded is the removal.
+
+      The absent clause is what makes this more than a repeat of S3's decode: a
+      build whose output pane did not recompute still shows `trgsrqsyl391`, and a
+      build that recomputed shows only `getfedfly391`. Together they say "the
+      output is now the intermediate value, and the old one is gone".
+
+      The literal "immediately" of the item is deliberately NOT asserted here.
+      F4 owns the auto-update property and measures it directly; failing a
+      manual-Run build in both places would charge one fault twice, so this
+      setup permits the Run click and this check judges only the value.
+
+      COST: a build with an output history or a per-step log that retains the
+      previous result fails on the absent clause. No such shape has been
+      observed in this corpus -- the reference app has no history pane -- but it
+      would be a false failure if it appeared.
+    setup: >-
+      Starting from the S3 state -- input `Z2V0ZmVkZmx5Mzkx`, recipe
+      Base64-Decode then ROT13 -- remove only the ROT13 step, leaving
+      Base64-Decode as the sole operation. Do not touch the input. If the app
+      only recomputes on an explicit Run / Bake / Execute control, click it once.
+      Leave the output on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "getfedfly391"
+      absent:
+        - "trgsrqsyl391"
+  - id: S5
+    text: "Reordering the two steps updates the output to the correspondingly different exact value."
+    points: 9
+    method: assert
+    expect: "[ROT13, Base64-Decode] on Z2V0ZmVkZmx5Mzkx -> 3b4321399fld"
+    note: >-
+      ROT13 of `Z2V0ZmVkZmx5Mzkx` is `M2I0MzIxMzk5Zmxk`, which is still valid
+      base64 and decodes to `3b4321399fld`. The input was chosen precisely so
+      that it does: for almost any other base64 string the reversed recipe
+      decodes to bytes no build can render, and this item would have had to
+      settle for "the output changed".
+
+      THE DRAG HALF IS NOT VERIFIED, and the setup says so out loud. The harness
+      gives the grader click, type and key presses but no drag, and reorder in
+      this idea is usually drag-and-drop -- so a build with no keyboard or button
+      affordance for moving a step would be failed for an interaction the
+      pipeline cannot perform, not for a wrong answer. Rebuilding the recipe in
+      the opposite order produces the identical recipe, so what is graded is what
+      the item is really about: the output for the other ordering. Recorded as a
+      known partial.
+    setup: >-
+      Keep the input exactly `Z2V0ZmVkZmx5Mzkx`. Put the recipe into the order
+      ROT13 first, Base64-Decode (From Base64) second. Use the app's own move-up
+      / move-down or reorder controls if it has them; if reordering is only
+      possible by dragging, instead remove both steps and add them again in the
+      new order, ROT13 first. Do not change the input and do not add a third
+      operation. If the app only recomputes on an explicit Run / Bake / Execute
+      control, click it once. Leave the output on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "3b4321399fld"
+      absent:
+        - "trgsrqsyl391"
+
+tier2:
+  - id: F1
+    text: >-
+      The catalogue contains and can search: base64 encode/decode, URL
+      encode/decode, hex, ROT13, case conversion, JSON pretty-print, MD5, SHA-256.
+    points: 6
+    method: assert
+    note: >-
+      Eight patterns for the nine names, because "base64 encode/decode" and "URL
+      encode/decode" are matched as families rather than as two directions each.
+      Requiring both directions separately would grade naming ("To Base64" vs
+      "Base64 Encode" vs a single op with a mode argument) rather than coverage.
+
+      THE SEARCH HALF IS NOT ASSERTED, and cannot be alongside the other: a
+      filtered catalogue by definition hides the eight operations the query does
+      not match, so "the whole list is present" and "typing filters it" are
+      claims about two different page states and only one check runs. Coverage
+      is the larger half and the one the brief enumerates, so it is the one
+      taken; a dead search box is left to universal P1.
+
+      LIMITATION: a virtualised catalogue that mounts only the visible rows puts
+      the rest outside `innerText` and fails here. Expanding every category, as
+      the setup asks, handles the ordinary collapsed-accordion case but not that
+      one.
+    setup: >-
+      Open the app's operation catalogue or sidebar so the full list of
+      operations is rendered. Clear the catalogue's search box if anything is
+      typed in it, and expand every collapsed category or group so no operation
+      is hidden. Do not filter the list. Leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "base\\s*-?64"
+        - "url\\s*[-_ ]?(en|de)cod|url\\s*(escape|unescape)|to\\s*url|from\\s*url|percent[-\\s]?encod"
+        - "\\bhex\\b|hexadecimal"
+        - "rot\\s*-?13"
+        - "upper\\s*case|lower\\s*case|case\\s*conver|change\\s*case|swap\\s*case"
+        - "json"
+        - "\\bmd5\\b"
+        - "sha\\s*-?256"
+  - id: F2
+    text: "Hash correctness, exact, for input `abc`."
+    points: 7
+    method: assert
+    expect: "sha256=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad; md5=900150983cd24fb0d6963f7d28e17f72"
+    note: >-
+      ONLY THE SHA-256 HALF IS ASSERTED. The two digests cannot be on screen at
+      the same time: a recipe is a chain, so adding both operations hashes the
+      first digest with the second algorithm rather than showing two results,
+      and one check reads one page state. A build with a correct SHA-256 and a
+      broken MD5 therefore passes. SHA-256 is the half taken because it is the
+      one the brief names last and the one a hand-rolled implementation is most
+      likely to get wrong -- MD5 is four lines of table lookup that every build
+      copies from the same place.
+
+      The comparison is case-insensitive, so an uppercase digest passes. A build
+      that renders the digest with separators between bytes ("ba 78 16 bf") fails
+      here; that shape has not been observed for hash output in this corpus.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type exactly `abc` into the input pane -- three lowercase letters,
+      no newline, no trailing space -- and add a single SHA-256 operation. Let
+      the digest appear and leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  - id: F3
+    text: "Per-operation arguments are applied: ROT13 with shift 5 on `abc` yields `fgh`."
+    points: 5
+    method: assert
+    expect: "fgh"
+    note: >-
+      The absent clause is the item, not a garnish. `nop` is ROT13 of `abc` at
+      the default shift of 13, so it is exactly what a build renders when it
+      accepts the argument in its UI and ignores it in its implementation --
+      the failure this item exists for, and one that looks completely correct to
+      a person who does not know the right answer. Asserting `fgh` alone would
+      also be satisfied by a build that happens to display an example.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type exactly `abc` into the input pane. Add the app's ROT13
+      operation and set its rotation-amount / shift / N argument to 5. If the app
+      names that operation something else (Rotate, Caesar, ROT-N), use that one
+      instead -- but do not substitute an operation that has no adjustable
+      amount. Let the output settle and leave it on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bfgh\\b"
+      absent:
+        - "\\bnop\\b"
+  - id: F4
+    text: "The output updates automatically on a recipe change, with no manual Run click."
+    points: 4
+    method: assert
+    expect: "adding To Base64 to getfedfly391 yields Z2V0ZmVkZmx5Mzkx with no Run click"
+    note: >-
+      `value_changes` is the obvious primitive here and it is the wrong one for
+      this idea, in both directions. Its `text` view is `body.innerText`, and the
+      recipe list is itself rendered text -- so adding an operation changes the
+      snapshot whether or not the output recomputed, and every build with a
+      visible recipe pane would pass. Switching to the `full` view is worse: it
+      adds `select.value`, and a new operation row usually IS a select, so a
+      build whose output pane is dead passes there too. Both are the exact trap
+      the authoring guide records.
+
+      What is asserted instead is the outcome the item is a proxy for: after a
+      recipe change and no Run click, the correct new value is on screen. A build
+      that recomputes only on Run leaves the encode undone and fails.
+
+      The operation is To Base64 rather than the S3/S4/S5 decode chain on
+      purpose, so that this item cannot be lost twice for one broken ROT13. The
+      strings are the same fixture read the other way: `getfedfly391` encodes to
+      `Z2V0ZmVkZmx5Mzkx`.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe, so that both panes are empty. Type exactly `getfedfly391` into the
+      input pane. Now add a single To Base64 (Base64-Encode) operation and wait a
+      moment for the app to react. Do NOT click any Run, Bake, Execute, Apply,
+      Convert or Refresh control, and do not press Enter to submit. Leave the
+      output on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "Z2V0ZmVkZmx5Mzkx"
+  - id: F5
+    text: "Everything runs in-browser: zero outbound requests carry the input data."
+    points: 3
+    method: assert
+    note: >-
+      Read over every request the page made, not just this item's phase, so a
+      build that ships the data during load or from a service worker is caught
+      too. Zero non-local requests is strictly stronger than the item's claim: if
+      nothing left the machine at all, nothing carrying the input left it either.
+
+      `request_payload_hash` is the primitive that would assert the narrower
+      form -- "this specific request carried these bytes" -- and it is not used,
+      because it is written to confirm that an upload DID happen and cannot
+      express its negation.
+
+      Overlaps universal R2, which runs the same primitive over the same page.
+      They are not merged because they are different claims: R2 is about a CDN
+      dependency breaking in a restricted container, this is about pasted data
+      leaving the machine, and an idea whose selling point is "runs in the
+      browser" should carry it at Tier 2 as well.
+    setup: >-
+      Run one complete cycle so the app does whatever work it does: clear the
+      input, type `Z2V0ZmVkZmx5Mzkx`, build the two-step Base64-Decode then ROT13
+      recipe, let the output appear, then add an SHA-256 operation and let that
+      settle too. Do not open any settings, help or about panel.
+    check:
+      name: network_origins
+
+penalties:
+  - id: A1
+    text: "Unicode mangled: a base64 round-trip of `héllo 🎉` is not byte-identical."
+    points: -6
+    method: assert
+    expect: "héllo 🎉 -> To Base64 -> From Base64 -> héllo 🎉, zero U+FFFD"
+    note: >-
+      Fires on the PRESENCE of corruption, which is why it is not `no_mojibake`:
+      that primitive returns yes when the text round-trips intact, the wrong way
+      round for a penalty. Universal R6 is the positive form of the same
+      observation; this is the one that can charge for the failure.
+
+      The markers are U+FFFD plus the classic UTF-8-decoded-as-Latin-1 sequences
+      from the harness's own mojibake list. Listing only some of them is
+      sufficient rather than partial: an encoding fault is a property of the
+      path, not of one character, so a build that mangles é mangles the emoji in
+      the same string.
+
+      TWO CASES ARE MISSED, both in the safe direction for a penalty. A build
+      whose `To Base64` is a bare `btoa()` throws on the non-Latin-1 input and
+      renders an error instead of mojibake -- a real bug, charged by A2 and R3
+      rather than here. And a build that silently DROPS the emoji round-trips to
+      `héllo ` with no corrupt byte anywhere; that is not byte-identical, but the
+      absent clause that would catch it cannot be used, because the input pane is
+      in scope for the read and still holds the correct string.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type the literal text `héllo 🎉` into the input pane, then build a
+      two-step recipe: To Base64 (Base64-Encode) first, From Base64
+      (Base64-Decode) second, so the text is encoded and decoded straight back.
+      Let the output settle and leave both panes on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\uFFFD|Ã©|Ã¨|Ã¡|Ã³|Ãº|Ã±|â€|ð|&#\\d+;"
+  - id: A2
+    text: >-
+      Invalid base64 input causes an unhandled exception or a silent empty pane
+      instead of a visible error.
+    points: -5
+    method: assert
+    expect: "@@@@ through Base64-Decode must produce a visible error message"
+    note: >-
+      Fires when NO error vocabulary is anywhere on screen after feeding input
+      that cannot possibly decode -- which is precisely "silent empty pane", and
+      also catches the throwing build, because a build whose decode throws
+      uncaught renders no message either. The uncaught-exception half is
+      additionally owned by universal R3; this half is the one R3 cannot see.
+
+      `@@@@` is chosen so no implementation has a legitimate answer. `@` is
+      outside the base64 alphabet, so a strict decoder throws; a lenient decoder
+      that strips non-alphabet characters is left with the empty string and
+      renders an empty pane. Either way a correct build must say something. A
+      longer or letter-bearing invalid string would let a stripping decoder
+      produce plausible-looking bytes and fire this falsely.
+
+      Broad vocabulary on purpose: the interlock is the input, not the wording.
+      Nothing about `@@@@` should leave an app silent, so every phrasing a build
+      might use to complain is listed, and a build using none of them has said
+      nothing. The failure direction is under-firing -- an app with the word
+      "error" anywhere in its chrome, including a console panel labelled "No
+      errors", is spared.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type exactly `@@@@` into the input pane and add a single
+      Base64-Decode (From Base64) operation. Wait a few seconds for the app to
+      react. Do not dismiss, close or acknowledge any message it shows, and do
+      not open a console or log panel of your own. Leave the result on screen.
+    check:
+      name: text_matches
+      absent:
+        - "error|invalid|failed|failure|cannot|can't|could not|couldn't|unable|not valid|malformed|bad input|exception|unexpected|decode\\s+fail|⚠|✗"
+  - id: A3
+    text: "Reload restores the app's default demo recipe rather than the user's recipe and input."
+    points: -5
+    method: assert
+    note: >-
+      A trier marked work_survived=true for exactly this. A grader must not.
+
+      THE `js` OVERRIDE IS LOAD-BEARING and this check is wrong without it.
+      `default_restored` fires when the nonce is gone and at least 40 characters
+      of content came back, and it reads the whole user-visible text by default
+      -- which on this idea includes the operation catalogue, several hundred
+      characters that are there on every load whether or not anything was
+      restored. With the default read, the check degenerates into "the input did
+      not survive" and fires on every build that loses it, including builds that
+      restore nothing at all, triple-charging one fault alongside R1 and P3.
+
+      Reading only field state -- `input`, `textarea` and `select` values plus
+      contenteditable text -- is the fix, and it is still DOM-agnostic: it names
+      no id, class or structure, only the elements a recipe and its data can
+      live in. Empty panes after reload now read as under 40 characters and are
+      correctly left to R1, while a restored demo recipe and sample input reads
+      as content and fires.
+
+      Still overlaps universal P3, which runs the unscoped form. That is a
+      duplication in P3's favour rather than a fault here, and the penalty cap of
+      -25 bounds what it can cost.
+
+      LIMITATION: a short demo -- a sample input of a dozen characters and two
+      operations -- can fall under the 40-character floor and be missed. Safe
+      direction.
+    setup: >-
+      Clear the app's input pane completely and remove every operation from the
+      recipe. Type the literal text VBRECIPE7391 into the input pane and build a
+      recipe of at least two operations, for example To Base64 followed by ROT13.
+      Wait until the output has settled, and a few seconds more if the app shows
+      a saving indicator. Then stop -- the harness performs the reload itself.
+      Do not reload the page yourself and do not clear storage.
+    check:
+      name: default_restored
+      nonce: VBRECIPE7391
+      js: >-
+        () => { const p = [];
+          for (const e of document.querySelectorAll('input,textarea,select')) {
+            if (e.value) p.push(e.value); }
+          for (const e of document.querySelectorAll('[contenteditable=""],[contenteditable="true"]')) {
+            p.push(e.innerText || ''); }
+          return p.join('\n'); }
+  - id: A4
+    text: "The shipped default sample input errors out of the box."
+    points: -4
+    method: assert
+    note: >-
+      Judged on the state the app ships, which is why the setup clears storage
+      before reloading: by the time penalties are graded the page has been
+      through every other item, and a build with persistence would otherwise be
+      shown its own leftovers rather than its default.
+
+      A build with no seeded sample shows empty panes, no error vocabulary, and
+      does not fire -- correct, since there is no default sample to error.
+
+      FALSE-POSITIVE RISK, recorded rather than hidden: the vocabulary is read
+      from the whole visible page, so a build whose landing copy explains its
+      error handling ("errors appear below the output") fires this without
+      anything being broken. The pattern is kept narrower than A2's for that
+      reason -- A2 can afford breadth because its input guarantees something must
+      be said, and this one cannot. `NaN` and `undefined` are included because
+      they are the tells of a default recipe that ran and produced nothing
+      meaningful, which is what "errors out of the box" looks like when no
+      exception is thrown.
+    setup: >-
+      Put the app back into the state it ships in: call `evaluate` with
+      `() => { localStorage.clear(); sessionStorage.clear(); return 'cleared'; }`
+      and then reload the page. Now touch nothing at all -- do not type, do not
+      clear the input, do not add or remove an operation, do not click Run. Let
+      the app settle for a few seconds and leave whatever it renders on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "\\berror\\b|\\binvalid\\b|\\bmalformed\\b|\\bexception\\b|is not a function|cannot read propert|unexpected (token|character|end)|\\bNaN\\b|\\bundefined\\b"

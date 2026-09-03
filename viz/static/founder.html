@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Founder trajectory viewer · ViralBench</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="app">
+
+<div class="topbar">
+  <div class="brand">Viral<span>Bench</span></div>
+  <nav class="navlinks">
+    <a href="/">Home</a>
+    <a href="/founder" class="active">Founder</a>
+    <a href="/crowd">Crowd</a>
+    <a href="/rubric">Rubric</a>
+  </nav>
+  <div class="picker">
+    <input id="buildInput" placeholder="paste any build id…  e.g. sliding_tile_game__20260817-200957__4fbc1b" spellcheck="false">
+    <button id="loadBtn" class="primary">Load</button>
+    <button id="browseBtn">Browse all builds…</button>
+  </div>
+  <div class="spacer"></div>
+  <button id="crowdBtn" title="Open this build's crowd runs" disabled>Crowd runs</button>
+  <button id="dlJson" disabled>JSON ↓</button>
+  <button id="dlZip" disabled>Zip ↓</button>
+</div>
+
+<div id="head" class="section"></div>
+<div id="lanes" class="section"></div>
+<div id="transport" class="section"></div>
+
+<div class="main">
+  <div class="col pane" id="feedPane" style="flex:0 0 44%">
+    <div class="section" style="border-bottom:1px solid var(--line)">
+      <h2>Event feed <span class="count" id="feedCount"></span></h2>
+      <div class="chips" id="feedFilters"></div>
+    </div>
+    <div class="scroll" id="feed"><div class="empty">Load a build to begin.</div></div>
+  </div>
+  <div class="col" id="sidePane" style="flex:1 1 56%">
+    <div class="tabs" id="tabs"></div>
+    <div class="scroll" id="tabBody"></div>
+  </div>
+</div>
+
+<div class="overlay" id="browser" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <input id="searchInput" placeholder="filter by idea, model, build id, app title…" spellcheck="false">
+      <select id="modeFilter"></select>
+      <select id="statusFilter"></select>
+      <label class="hint"><input type="checkbox" id="crowdOnly" style="min-width:auto"> has crowd runs</label>
+      <button id="closeBrowse">Close</button>
+    </div>
+    <div class="modal-body scroll" id="browseBody"></div>
+  </div>
+</div>
+
+<script type="module" src="/static/js/founder.js"></script>
+</body>
+</html>

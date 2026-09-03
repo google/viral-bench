@@ -1,0 +1,44 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): roomGPT — https://github.com/Nutlope/roomGPT
+# Verified 10,665 GitHub stars on 2026-08-06.
+#
+# Runtime note: redesign runs via a HOSTED image model (e.g. the Gemini image
+# API through google-genai), NOT a local GPU model, so it fits the container's
+# resource caps. A small same-origin backend holds the API key (read from the
+# environment, e.g. GEMINI_API_KEY, and injected by the runner via the container
+# env allowlist) so the key is never exposed in browser JS. The page must still
+# load without a key so the validity gate passes.
+
+idea_id: ai_room_redesign
+title: "DreamRoom"
+pitch: "Upload a photo of a room and get AI-generated redesigns in the style of your choice."
+problem: "Visualizing a redesign of your actual space is hard and usually requires hiring a designer or learning complex 3D tools."
+target_user: "Homeowners and renters who want quick, realistic interior-design inspiration for their own rooms."
+core_features:
+  - "Upload a photo of a room"
+  - "Pick a target style (e.g. modern, minimalist, Scandinavian) from a menu and a room type from a dropdown"
+  - "A hosted image model redesigns the room in the chosen style, called server-side using an API key read from the environment"
+  - "Show a labeled before/after comparison of the original and the AI-generated result"
+  - "Download or share the generated image"
+success_criteria: "Given a room photo and a chosen style, the app returns an AI-generated redesigned image of the same room and shows it side-by-side with the original via a labeled before/after control."
+allowed_scope: client-app
+difficulty: hard
+
+ground_truth:
+  source: "Twitter/X"
+  metric: github_stars
+  value: 10665

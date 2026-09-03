@@ -1,0 +1,370 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for ai_room_redesign (DreamRoom). Never shown to the founder.
+#
+# ONE FIXTURE, one state. Every navigable item works from the same room photo,
+# `photo_large.png` (1024x768, photographic), uploaded through the app's own
+# upload control; S3 adds one completed redesign to that state and S4 and S5
+# read it back. The fixture is named once here rather than restated per item:
+#
+#   the S1 state   photo_large.png uploaded and rendered, nothing generated yet
+#   the S3 state   the S1 state plus one finished redesign on screen
+#
+# ON COUNTING IMAGES. S1 and S3 decide "an image is on screen" with
+# `distinct_sources`, which is the only extraction that survives forty builds
+# sharing no markup. Two things make it safe here rather than merely convenient:
+# the container has no external network and an LLM build ships no photographic
+# assets, so an `<img>` on screen is the user's file or the model's output; and
+# SVG data URIs are excluded from the selector, because a hand-written SVG
+# illustration is precisely what the highest-scoring build of this idea serves
+# INSTEAD of a redesign (see F3 and A3), and it must not be able to satisfy an
+# item about the model returning image data.
+rubric_version: 1
+idea_id: ai_room_redesign
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Single-shot transform tool. The brief asks for upload -> generate ->
+      compare -> download, and never asks for a durable workspace. Punishing a
+      reload wipe here would import a crowd preference the brief does not state.
+      P3 still applies if the app implements persistence and lies about it.
+  P5:
+    applicable: false
+    reason: >-
+      P5 penalises depending on a model API for a feature the brief never asked
+      for. This brief asks for exactly that feature, in those words: "a hosted
+      image model redesigns the room in the chosen style, called server-side
+      using an API key read from the environment". Left applicable,
+      `model_dependency` would fire on every correct build of this idea by
+      construction. The two neighbouring guards stay: P4 still fires if a
+      credential reaches a client-served asset, and R7 still requires the app to
+      start with no key set.
+
+tier1:
+  - id: S1
+    text: "A room photo can be uploaded via a real file input and is displayed as the original."
+    points: 8
+    method: assert
+    setup: >-
+      Upload the fixture `photo_large.png` as the room photo, through the app's
+      own upload control, and wait until the app renders it on screen. Do not use
+      a built-in sample or demo room, and do not start a redesign yet.
+    note: >-
+      The "real file input" half is enforced by the setup rather than by the
+      check, and enforced harder than a check could enforce it: `upload_file`
+      drives `input[type=file]` directly and refuses outright when the page has
+      none, so a build whose upload is a drop-zone div never reaches this state
+      and has no image to display. What is left to decide is that the file was
+      really rendered.
+
+      The cost of counting images rather than naming an element is that a
+      decorative photograph would satisfy it. See the header for why that is a
+      small risk here.
+    check:
+      name: distinct_sources
+      selector: 'img:not([src^="data:image/svg"]), canvas'
+      minimum: 1
+  - id: S2
+    text: >-
+      A style is selectable from at least 3 named styles, and a room type from a
+      dropdown; both are operable by accessible name.
+    points: 6
+    method: assert
+    setup: >-
+      With photo_large.png uploaded, bring the style picker and the room-type
+      control into view. Choose a named style — `Scandinavian` if the app offers
+      it, otherwise any other named style — by its accessible name, and choose a
+      room type from the dropdown. Leave both controls on screen, with no dialog
+      or overlay covering them.
+    note: >-
+      Observed failures: `could not click 'css=input[type="radio"][value="Scandinavian"]'`,
+      `could not click 'css=.style-card'` — styles rendered as unlabelled divs.
+
+      Only the room-type half is decided, and the omission is deliberate. "At
+      least 3 named styles" has no build-independent signature: styles ship as
+      radios, as `<button>` cards, as `<option>`s and as divs, and any selector
+      wide enough to accept the honest shapes (`button`) is already satisfied by
+      the Generate and Download buttons on a build that has no style picker at
+      all. A check that every build passes decides nothing.
+
+      The unlabelled-div failure quoted above is not lost, it is already owned:
+      universal R4 (`controls_have_names`, `max_unnamed: 0`) fails a div standing
+      in for a control, and asserting it again here would double-count one fault.
+      What is left is the half R4 cannot see — that the room type is chosen from a
+      real, operable dropdown rather than read off as text. Both the native
+      `select` and the ARIA combobox/listbox shape are accepted, because failing
+      a build for using Radix or Headless UI would grade the component library
+      rather than the app.
+    check:
+      name: is_operable
+      selector: 'select, [role="combobox"], [role="listbox"]'
+      min_size: 8
+  - id: S3
+    text: >-
+      Triggering a redesign returns HTTP 200 with image data within 120s — no
+      abort, 403, 500 or hang.
+    points: 10
+    method: assert
+    setup: >-
+      With photo_large.png uploaded and a style and room type chosen, trigger the
+      redesign exactly once and wait for it to finish — up to two minutes. To
+      wait, run `evaluate` with `() => new Promise(r => setTimeout(r, 15000))`
+      and look again; do NOT click the generate control a second time, do not
+      reload, and do not dismiss the result. Leave the finished result on screen
+      alongside the original.
+    note: >-
+      Dominant trace error is `subresource-failed: /api/redesign
+      (net::ERR_ABORTED)`, 61 occurrences. One build threw 403 into an infinite
+      spinner: delight 1.7, 0/30 would_use.
+
+      Decided by the EFFECT of those failures — a second image never appears —
+      rather than by reading the console, and that is a correctness point rather
+      than a stylistic one. `no_failed_requests` reads `drain_console()`, which
+      is destructive, and `look` drains it too; a grader that looks at the page
+      after clicking generate, which is the natural thing to do, would empty the
+      buffer and hand the check a clean console on exactly the build whose
+      request aborted. Counting images is immune to that, and it also decides the
+      "hang" clause, which no console read can see: an infinite spinner produces
+      no second image.
+
+      TWO LIMITATIONS. A build that REPLACES the original with the result instead
+      of showing both fails here although its redesign call succeeded; the shape
+      is rare for an idea whose brief makes before/after a success criterion, and
+      it is the safe direction to be wrong in. And a build that returns 200 with
+      a canned or cached image passes — that is F2's claim, not this one.
+    check:
+      name: distinct_sources
+      selector: 'img:not([src^="data:image/svg"]), canvas'
+      minimum: 2
+  - id: S4
+    text: >-
+      The generated image is shown side by side with the original, and both
+      panes carry explicit labels (before/after or original/redesign).
+    points: 8
+    method: assert
+    setup: >-
+      Same state as S3: one completed redesign, with the original and the
+      generated image both on screen. Bring the comparison into view, and if it
+      is a slider or a toggle, leave it in the position where both panes and
+      their labels are rendered.
+    note: >-
+      The side-by-side half is already decided next door, by S3's two distinct
+      image sources; what is left for this item is the half S3 cannot see, the
+      LABELS. Either vocabulary is accepted, because the item's own text offers
+      both and grading the choice between them would grade wording.
+
+      LIMITATION, and a real one: "Redesign" is also the usual name of the
+      generate button, and "original" appears in ordinary copy, so a build that
+      renders two unlabelled panes can pass. The patterns are still worth having
+      — a build with no comparison vocabulary anywhere on screen fails — but this
+      is the loosest check in the file, and a stricter form would need a
+      primitive that reads the accessible name of the element wrapping each
+      image, which does not exist and would be markup-dependent if it did.
+    check:
+      name: text_matches
+      patterns:
+        - "\\bbefore\\b|\\boriginal\\b"
+        - "\\bafter\\b|\\bredesign(ed)?\\b|\\bresult\\b|\\bgenerated\\b"
+  - id: S5
+    text: >-
+      The download or share control yields a file of non-zero length whose magic
+      bytes are a valid image format.
+    points: 8
+    method: assert
+    setup: >-
+      Same state as S3. Use the app's download or save control once, so the file
+      is really written, and wait for the download to finish. If the app offers
+      only a share control, use that. Do not right-click or use a browser menu —
+      the item is about the app's own control.
+    note: >-
+      The magic-byte half is NOT asserted, and cannot be with this primitive:
+      `download` compares against ONE named format while the item accepts any
+      valid image format, so `magic: png` would fail every build that serves the
+      model's output as JPEG or WebP, and `magic: jpeg` the mirror image of that.
+      Deciding it needs `download` to accept a LIST of magics (`magic: [png,
+      jpeg, webp]`, passing when the bytes start with any of them) — and `webp`
+      is not in the `MAGIC` table at all, so the primitive would need
+      `RIFF....WEBP` added.
+
+      What is decided is the half that actually fails in this corpus: a
+      download or share control that writes no file at all, or writes an empty
+      one. The 512-byte floor is the item's "non-zero length" with the degenerate
+      cases excluded; no photograph the model returns is anywhere near it.
+    check:
+      name: download
+      min_size: 512
+
+tier2:
+  - id: F1
+    text: "The API key is read server-side from the environment and appears in no client-served asset."
+    points: 6
+    method: source
+    setup: >-
+      Nothing to navigate: this is decided from the built source tree. Leave the
+      app where it is and report `unknown`.
+    note: >-
+      Decided on the FIRST half — the key is read from the runtime's own
+      environment variable — because that is the half nothing else in the scheme
+      owns, and because it is the one assertion separating a real server-side
+      integration from the build that emits a client-side illustration and calls
+      no model at all (see F3 and A3).
+
+      The `\b` before the variable name is load-bearing rather than decoration:
+      `_` is a word character, so `process.env.NEXT_PUBLIC_GEMINI_API_KEY` — the
+      browser-exposed alias, which is exactly the failure the item's second half
+      names — does not match and cannot earn this item. The same holds for
+      `VITE_`, `REACT_APP_` and any other framework prefix that publishes an env
+      var to the bundle.
+
+      The second half is not asserted twice: universal P4
+      (`client_secret_present`) already fires, at -10, on a credential literal in
+      a browser-served file, and it is scoped to client suffixes in a way a
+      whole-tree grep here could not be.
+
+      LIMITATION: an app that lets the `google-genai` SDK pick the key up
+      implicitly (`genai.Client()` with no arguments) never names the variable
+      and is failed here. The founder prompt tells builds to read
+      `GEMINI_API_KEY` explicitly, so the shape should be rare, but it is a false
+      failure where it appears.
+    check:
+      name: source_present
+      pattern: "(process\\.env|os\\.environ|os\\.getenv|getenv|Deno\\.env)[^\\n]{0,40}\\b(GEMINI|GOOGLE|GENAI|OPENAI)[A-Z_]*API_KEY"
+  - id: F2
+    text: "Two different chosen styles produce two different output images."
+    points: 7
+    method: assert
+    setup: >-
+      From the S1 state, generate twice without reloading, and download after
+      each generation. Choose the first named style, run the redesign, wait for
+      it to finish, then use the app's own download or save control ONCE and wait
+      for the file to be written; call `screenshot(note="styleA")`. Then choose a
+      DIFFERENT named style, run the redesign again, wait for it to finish, use
+      the download control ONCE more and wait for that file too; call
+      `screenshot(note="styleB")`. The two downloaded files are what this item is
+      decided on, so do not skip either, do not download the ORIGINAL photo, and
+      do not download a third time. If the app offers no download or save control
+      at all, say so and leave it there.
+    note: >-
+      Catches a cached or stock result served regardless of the chosen style, and
+      it has to be decided on BYTES because nothing else can decide it. Reading
+      `img.src` across two captures cannot work: a re-served identical image
+      arrives under a fresh `blob:` URL every time, so the strings differ while
+      the pixels do not. `value_changes` compares harness snapshots, and none of
+      its three views records an image at all — its `text` view would report a
+      change merely because the app relabelled the pane "Scandinavian", which is
+      precisely the build this item exists to catch. `distinct_sources` reads one
+      screen, and the second result normally replaces the first.
+
+      `downloads_distinct` sha256s the last two downloads and passes when the
+      digests differ. Identical digests are a `no` carrying both digests, which
+      is the cached-result finding stated rather than merely asserted, and fewer
+      than two downloads is `unknown`, so "the download control is broken" stays
+      distinct from "the two styles gave the same picture".
+
+      TWO COSTS, both accepted. A build whose download is broken cannot be graded
+      here even when its two results genuinely differ — the item records
+      `unknown` rather than a false same-picture finding, and S5 already owns
+      that fault at Tier 1 weight. And the primitive takes no magic-byte filter,
+      so it compares whatever the save control actually wrote; the setup's "once
+      after each generation, never the original, never a third time" is what
+      keeps those two files the two results. A build that fires its own extra
+      download per generation — the original alongside the result — would have
+      the last two entries come from the second generation only, and could pass
+      on two files that are not the two styles.
+    check:
+      name: downloads_distinct
+      minimum: 2
+      last: 2
+  - id: F3
+    text: >-
+      The output is recognisably a redesign of the uploaded room — same room
+      geometry and layout — not an unrelated or generic image.
+    points: 7
+    method: agent
+    note: >-
+      The highest-scoring recent build (delight 8.1, 30/30 would_use) wins by
+      emitting a generated SVG illustration rather than redesigning the photo.
+      The crowd rewards it; the brief says "the same room". This item and A3 are
+      the guard, and this is a predicted crowd/rubric divergence.
+  - id: F4
+    text: "Three simultaneous generation requests all return 200."
+    points: 5
+    method: probe
+    setup: >-
+      First find the generation endpoint and its payload: `grep` the source for
+      the route the app posts to (try `fetch\(`, `/api/`, `app.post`,
+      `@app.route`) and `read_file` the handler to see what body it expects. Then
+      issue three at once in a single `evaluate`, from the app's own origin, e.g.
+
+        () => Promise.all([1,2,3].map(() => fetch('/api/redesign', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(BODY),
+        }).then(r => r.status)))
+
+      with BODY built to match the handler. Report `pass` only if the recorded
+      result of that one call is three 200s. Report `unknown` — not `fail` — if
+      you cannot work out a valid payload, so a payload you got wrong is not
+      recorded as the app failing under load.
+    note: >-
+      NO CHECK — nothing in the catalogue issues a request, let alone three
+      concurrently: `http_status` fetches one route anonymously with GET and no
+      body, and the request log the other network primitives read holds url,
+      method and body SIZE only — the bodies are dropped precisely because they
+      can be megabytes, so nothing recorded can be replayed.
+
+      Observed: half the agents in one run hit aborts under 30-way load, half
+      succeeded.
+
+      What would decide it is a concurrency probe:
+
+        name: concurrent_requests
+        params:
+          url_matches: "/redesign|/generate|/api/"   # picks the request to repeat
+          n: 3                                       # how many at once
+          expect: 200
+          timeout: 120
+
+      It would find the most recent POST in `ctx.page.requests()` whose URL
+      matches, re-issue it `n` times concurrently from inside the page (so the
+      app's own origin, cookies and headers apply), and pass only when every
+      response carries `expect`. That needs one supporting change the harness
+      does not have today: `on_request` must RETAIN the body of matching POSTs,
+      not just its length, behind a size cap — a few megabytes for one request is
+      affordable, keeping every body is not.
+
+      Until then the item falls to the model, with the setup above making it
+      reconstruct the payload from source. That is weaker in a specific way worth
+      recording: a wrong reconstruction looks exactly like a failing server, so
+      the instruction to report `unknown` rather than `fail` is what keeps this
+      item from manufacturing load failures.
+
+penalties:
+  - id: A1
+    text: >-
+      A silent client-side fallback substitutes a template or illustration when
+      the model call fails, without telling the user.
+    points: -8
+    method: agent
+  - id: A2
+    text: "A failed generation leaves an infinite spinner with no error surface."
+    points: -5
+    method: agent
+  - id: A3
+    text: "The output is a generic illustration bearing no relation to the uploaded photo."
+    points: -8
+    method: agent

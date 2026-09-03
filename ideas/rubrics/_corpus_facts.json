@@ -1,0 +1,2066 @@
+{
+  "builds_indexed": 1000,
+  "builds_without_an_app_dir": 0,
+  "generation": "r3",
+  "ideas": {
+    "ai_room_redesign": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 24,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${ext}": 1,
+        ".jpg": 7,
+        ".png": 7,
+        ".replace(": 2,
+        ".room_": 1,
+        ".style || ": 1
+      },
+      "largest_client_file_bytes": 53868,
+      "probes": {
+        "api_key_env": {
+          "n": 38,
+          "pct": 95
+        },
+        "aria_label": {
+          "n": 33,
+          "pct": 82
+        },
+        "auth_gate": {
+          "n": 4,
+          "pct": 10
+        },
+        "canvas_2d": {
+          "n": 28,
+          "pct": 70
+        },
+        "canvas_el": {
+          "n": 28,
+          "pct": 70
+        },
+        "clipboard": {
+          "n": 26,
+          "pct": 65
+        },
+        "css_variables": {
+          "n": 26,
+          "pct": 65
+        },
+        "download_anchor": {
+          "n": 34,
+          "pct": 85
+        },
+        "fetch_or_xhr": {
+          "n": 40,
+          "pct": 100
+        },
+        "file_input": {
+          "n": 38,
+          "pct": 95
+        },
+        "genai_client": {
+          "n": 7,
+          "pct": 18
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 2
+        },
+        "local_storage": {
+          "n": 13,
+          "pct": 32
+        },
+        "pointer_events": {
+          "n": 24,
+          "pct": 60
+        },
+        "svg_geometry": {
+          "n": 15,
+          "pct": 38
+        },
+        "title_attr": {
+          "n": 8,
+          "pct": 20
+        }
+      },
+      "with_client_source": 40
+    },
+    "browser_api_client": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 34,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${ext}": 1,
+        ".${f": 1,
+        ".${isjson ": 1,
+        ".json": 3,
+        ".status || ": 1,
+        ".status||": 1
+      },
+      "largest_client_file_bytes": 407279,
+      "probes": {
+        "api_key_env": {
+          "n": 5,
+          "pct": 13
+        },
+        "aria_label": {
+          "n": 36,
+          "pct": 92
+        },
+        "auth_gate": {
+          "n": 12,
+          "pct": 31
+        },
+        "clipboard": {
+          "n": 35,
+          "pct": 90
+        },
+        "contenteditable": {
+          "n": 9,
+          "pct": 23
+        },
+        "css_variables": {
+          "n": 27,
+          "pct": 69
+        },
+        "dark_class_toggle": {
+          "n": 3,
+          "pct": 8
+        },
+        "dialog_element": {
+          "n": 6,
+          "pct": 15
+        },
+        "download_anchor": {
+          "n": 10,
+          "pct": 26
+        },
+        "fetch_or_xhr": {
+          "n": 39,
+          "pct": 100
+        },
+        "file_input": {
+          "n": 8,
+          "pct": 21
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 35,
+          "pct": 90
+        },
+        "pointer_events": {
+          "n": 10,
+          "pct": 26
+        },
+        "service_worker": {
+          "n": 5,
+          "pct": 13
+        },
+        "svg_geometry": {
+          "n": 14,
+          "pct": 36
+        },
+        "title_attr": {
+          "n": 32,
+          "pct": 82
+        }
+      },
+      "with_client_source": 39
+    },
+    "code_screenshot_studio": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 34,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".filename || ": 1,
+        ".png": 18,
+        ".split(": 2,
+        ".svg": 1,
+        ".title || ": 1
+      },
+      "largest_client_file_bytes": 1089615,
+      "probes": {
+        "api_key_env": {
+          "n": 4,
+          "pct": 10
+        },
+        "aria_label": {
+          "n": 36,
+          "pct": 92
+        },
+        "canvas_2d": {
+          "n": 22,
+          "pct": 56
+        },
+        "canvas_el": {
+          "n": 22,
+          "pct": 56
+        },
+        "clipboard": {
+          "n": 39,
+          "pct": 100
+        },
+        "contenteditable": {
+          "n": 11,
+          "pct": 28
+        },
+        "css_variables": {
+          "n": 28,
+          "pct": 72
+        },
+        "dark_class_toggle": {
+          "n": 2,
+          "pct": 5
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 3
+        },
+        "download_anchor": {
+          "n": 39,
+          "pct": 100
+        },
+        "fetch_or_xhr": {
+          "n": 26,
+          "pct": 67
+        },
+        "file_input": {
+          "n": 5,
+          "pct": 13
+        },
+        "local_storage": {
+          "n": 23,
+          "pct": 59
+        },
+        "pointer_events": {
+          "n": 10,
+          "pct": 26
+        },
+        "service_worker": {
+          "n": 7,
+          "pct": 18
+        },
+        "svg_geometry": {
+          "n": 11,
+          "pct": 28
+        },
+        "title_attr": {
+          "n": 19,
+          "pct": 49
+        }
+      },
+      "with_client_source": 39
+    },
+    "collaborative_table": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 37,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {},
+      "largest_client_file_bytes": 1234473,
+      "probes": {
+        "api_key_env": {
+          "n": 10,
+          "pct": 26
+        },
+        "aria_label": {
+          "n": 27,
+          "pct": 71
+        },
+        "auth_gate": {
+          "n": 31,
+          "pct": 82
+        },
+        "canvas_2d": {
+          "n": 1,
+          "pct": 3
+        },
+        "canvas_el": {
+          "n": 2,
+          "pct": 5
+        },
+        "clipboard": {
+          "n": 27,
+          "pct": 71
+        },
+        "contenteditable": {
+          "n": 12,
+          "pct": 32
+        },
+        "css_variables": {
+          "n": 31,
+          "pct": 82
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 3
+        },
+        "dialog_element": {
+          "n": 4,
+          "pct": 11
+        },
+        "download_anchor": {
+          "n": 3,
+          "pct": 8
+        },
+        "fetch_or_xhr": {
+          "n": 37,
+          "pct": 97
+        },
+        "file_input": {
+          "n": 5,
+          "pct": 13
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 12,
+          "pct": 32
+        },
+        "pointer_events": {
+          "n": 12,
+          "pct": 32
+        },
+        "service_worker": {
+          "n": 5,
+          "pct": 13
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 34
+        },
+        "title_attr": {
+          "n": 27,
+          "pct": 71
+        },
+        "websocket": {
+          "n": 2,
+          "pct": 5
+        }
+      },
+      "with_client_source": 38
+    },
+    "data_transform_workbench": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 29,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${ext}": 1,
+        ".${t}": 1,
+        ".bin": 2,
+        ".json": 1,
+        ".png": 2,
+        ".txt": 11
+      },
+      "largest_client_file_bytes": 444048,
+      "probes": {
+        "aria_label": {
+          "n": 34,
+          "pct": 87
+        },
+        "canvas_2d": {
+          "n": 3,
+          "pct": 8
+        },
+        "canvas_el": {
+          "n": 3,
+          "pct": 8
+        },
+        "clipboard": {
+          "n": 35,
+          "pct": 90
+        },
+        "contenteditable": {
+          "n": 15,
+          "pct": 38
+        },
+        "css_variables": {
+          "n": 30,
+          "pct": 77
+        },
+        "dialog_element": {
+          "n": 3,
+          "pct": 8
+        },
+        "download_anchor": {
+          "n": 14,
+          "pct": 36
+        },
+        "fetch_or_xhr": {
+          "n": 16,
+          "pct": 41
+        },
+        "file_input": {
+          "n": 9,
+          "pct": 23
+        },
+        "local_storage": {
+          "n": 21,
+          "pct": 54
+        },
+        "pointer_events": {
+          "n": 15,
+          "pct": 38
+        },
+        "service_worker": {
+          "n": 10,
+          "pct": 26
+        },
+        "svg_geometry": {
+          "n": 5,
+          "pct": 13
+        },
+        "title_attr": {
+          "n": 31,
+          "pct": 79
+        }
+      },
+      "with_client_source": 39
+    },
+    "db_schema_designer": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 32,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${ext}": 1,
+        ".json": 3,
+        ".name || ": 2,
+        ".name, ": 1,
+        ".name||": 2,
+        ".png": 2,
+        ".sql": 3,
+        ".svg": 1
+      },
+      "largest_client_file_bytes": 383708,
+      "probes": {
+        "api_key_env": {
+          "n": 3,
+          "pct": 8
+        },
+        "aria_label": {
+          "n": 36,
+          "pct": 92
+        },
+        "canvas_2d": {
+          "n": 2,
+          "pct": 5
+        },
+        "canvas_el": {
+          "n": 9,
+          "pct": 23
+        },
+        "clipboard": {
+          "n": 37,
+          "pct": 95
+        },
+        "contenteditable": {
+          "n": 15,
+          "pct": 38
+        },
+        "css_variables": {
+          "n": 30,
+          "pct": 77
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 3
+        },
+        "dialog_element": {
+          "n": 7,
+          "pct": 18
+        },
+        "download_anchor": {
+          "n": 19,
+          "pct": 49
+        },
+        "fetch_or_xhr": {
+          "n": 13,
+          "pct": 33
+        },
+        "file_input": {
+          "n": 15,
+          "pct": 38
+        },
+        "local_storage": {
+          "n": 38,
+          "pct": 97
+        },
+        "pointer_events": {
+          "n": 38,
+          "pct": 97
+        },
+        "service_worker": {
+          "n": 8,
+          "pct": 21
+        },
+        "svg_geometry": {
+          "n": 27,
+          "pct": 69
+        },
+        "title_attr": {
+          "n": 32,
+          "pct": 82
+        }
+      },
+      "with_client_source": 39
+    },
+    "form_builder": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 22,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".currentform": 1,
+        ".png": 2
+      },
+      "largest_client_file_bytes": 1234473,
+      "probes": {
+        "api_key_env": {
+          "n": 8,
+          "pct": 21
+        },
+        "aria_label": {
+          "n": 24,
+          "pct": 62
+        },
+        "auth_gate": {
+          "n": 32,
+          "pct": 82
+        },
+        "canvas_2d": {
+          "n": 2,
+          "pct": 5
+        },
+        "canvas_el": {
+          "n": 3,
+          "pct": 8
+        },
+        "clipboard": {
+          "n": 30,
+          "pct": 77
+        },
+        "contenteditable": {
+          "n": 3,
+          "pct": 8
+        },
+        "css_variables": {
+          "n": 25,
+          "pct": 64
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 3
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 3
+        },
+        "download_anchor": {
+          "n": 4,
+          "pct": 10
+        },
+        "fetch_or_xhr": {
+          "n": 31,
+          "pct": 79
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 2,
+          "pct": 5
+        },
+        "pointer_events": {
+          "n": 4,
+          "pct": 10
+        },
+        "service_worker": {
+          "n": 3,
+          "pct": 8
+        },
+        "svg_geometry": {
+          "n": 11,
+          "pct": 28
+        },
+        "title_attr": {
+          "n": 21,
+          "pct": 54
+        }
+      },
+      "with_client_source": 39
+    },
+    "group_scheduling_poll": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 20,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".svg": 1
+      },
+      "largest_client_file_bytes": 52402,
+      "probes": {
+        "api_key_env": {
+          "n": 7,
+          "pct": 19
+        },
+        "aria_label": {
+          "n": 27,
+          "pct": 75
+        },
+        "auth_gate": {
+          "n": 21,
+          "pct": 58
+        },
+        "canvas_2d": {
+          "n": 4,
+          "pct": 11
+        },
+        "canvas_el": {
+          "n": 4,
+          "pct": 11
+        },
+        "clipboard": {
+          "n": 32,
+          "pct": 89
+        },
+        "css_variables": {
+          "n": 24,
+          "pct": 67
+        },
+        "download_anchor": {
+          "n": 5,
+          "pct": 14
+        },
+        "fetch_or_xhr": {
+          "n": 31,
+          "pct": 86
+        },
+        "genai_client": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 19,
+          "pct": 53
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 36
+        },
+        "title_attr": {
+          "n": 14,
+          "pct": 39
+        }
+      },
+      "with_client_source": 36
+    },
+    "handdrawn_whiteboard": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 36,
+      "builds_with_a_literal_key": 1,
+      "download_extensions": {
+        ".json": 4,
+        ".png": 18,
+        ".rough": 1,
+        ".roughdraw": 5,
+        ".svg": 13
+      },
+      "largest_client_file_bytes": 1821030,
+      "probes": {
+        "api_key_env": {
+          "n": 3,
+          "pct": 8
+        },
+        "aria_label": {
+          "n": 33,
+          "pct": 85
+        },
+        "auth_gate": {
+          "n": 1,
+          "pct": 3
+        },
+        "canvas_2d": {
+          "n": 38,
+          "pct": 97
+        },
+        "canvas_el": {
+          "n": 38,
+          "pct": 97
+        },
+        "clipboard": {
+          "n": 25,
+          "pct": 64
+        },
+        "contenteditable": {
+          "n": 16,
+          "pct": 41
+        },
+        "css_variables": {
+          "n": 30,
+          "pct": 77
+        },
+        "dark_class_toggle": {
+          "n": 2,
+          "pct": 5
+        },
+        "dialog_element": {
+          "n": 8,
+          "pct": 21
+        },
+        "download_anchor": {
+          "n": 39,
+          "pct": 100
+        },
+        "excalidraw": {
+          "n": 5,
+          "pct": 13
+        },
+        "fabric_konva": {
+          "n": 1,
+          "pct": 3
+        },
+        "fetch_or_xhr": {
+          "n": 13,
+          "pct": 33
+        },
+        "file_input": {
+          "n": 35,
+          "pct": 90
+        },
+        "local_storage": {
+          "n": 32,
+          "pct": 82
+        },
+        "pointer_events": {
+          "n": 39,
+          "pct": 100
+        },
+        "service_worker": {
+          "n": 6,
+          "pct": 15
+        },
+        "svg_geometry": {
+          "n": 20,
+          "pct": 51
+        },
+        "title_attr": {
+          "n": 35,
+          "pct": 90
+        }
+      },
+      "with_client_source": 39
+    },
+    "image_compressor": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 22,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${extension}": 2,
+        ".${ext}": 10,
+        ".ext}": 1,
+        ".name || ": 1,
+        ".png": 7,
+        ".split(": 1,
+        ".value}": 2,
+        ".zip": 3
+      },
+      "largest_client_file_bytes": 301184,
+      "probes": {
+        "api_key_env": {
+          "n": 3,
+          "pct": 8
+        },
+        "aria_label": {
+          "n": 35,
+          "pct": 90
+        },
+        "canvas_2d": {
+          "n": 38,
+          "pct": 97
+        },
+        "canvas_el": {
+          "n": 38,
+          "pct": 97
+        },
+        "clipboard": {
+          "n": 25,
+          "pct": 64
+        },
+        "contenteditable": {
+          "n": 3,
+          "pct": 8
+        },
+        "css_variables": {
+          "n": 27,
+          "pct": 69
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 3
+        },
+        "download_anchor": {
+          "n": 39,
+          "pct": 100
+        },
+        "fetch_or_xhr": {
+          "n": 9,
+          "pct": 23
+        },
+        "file_input": {
+          "n": 39,
+          "pct": 100
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 4,
+          "pct": 10
+        },
+        "pointer_events": {
+          "n": 32,
+          "pct": 82
+        },
+        "service_worker": {
+          "n": 2,
+          "pct": 5
+        },
+        "svg_geometry": {
+          "n": 22,
+          "pct": 56
+        },
+        "title_attr": {
+          "n": 13,
+          "pct": 33
+        }
+      },
+      "with_client_source": 39
+    },
+    "it_tools_dev_toolbox": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 27,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${ext}": 1,
+        ".${language === ": 1,
+        ".${n===": 1,
+        ".bin": 2,
+        ".html": 1,
+        ".json": 2,
+        ".md": 1,
+        ".png": 5
+      },
+      "largest_client_file_bytes": 1411403,
+      "probes": {
+        "api_key_env": {
+          "n": 3,
+          "pct": 8
+        },
+        "aria_label": {
+          "n": 33,
+          "pct": 85
+        },
+        "canvas_2d": {
+          "n": 4,
+          "pct": 10
+        },
+        "canvas_el": {
+          "n": 5,
+          "pct": 13
+        },
+        "clipboard": {
+          "n": 36,
+          "pct": 92
+        },
+        "contenteditable": {
+          "n": 11,
+          "pct": 28
+        },
+        "css_variables": {
+          "n": 31,
+          "pct": 79
+        },
+        "dark_class_toggle": {
+          "n": 3,
+          "pct": 8
+        },
+        "dialog_element": {
+          "n": 3,
+          "pct": 8
+        },
+        "download_anchor": {
+          "n": 9,
+          "pct": 23
+        },
+        "fetch_or_xhr": {
+          "n": 22,
+          "pct": 56
+        },
+        "file_input": {
+          "n": 7,
+          "pct": 18
+        },
+        "local_storage": {
+          "n": 21,
+          "pct": 54
+        },
+        "pointer_events": {
+          "n": 10,
+          "pct": 26
+        },
+        "service_worker": {
+          "n": 8,
+          "pct": 21
+        },
+        "svg_geometry": {
+          "n": 12,
+          "pct": 31
+        },
+        "title_attr": {
+          "n": 28,
+          "pct": 72
+        }
+      },
+      "with_client_source": 39
+    },
+    "json_graph_viewer": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 28,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".json": 2,
+        ".png": 8,
+        ".svg": 7
+      },
+      "largest_client_file_bytes": 650979,
+      "probes": {
+        "api_key_env": {
+          "n": 5,
+          "pct": 13
+        },
+        "aria_label": {
+          "n": 34,
+          "pct": 87
+        },
+        "canvas_2d": {
+          "n": 8,
+          "pct": 21
+        },
+        "canvas_el": {
+          "n": 15,
+          "pct": 38
+        },
+        "clipboard": {
+          "n": 39,
+          "pct": 100
+        },
+        "contenteditable": {
+          "n": 17,
+          "pct": 44
+        },
+        "css_variables": {
+          "n": 30,
+          "pct": 77
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 3
+        },
+        "dialog_element": {
+          "n": 4,
+          "pct": 10
+        },
+        "download_anchor": {
+          "n": 10,
+          "pct": 26
+        },
+        "fetch_or_xhr": {
+          "n": 15,
+          "pct": 38
+        },
+        "file_input": {
+          "n": 4,
+          "pct": 10
+        },
+        "local_storage": {
+          "n": 11,
+          "pct": 28
+        },
+        "pointer_events": {
+          "n": 26,
+          "pct": 67
+        },
+        "service_worker": {
+          "n": 9,
+          "pct": 23
+        },
+        "svg_geometry": {
+          "n": 17,
+          "pct": 44
+        },
+        "title_attr": {
+          "n": 23,
+          "pct": 59
+        }
+      },
+      "with_client_source": 39
+    },
+    "local_pdf_toolkit": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 38,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${imgformat}": 1,
+        ".${p}": 1,
+        ".jpg": 2,
+        ".name}": 4,
+        ".pdf": 11,
+        ".png": 5,
+        ".replace(": 1,
+        ".split(": 1
+      },
+      "largest_client_file_bytes": 1344846,
+      "probes": {
+        "api_key_env": {
+          "n": 1,
+          "pct": 2
+        },
+        "aria_label": {
+          "n": 35,
+          "pct": 88
+        },
+        "canvas_2d": {
+          "n": 37,
+          "pct": 92
+        },
+        "canvas_el": {
+          "n": 37,
+          "pct": 92
+        },
+        "clipboard": {
+          "n": 20,
+          "pct": 50
+        },
+        "contenteditable": {
+          "n": 24,
+          "pct": 60
+        },
+        "css_variables": {
+          "n": 30,
+          "pct": 75
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 2
+        },
+        "dialog_element": {
+          "n": 7,
+          "pct": 18
+        },
+        "download_anchor": {
+          "n": 39,
+          "pct": 98
+        },
+        "fetch_or_xhr": {
+          "n": 31,
+          "pct": 78
+        },
+        "file_input": {
+          "n": 40,
+          "pct": 100
+        },
+        "indexed_db": {
+          "n": 2,
+          "pct": 5
+        },
+        "local_storage": {
+          "n": 7,
+          "pct": 18
+        },
+        "pointer_events": {
+          "n": 23,
+          "pct": 58
+        },
+        "service_worker": {
+          "n": 12,
+          "pct": 30
+        },
+        "svg_geometry": {
+          "n": 28,
+          "pct": 70
+        },
+        "title_attr": {
+          "n": 32,
+          "pct": 80
+        }
+      },
+      "with_client_source": 40
+    },
+    "markdown_editor": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 35,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".md": 9,
+        ".title || ": 1
+      },
+      "largest_client_file_bytes": 1689070,
+      "probes": {
+        "api_key_env": {
+          "n": 3,
+          "pct": 8
+        },
+        "aria_label": {
+          "n": 36,
+          "pct": 92
+        },
+        "canvas_2d": {
+          "n": 5,
+          "pct": 13
+        },
+        "canvas_el": {
+          "n": 6,
+          "pct": 15
+        },
+        "clipboard": {
+          "n": 39,
+          "pct": 100
+        },
+        "contenteditable": {
+          "n": 7,
+          "pct": 18
+        },
+        "css_variables": {
+          "n": 35,
+          "pct": 90
+        },
+        "dark_class_toggle": {
+          "n": 10,
+          "pct": 26
+        },
+        "dialog_element": {
+          "n": 7,
+          "pct": 18
+        },
+        "download_anchor": {
+          "n": 39,
+          "pct": 100
+        },
+        "fetch_or_xhr": {
+          "n": 8,
+          "pct": 21
+        },
+        "file_input": {
+          "n": 6,
+          "pct": 15
+        },
+        "indexed_db": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 39,
+          "pct": 100
+        },
+        "pointer_events": {
+          "n": 20,
+          "pct": 51
+        },
+        "print_only": {
+          "n": 5,
+          "pct": 13
+        },
+        "service_worker": {
+          "n": 4,
+          "pct": 10
+        },
+        "svg_geometry": {
+          "n": 16,
+          "pct": 41
+        },
+        "title_attr": {
+          "n": 38,
+          "pct": 97
+        }
+      },
+      "with_client_source": 39
+    },
+    "markdown_slides": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 34,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".html": 2,
+        ".md": 5,
+        ".png": 2,
+        ".title || ": 1,
+        ".title||": 1
+      },
+      "largest_client_file_bytes": 1968686,
+      "probes": {
+        "api_key_env": {
+          "n": 7,
+          "pct": 18
+        },
+        "aria_label": {
+          "n": 35,
+          "pct": 88
+        },
+        "canvas_2d": {
+          "n": 7,
+          "pct": 18
+        },
+        "canvas_el": {
+          "n": 7,
+          "pct": 18
+        },
+        "clipboard": {
+          "n": 26,
+          "pct": 65
+        },
+        "contenteditable": {
+          "n": 18,
+          "pct": 45
+        },
+        "css_variables": {
+          "n": 36,
+          "pct": 90
+        },
+        "dark_class_toggle": {
+          "n": 2,
+          "pct": 5
+        },
+        "dialog_element": {
+          "n": 5,
+          "pct": 12
+        },
+        "download_anchor": {
+          "n": 26,
+          "pct": 65
+        },
+        "fetch_or_xhr": {
+          "n": 29,
+          "pct": 72
+        },
+        "file_input": {
+          "n": 18,
+          "pct": 45
+        },
+        "local_storage": {
+          "n": 36,
+          "pct": 90
+        },
+        "pointer_events": {
+          "n": 20,
+          "pct": 50
+        },
+        "print_only": {
+          "n": 35,
+          "pct": 88
+        },
+        "service_worker": {
+          "n": 9,
+          "pct": 22
+        },
+        "svg_geometry": {
+          "n": 17,
+          "pct": 42
+        },
+        "title_attr": {
+          "n": 35,
+          "pct": 88
+        }
+      },
+      "with_client_source": 40
+    },
+    "privacy_resume_builder": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 28,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".json": 7,
+        ".name || ": 1,
+        ".png": 3,
+        ".txt": 1
+      },
+      "largest_client_file_bytes": 948428,
+      "probes": {
+        "api_key_env": {
+          "n": 6,
+          "pct": 16
+        },
+        "aria_label": {
+          "n": 28,
+          "pct": 74
+        },
+        "canvas_2d": {
+          "n": 10,
+          "pct": 26
+        },
+        "canvas_el": {
+          "n": 11,
+          "pct": 29
+        },
+        "clipboard": {
+          "n": 25,
+          "pct": 66
+        },
+        "contenteditable": {
+          "n": 10,
+          "pct": 26
+        },
+        "css_variables": {
+          "n": 32,
+          "pct": 84
+        },
+        "dark_class_toggle": {
+          "n": 2,
+          "pct": 5
+        },
+        "dialog_element": {
+          "n": 5,
+          "pct": 13
+        },
+        "download_anchor": {
+          "n": 27,
+          "pct": 71
+        },
+        "fetch_or_xhr": {
+          "n": 20,
+          "pct": 53
+        },
+        "file_input": {
+          "n": 28,
+          "pct": 74
+        },
+        "indexed_db": {
+          "n": 5,
+          "pct": 13
+        },
+        "local_storage": {
+          "n": 34,
+          "pct": 89
+        },
+        "pointer_events": {
+          "n": 14,
+          "pct": 37
+        },
+        "print_only": {
+          "n": 32,
+          "pct": 84
+        },
+        "service_worker": {
+          "n": 8,
+          "pct": 21
+        },
+        "svg_geometry": {
+          "n": 14,
+          "pct": 37
+        },
+        "title_attr": {
+          "n": 26,
+          "pct": 68
+        }
+      },
+      "with_client_source": 38
+    },
+    "quick_notes_app": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 18,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".png": 2,
+        ".svg": 2
+      },
+      "largest_client_file_bytes": 52172,
+      "probes": {
+        "api_key_env": {
+          "n": 4,
+          "pct": 11
+        },
+        "aria_label": {
+          "n": 28,
+          "pct": 76
+        },
+        "auth_gate": {
+          "n": 33,
+          "pct": 89
+        },
+        "canvas_2d": {
+          "n": 3,
+          "pct": 8
+        },
+        "canvas_el": {
+          "n": 4,
+          "pct": 11
+        },
+        "clipboard": {
+          "n": 22,
+          "pct": 59
+        },
+        "contenteditable": {
+          "n": 1,
+          "pct": 3
+        },
+        "css_variables": {
+          "n": 21,
+          "pct": 57
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 3
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 3
+        },
+        "download_anchor": {
+          "n": 3,
+          "pct": 8
+        },
+        "fetch_or_xhr": {
+          "n": 21,
+          "pct": 57
+        },
+        "local_storage": {
+          "n": 3,
+          "pct": 8
+        },
+        "svg_geometry": {
+          "n": 12,
+          "pct": 32
+        },
+        "title_attr": {
+          "n": 18,
+          "pct": 49
+        }
+      },
+      "with_client_source": 37
+    },
+    "screenshot_to_code": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 25,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".${c===": 1,
+        ".${extension}": 1,
+        ".${ext}": 6,
+        ".${stack === ": 1,
+        ".${target_ext[target] || ": 1,
+        ".html": 14,
+        ".png": 3,
+        ".zip": 1
+      },
+      "largest_client_file_bytes": 2000000,
+      "probes": {
+        "api_key_env": {
+          "n": 38,
+          "pct": 95
+        },
+        "aria_label": {
+          "n": 35,
+          "pct": 88
+        },
+        "auth_gate": {
+          "n": 7,
+          "pct": 18
+        },
+        "canvas_2d": {
+          "n": 16,
+          "pct": 40
+        },
+        "canvas_el": {
+          "n": 16,
+          "pct": 40
+        },
+        "clipboard": {
+          "n": 34,
+          "pct": 85
+        },
+        "contenteditable": {
+          "n": 6,
+          "pct": 15
+        },
+        "css_variables": {
+          "n": 16,
+          "pct": 40
+        },
+        "dialog_element": {
+          "n": 4,
+          "pct": 10
+        },
+        "download_anchor": {
+          "n": 33,
+          "pct": 82
+        },
+        "fetch_or_xhr": {
+          "n": 38,
+          "pct": 95
+        },
+        "file_input": {
+          "n": 40,
+          "pct": 100
+        },
+        "genai_client": {
+          "n": 4,
+          "pct": 10
+        },
+        "indexed_db": {
+          "n": 2,
+          "pct": 5
+        },
+        "local_storage": {
+          "n": 15,
+          "pct": 38
+        },
+        "pointer_events": {
+          "n": 18,
+          "pct": 45
+        },
+        "service_worker": {
+          "n": 4,
+          "pct": 10
+        },
+        "svg_geometry": {
+          "n": 23,
+          "pct": 58
+        },
+        "title_attr": {
+          "n": 36,
+          "pct": 90
+        }
+      },
+      "with_client_source": 40
+    },
+    "shared_bookmarks": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 19,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".md": 1
+      },
+      "largest_client_file_bytes": 63127,
+      "probes": {
+        "api_key_env": {
+          "n": 5,
+          "pct": 14
+        },
+        "aria_label": {
+          "n": 23,
+          "pct": 62
+        },
+        "auth_gate": {
+          "n": 35,
+          "pct": 95
+        },
+        "clipboard": {
+          "n": 28,
+          "pct": 76
+        },
+        "contenteditable": {
+          "n": 5,
+          "pct": 14
+        },
+        "css_variables": {
+          "n": 21,
+          "pct": 57
+        },
+        "dialog_element": {
+          "n": 6,
+          "pct": 16
+        },
+        "download_anchor": {
+          "n": 1,
+          "pct": 3
+        },
+        "fetch_or_xhr": {
+          "n": 22,
+          "pct": 59
+        },
+        "file_input": {
+          "n": 2,
+          "pct": 5
+        },
+        "local_storage": {
+          "n": 4,
+          "pct": 11
+        },
+        "pointer_events": {
+          "n": 1,
+          "pct": 3
+        },
+        "svg_geometry": {
+          "n": 11,
+          "pct": 30
+        },
+        "title_attr": {
+          "n": 20,
+          "pct": 54
+        }
+      },
+      "with_client_source": 37
+    },
+    "sliding_tile_game": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 14,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".png": 2
+      },
+      "largest_client_file_bytes": 34247,
+      "probes": {
+        "api_key_env": {
+          "n": 5,
+          "pct": 12
+        },
+        "aria_label": {
+          "n": 33,
+          "pct": 82
+        },
+        "canvas_2d": {
+          "n": 9,
+          "pct": 22
+        },
+        "canvas_el": {
+          "n": 11,
+          "pct": 28
+        },
+        "clipboard": {
+          "n": 27,
+          "pct": 68
+        },
+        "contenteditable": {
+          "n": 2,
+          "pct": 5
+        },
+        "css_variables": {
+          "n": 33,
+          "pct": 82
+        },
+        "dialog_element": {
+          "n": 2,
+          "pct": 5
+        },
+        "download_anchor": {
+          "n": 4,
+          "pct": 10
+        },
+        "local_storage": {
+          "n": 40,
+          "pct": 100
+        },
+        "pointer_events": {
+          "n": 4,
+          "pct": 10
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 32
+        },
+        "title_attr": {
+          "n": 7,
+          "pct": 18
+        }
+      },
+      "with_client_source": 40
+    },
+    "team_wiki": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 23,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".png": 1,
+        ".slug || ": 2,
+        ".split(": 1
+      },
+      "largest_client_file_bytes": 391123,
+      "probes": {
+        "api_key_env": {
+          "n": 8,
+          "pct": 20
+        },
+        "aria_label": {
+          "n": 25,
+          "pct": 62
+        },
+        "auth_gate": {
+          "n": 32,
+          "pct": 80
+        },
+        "canvas_2d": {
+          "n": 3,
+          "pct": 8
+        },
+        "canvas_el": {
+          "n": 3,
+          "pct": 8
+        },
+        "clipboard": {
+          "n": 20,
+          "pct": 50
+        },
+        "contenteditable": {
+          "n": 8,
+          "pct": 20
+        },
+        "css_variables": {
+          "n": 23,
+          "pct": 58
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 2
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 2
+        },
+        "download_anchor": {
+          "n": 3,
+          "pct": 8
+        },
+        "fetch_or_xhr": {
+          "n": 31,
+          "pct": 78
+        },
+        "genai_client": {
+          "n": 1,
+          "pct": 2
+        },
+        "local_storage": {
+          "n": 5,
+          "pct": 12
+        },
+        "pointer_events": {
+          "n": 11,
+          "pct": 28
+        },
+        "service_worker": {
+          "n": 2,
+          "pct": 5
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 32
+        },
+        "title_attr": {
+          "n": 22,
+          "pct": 55
+        }
+      },
+      "with_client_source": 40
+    },
+    "text_adventure_game": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 15,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {},
+      "largest_client_file_bytes": 203585,
+      "probes": {
+        "api_key_env": {
+          "n": 4,
+          "pct": 10
+        },
+        "aria_label": {
+          "n": 31,
+          "pct": 78
+        },
+        "canvas_2d": {
+          "n": 2,
+          "pct": 5
+        },
+        "canvas_el": {
+          "n": 3,
+          "pct": 8
+        },
+        "clipboard": {
+          "n": 25,
+          "pct": 62
+        },
+        "contenteditable": {
+          "n": 2,
+          "pct": 5
+        },
+        "css_variables": {
+          "n": 28,
+          "pct": 70
+        },
+        "dialog_element": {
+          "n": 2,
+          "pct": 5
+        },
+        "download_anchor": {
+          "n": 1,
+          "pct": 2
+        },
+        "fetch_or_xhr": {
+          "n": 3,
+          "pct": 8
+        },
+        "local_storage": {
+          "n": 40,
+          "pct": 100
+        },
+        "pointer_events": {
+          "n": 2,
+          "pct": 5
+        },
+        "svg_geometry": {
+          "n": 3,
+          "pct": 8
+        },
+        "title_attr": {
+          "n": 11,
+          "pct": 28
+        }
+      },
+      "with_client_source": 40
+    },
+    "typing_speed_test": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 22,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".png": 7
+      },
+      "largest_client_file_bytes": 198401,
+      "probes": {
+        "api_key_env": {
+          "n": 2,
+          "pct": 5
+        },
+        "aria_label": {
+          "n": 36,
+          "pct": 95
+        },
+        "canvas_2d": {
+          "n": 12,
+          "pct": 32
+        },
+        "canvas_el": {
+          "n": 13,
+          "pct": 34
+        },
+        "clipboard": {
+          "n": 26,
+          "pct": 68
+        },
+        "contenteditable": {
+          "n": 3,
+          "pct": 8
+        },
+        "css_variables": {
+          "n": 29,
+          "pct": 76
+        },
+        "dark_class_toggle": {
+          "n": 2,
+          "pct": 5
+        },
+        "dialog_element": {
+          "n": 1,
+          "pct": 3
+        },
+        "download_anchor": {
+          "n": 9,
+          "pct": 24
+        },
+        "fabric_konva": {
+          "n": 1,
+          "pct": 3
+        },
+        "fetch_or_xhr": {
+          "n": 3,
+          "pct": 8
+        },
+        "local_storage": {
+          "n": 37,
+          "pct": 97
+        },
+        "pointer_events": {
+          "n": 7,
+          "pct": 18
+        },
+        "service_worker": {
+          "n": 2,
+          "pct": 5
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 34
+        },
+        "title_attr": {
+          "n": 8,
+          "pct": 21
+        }
+      },
+      "with_client_source": 38
+    },
+    "uptime_monitor": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 12,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".png": 2,
+        ".svg": 1
+      },
+      "largest_client_file_bytes": 48029,
+      "probes": {
+        "api_key_env": {
+          "n": 7,
+          "pct": 19
+        },
+        "aria_label": {
+          "n": 22,
+          "pct": 61
+        },
+        "auth_gate": {
+          "n": 31,
+          "pct": 86
+        },
+        "canvas_2d": {
+          "n": 2,
+          "pct": 6
+        },
+        "canvas_el": {
+          "n": 2,
+          "pct": 6
+        },
+        "clipboard": {
+          "n": 18,
+          "pct": 50
+        },
+        "css_variables": {
+          "n": 22,
+          "pct": 61
+        },
+        "dialog_element": {
+          "n": 2,
+          "pct": 6
+        },
+        "download_anchor": {
+          "n": 2,
+          "pct": 6
+        },
+        "fetch_or_xhr": {
+          "n": 26,
+          "pct": 72
+        },
+        "file_input": {
+          "n": 1,
+          "pct": 3
+        },
+        "local_storage": {
+          "n": 2,
+          "pct": 6
+        },
+        "svg_geometry": {
+          "n": 14,
+          "pct": 39
+        },
+        "title_attr": {
+          "n": 22,
+          "pct": 61
+        }
+      },
+      "with_client_source": 36
+    },
+    "web_cheatsheets": {
+      "builds": 40,
+      "builds_with_a_file_over_20kb": 28,
+      "builds_with_a_literal_key": 0,
+      "download_extensions": {
+        ".json": 5,
+        ".png": 2
+      },
+      "largest_client_file_bytes": 2000000,
+      "probes": {
+        "api_key_env": {
+          "n": 1,
+          "pct": 2
+        },
+        "aria_label": {
+          "n": 37,
+          "pct": 92
+        },
+        "canvas_2d": {
+          "n": 4,
+          "pct": 10
+        },
+        "canvas_el": {
+          "n": 4,
+          "pct": 10
+        },
+        "clipboard": {
+          "n": 39,
+          "pct": 98
+        },
+        "contenteditable": {
+          "n": 11,
+          "pct": 28
+        },
+        "css_variables": {
+          "n": 32,
+          "pct": 80
+        },
+        "dark_class_toggle": {
+          "n": 1,
+          "pct": 2
+        },
+        "dialog_element": {
+          "n": 3,
+          "pct": 8
+        },
+        "download_anchor": {
+          "n": 10,
+          "pct": 25
+        },
+        "fetch_or_xhr": {
+          "n": 15,
+          "pct": 38
+        },
+        "file_input": {
+          "n": 6,
+          "pct": 15
+        },
+        "local_storage": {
+          "n": 21,
+          "pct": 52
+        },
+        "pointer_events": {
+          "n": 5,
+          "pct": 12
+        },
+        "print_only": {
+          "n": 2,
+          "pct": 5
+        },
+        "service_worker": {
+          "n": 4,
+          "pct": 10
+        },
+        "svg_geometry": {
+          "n": 13,
+          "pct": 32
+        },
+        "title_attr": {
+          "n": 29,
+          "pct": 72
+        }
+      },
+      "with_client_source": 40
+    }
+  },
+  "probe_notes": {
+    "aria_label": "controls_have_names / aria_names",
+    "canvas_2d": "scene is pixels, not DOM",
+    "css_variables": "themeable via :root",
+    "download_anchor": "download items",
+    "local_storage": "survives_reload",
+    "pointer_events": "drag target",
+    "print_only": "the dead-export shape"
+  }
+}

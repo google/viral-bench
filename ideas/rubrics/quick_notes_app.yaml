@@ -1,0 +1,445 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for quick_notes_app (QuickMemo). Never shown to the founder.
+#
+# The lowest crowd-observable fraction of any idea surveyed (~45%), and the gap
+# is concentrated in exactly the security-relevant clauses. Across all 20 recent
+# runs: search actions 0, comment actions 0, private notes authored ~0. A build
+# could leak every private note to Explore and still score 7.9.
+#
+# Fixed fixtures used throughout, so that one setup's state serves several items:
+#   accounts  ada7731 / ada7731@example.com / Quickmemo-7731   (author)
+#             ben7731 / ben7731@example.com / Quickmemo-7731   (reader)
+#   note P    PUBLIC,  tag `roadmap`, markdown, carries VBPUBLIC7731
+#   note Q    PRIVATE, tag `roadmap`, carries VBPRIVATE7731
+#   note E    PUBLIC,  tag `errata`,  carries VBERRATA7731     (F2 only)
+# Both P and Q carry the word QUARTERLY, which is what S5 searches for: one
+# query whose correct result set contains P and excludes Q, so a single read of
+# the result list decides both halves of the item.
+rubric_version: 1
+idea_id: quick_notes_app
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Server-side persistence is the point of this brief and is tested in S3 and
+      F3 (survives a restart) rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      Two users can sign up and sign in; sign-up establishes a session in one
+      submit and leaves no auth dialog open.
+    points: 7
+    method: probe
+    note: >-
+      The make-or-break for this idea. In failing builds the modal silently
+      reopens and agents loop sign-up to sign-in to sign-up; one agent spent all
+      15 of its steps on auth and gave up.
+
+      Only the END state is decided: no visible password field, and a page with
+      real content on it. That is precisely the failure mode above — the modal
+      that will not close — and it is DOM-agnostic, since `input[type=password]`
+      is the one auth element every build shares. What it cannot see is a build
+      that took three submits to get there; the "in one submit" clause rests on
+      the setup forbidding a retry and on the transcript. The `length > 20` guard
+      is what stops a build that crashes to a blank page from passing for want of
+      a password box.
+    setup: >-
+      Sign up as ada7731 (email ada7731@example.com, password Quickmemo-7731),
+      submitting the sign-up form exactly ONCE — do not resubmit or switch to the
+      sign-in tab if it appears to do nothing. Sign out with the app's own
+      control, sign up the second account ben7731 (ben7731@example.com, same
+      password), sign out again, then sign in as ada7731. Leave the app on
+      whatever it shows after that sign-in; do not reopen any auth dialog.
+    check:
+      name: value_matches
+      js: |-
+        () => {
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 2 && r.height > 2 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const pw = Array.from(
+            document.querySelectorAll('input[type=password]')).some(vis);
+          const body = (document.body.innerText || '').trim();
+          return 'pw=' + (pw ? 'y' : 'n') + ' chars=' + body.length +
+            ' verdict=' + (!pw && body.length > 20 ? 'signed-in' : 'auth-open');
+        }
+      pattern: "verdict=signed-in"
+  - id: S2
+    text: "User A posts a public markdown note carrying a tag, and a private note."
+    points: 6
+    method: assert
+    note: >-
+      Read from A's own timeline, where both notes must be visible; the public
+      flag itself is not decided here but downstream, by S3 and A1.
+    setup: >-
+      Signed in as ada7731, post note P — mark it PUBLIC, tag it `roadmap` (use
+      the app's tag field if it has one, otherwise put `#roadmap` on its own line
+      in the body), and type this body exactly, including both lines of three
+      backticks:
+
+      # QUARTERLY plan VBPUBLIC7731
+
+      - ship the beta
+
+      - tell the crowd
+
+      ```
+
+      npm run build
+
+      ```
+
+      Then post note Q — mark it PRIVATE, tag it `roadmap` as well, body
+      `QUARTERLY runway VBPRIVATE7731`. Leave A's own timeline on screen with
+      both notes listed.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPUBLIC7731"
+        - "VBPRIVATE7731"
+        - "[Rr]oadmap"
+  - id: S3
+    text: >-
+      User B sees ONLY the public note on Explore; the private note's text
+      appears nowhere in the page or in any JSON payload the client receives.
+    points: 10
+    method: assert
+    note: >-
+      Assert at the payload level too — an app can filter in the template while
+      shipping the private row to the browser.
+
+      PARTIALLY DECIDED, and this is the item's known limit. The js reads the
+      whole serialised DOM (`outerHTML`, not `innerText`), plus localStorage and
+      sessionStorage, so it catches the private row hidden in a `display:none`
+      node, in a `data-` attribute, in an inline bootstrap `<script>` payload, or
+      cached client-side. It CANNOT see the body of an XHR/fetch response: a SPA
+      that receives every note over `/api/notes` and drops the private ones in
+      the render function passes this. No primitive in the registry inspects
+      response bodies of requests the page made — `http_status` fetches one
+      route the harness names itself, and this idea has no route survey on its
+      facts sheet. A `response_bodies_exclude(pattern, url_matches='')` over the
+      phase's recorded network log is what would close it.
+
+      Both halves are required: P's marker present AND Q's marker absent, so a
+      build whose Explore is empty or broken fails rather than passing for having
+      leaked nothing.
+    setup: >-
+      Sign out of ada7731 and sign in as ben7731 (ben7731@example.com,
+      Quickmemo-7731). Open the shared Explore / public timeline and wait for it
+      to finish loading. Do not open any of A's notes individually and do not
+      search. If notes P and Q from S2 no longer exist, recreate them as A first.
+    check:
+      name: value_matches
+      js: |-
+        () => {
+          const html = document.documentElement.outerHTML;
+          let extra = '';
+          try {
+            extra = JSON.stringify(localStorage) + JSON.stringify(sessionStorage);
+          } catch (e) {}
+          const pub = html.indexOf('VBPUBLIC7731') >= 0;
+          const leak = (html + extra).indexOf('VBPRIVATE7731') >= 0;
+          return 'public=' + (pub ? 'y' : 'n') + ' private=' + (leak ? 'y' : 'n') +
+            ' verdict=' + (pub && !leak ? 'clean' : 'leak');
+        }
+      pattern: "verdict=clean"
+  - id: S4
+    text: >-
+      Markdown is rendered on the timeline: heading, list and code-block
+      elements are present and the raw markers are absent.
+    points: 5
+    method: assert
+    note: >-
+      Structural, not selector-coupled: `h1..h6`, `li` and `pre,code` are what
+      any markdown renderer emits, whatever the build calls its containers. The
+      element half alone would be lenient — app chrome supplies an `h1` and a nav
+      `li` on most builds — so the raw-marker half carries the discrimination: a
+      build that prints the body verbatim shows ``` or `# QUARTERLY` in the
+      rendered text and fails. Both halves must hold.
+    setup: >-
+      Signed in as either account, bring note P's rendered body into view on a
+      timeline (Explore or A's own), not in an edit box. Leave it on screen.
+    check:
+      name: value_matches
+      js: |-
+        () => {
+          const has = (s) => document.querySelectorAll(s).length > 0;
+          const t = document.body.innerText || '';
+          const raw = t.indexOf('```') >= 0 || t.indexOf('# QUARTERLY') >= 0;
+          const ok = has('h1,h2,h3,h4,h5,h6') && has('li') && has('pre,code') && !raw;
+          return 'raw=' + (raw ? 'y' : 'n') +
+            ' verdict=' + (ok ? 'rendered' : 'not-rendered');
+        }
+      pattern: "verdict=rendered"
+  - id: S5
+    text: "B finds A's public note by search, and searching for the private note's text returns nothing."
+    points: 6
+    method: assert
+    note: >-
+      One query decides both halves, which is why P and Q both carry the word
+      QUARTERLY. The correct result set for `QUARTERLY` as B is exactly {P}: a
+      build whose search ignores visibility returns Q too and fails on the absent
+      pattern, and a build whose search returns nothing fails on the present one.
+      The query term itself appears in neither marker, so a "Results for
+      QUARTERLY" echo cannot satisfy either pattern.
+    setup: >-
+      Signed in as ben7731, use the app's search to search for QUARTERLY —
+      from the Explore / public timeline if search is scoped there, otherwise the
+      global search box. Wait for the results to settle and leave them on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPUBLIC7731"
+      absent:
+        - "VBPRIVATE7731"
+  - id: S6
+    text: "B comments on the public note and A sees the comment attributed to B."
+    points: 6
+    method: assert
+    note: >-
+      Zero comment actions across 20 runs. Every note renders `0 comments`; a
+      build whose comment POST 500s is indistinguishable to the crowd.
+
+      Which account is looking cannot be read off the page, so "A sees it" rests
+      on the sign-out and sign-in the transcript records. What is decided is that
+      B's comment text and B's name render together — the half that fails when a
+      comment is dropped, stored with no author, or shown only to its writer.
+    setup: >-
+      Signed in as ben7731, open note P and add a comment containing the literal
+      text VBCOMMENT7731. Then sign out, sign back in as ada7731
+      (ada7731@example.com, Quickmemo-7731), open the same note and leave the
+      comment thread visible.
+    check:
+      name: text_matches
+      patterns:
+        - "VBCOMMENT7731"
+        - "[Bb]en7731"
+
+tier2:
+  - id: F1
+    text: >-
+      Direct-ID access control: B requesting A's private note by id receives
+      403 or 404, never 200.
+    points: 8
+    method: probe
+    note: >-
+      The check no crowd agent can perform, and the one most likely to fail.
+
+      NO CHECK — two things are missing and neither can be guessed safely.
+      (1) The route. `http_status` is the only session-free instrument, and it
+      must be handed a literal path; the facts sheet for this idea carries no
+      route survey, so there is no modal note API to name the way team_wiki F1
+      names `/api/documents`. A wrong path answers 404, which for a positive item
+      reads as a pass, so every build would be credited 8 points for a probe that
+      never reached them.
+      (2) The session. The item is about B's session, not an anonymous one, and
+      no primitive can re-issue a request that the grader discovered at runtime
+      under a second account's cookie. A `refetch_as(other_session, url_from)`
+      primitive — or a corpus route survey plus `http_status(anonymous: true)`
+      for the weaker anonymous variant — is what would decide it.
+    setup: >-
+      Signed in as ada7731, open note Q (VBPRIVATE7731) on its own and note the
+      URL. Sign out, sign in as ben7731 and navigate straight to that same URL
+      with `goto`. Report the status the app returns and whether any of Q's text
+      is on screen or in the response.
+  - id: F2
+    text: "Tag filtering returns the correct subset, scoped to what the viewer may see."
+    points: 4
+    method: assert
+    note: >-
+      Needs three notes to be a real subset test, which is why E exists: filtering
+      by `roadmap` as B must return P and neither E (public, wrong tag) nor Q
+      (right tag, not B's to see). A build that filters nothing shows all three
+      and fails on either absent pattern; a build that filters by tag but ignores
+      visibility fails on Q.
+    setup: >-
+      Signed in as ada7731, post note E if it does not exist: PUBLIC, tag
+      `errata`, body `VBERRATA7731 typo fixes`. Then sign out and sign in as
+      ben7731, open the Explore / public timeline and apply the app's tag filter
+      for `roadmap` (click the tag chip if that is how the build filters). Leave
+      the filtered list on screen.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPUBLIC7731"
+      absent:
+        - "VBERRATA7731"
+        - "VBPRIVATE7731"
+  - id: F3
+    text: "Notes survive a server restart — state under VIRALBENCH_DATA_DIR, not a process dict."
+    points: 5
+    method: probe
+    note: >-
+      LIMITATION, recorded rather than hidden: the harness never restarts the app
+      while grading, so this is decided from source. The app's code lives in a
+      throwaway clone and only `VIRALBENCH_DATA_DIR` survives a restart, so a
+      build whose store is anywhere else — the app directory, /tmp, or a process
+      dict — loses every note and every account. The pattern requires the
+      variable to be READ FROM THE ENVIRONMENT in code, not merely mentioned in a
+      README. What it cannot see is a build that reads the variable and then
+      writes its rows elsewhere anyway, or one that recreates its schema at
+      startup and truncates. A `restart_app` primitive (stop the process, start
+      it again, re-navigate, re-read the timeline) would decide it properly.
+
+      Unlike collaborative_table F5, the share of this idea's corpus that reads
+      the variable is unmeasured — the facts sheet carries no data-dir signal —
+      so the abstention rate here is not known.
+    setup: "Nothing to navigate; this is read from source. Leave the app as it is."
+    check:
+      name: source_present
+      pattern: "(getenv|environ|process\\.env|env\\[|env\\.get)[^\\n]{0,40}VIRALBENCH_DATA_DIR"
+  - id: F4
+    text: "No required form control lacks a name or id."
+    points: 3
+    method: assert
+    expect: "document.querySelectorAll('[required]:not([name]):not([id])').length === 0"
+    note: >-
+      `An invalid form control with name='' is not focusable` blocks submit and
+      the browser cannot even focus it to complain.
+
+      Counted rather than evaluated: `dom_count` with `n: 0` is the same query
+      the `expect` names, without depending on how a js result is coerced. It
+      counts controls whether or not they are visible, which is what is wanted —
+      a closed auth dialog's inputs break submit the moment it opens.
+    setup: >-
+      Open the app's sign-up or sign-in form and any note composer, so the
+      build's real forms are in the DOM. Leave them there.
+    check:
+      name: dom_count
+      selector: "[required]:not([name]):not([id])"
+      op: "=="
+      n: 0
+  - id: F5
+    text: "Zero non-localhost requests."
+    points: 5
+    method: assert
+    note: >-
+      A self-hosted note app has nothing to ask the internet for. A3 is the
+      penalty half of the same observation and is recorded from the same network
+      log rather than re-observed.
+    setup: >-
+      Complete one ordinary pass through the app — sign in, open the timeline,
+      open Explore — so the network log covers a real session.
+    check:
+      name: network_origins
+
+penalties:
+  - id: A1
+    text: >-
+      Explore shows all notes regardless of the public flag — a global feed
+      presented as multi-user sharing.
+    points: -10
+    method: assert
+    note: >-
+      The highest-value grader check for this idea. The crowd's entire
+      observable surface is "Explore has other people's stuff in it", which a
+      SELECT * satisfies perfectly.
+
+      Polarity: this PASSES — the penalty fires — when Q's marker is readable on
+      B's Explore. Read from rendered text rather than from the DOM, because the
+      claim here is what a second user is SHOWN; the stricter payload-level read
+      of the same state is S3's job, and the two are deliberately allowed to
+      disagree (shipped-but-hidden fails S3 without firing A1).
+    setup: >-
+      Same state as S3: signed in as ben7731 with the Explore / public timeline
+      loaded and unfiltered. Recreate notes P and Q as ada7731 first if they are
+      gone.
+    check:
+      name: text_matches
+      patterns:
+        - "VBPRIVATE7731"
+  - id: A2
+    text: >-
+      Auth fails silently: submitting valid credentials reopens the dialog with
+      no visible error.
+    points: -8
+    method: assert
+    note: >-
+      Fires only when both halves hold: a visible password field is still on
+      screen after a correct submit AND no error, invalid, incorrect, failed or
+      taken wording appears anywhere in the rendered text. A build that rejects
+      the credentials and says so is a different (lesser) fault and does not fire
+      this; a build that signed the user in has no visible password field and
+      does not fire it either.
+
+      The visibility test is geometry plus `visibility`, not `offsetParent`,
+      because auth dialogs are routinely `position: fixed`, for which
+      `offsetParent` is null even when the dialog is on screen.
+    setup: >-
+      Sign out. Open the sign-in form and sign in as ada7731 with the exact
+      password Quickmemo-7731, submit ONCE, then wait several seconds for the app
+      to settle. Do not retry, do not close the dialog yourself, and do not touch
+      anything else — leave on screen whatever the app left there.
+    check:
+      name: value_matches
+      js: |-
+        () => {
+          const vis = (e) => { const r = e.getBoundingClientRect();
+            return r.width > 2 && r.height > 2 &&
+                   getComputedStyle(e).visibility !== 'hidden'; };
+          const pw = Array.from(
+            document.querySelectorAll('input[type=password]')).some(vis);
+          const err = /error|invalid|incorrect|failed|wrong|already|taken|exists|try again/i
+            .test(document.body.innerText || '');
+          return 'pw=' + (pw ? 'y' : 'n') + ' err=' + (err ? 'y' : 'n') +
+            ' verdict=' + (pw && !err ? 'silent-fail' : 'no-silent-fail');
+        }
+      pattern: "verdict=silent-fail"
+  - id: A3
+    text: "A self-hosted app fetches its renderer or other assets from a third-party CDN."
+    points: -6
+    method: assert
+    note: >-
+      One build: 101x `cdn.jsdelivr.net/npm/marked/marked.js (ERR_BLOCKED_BY_ORB)`
+      then 53x `escapeHtml is not defined` — the CDN block took the whole page's
+      JS down. Fires as the inverse of F5, so it is recorded by the harness
+      rather than re-observed: see F5's network log.
+    setup: >-
+      Nothing extra to navigate; the network log from the ordinary pass is what
+      is read. Leave the app as it is.
+    check:
+      name: third_party_requests
+  - id: A4
+    text: "Note content is rendered unescaped."
+    points: -8
+    method: assert
+    note: >-
+      Polarity: passes — the penalty fires — when the injected tag became a live
+      element, or when its `onerror` ran. A build that escapes it shows the tag
+      as literal text and no `img` exists; a build that strips it shows nothing
+      and also does not fire. A markdown renderer that passes inline HTML through
+      by design fires this, which is intended: the item is about the rendering,
+      not the intent.
+    setup: >-
+      Signed in as ada7731, post one more note whose body is exactly this single
+      line, typed literally and left unrendered by any preview toggle:
+
+      <img src=x alt=XSSPROBE onerror="window.__vbxss=1">
+
+      Then leave that note visible on the timeline. Do not reload the page after
+      posting.
+    check:
+      name: value_matches
+      js: |-
+        () => {
+          const el = document.querySelector('img[alt=XSSPROBE], img[src="x"]');
+          const fired = !!window.__vbxss;
+          return 'el=' + (el ? 'y' : 'n') + ' fired=' + (fired ? 'y' : 'n') +
+            ' verdict=' + (el || fired ? 'unescaped' : 'escaped');
+        }
+      pattern: "verdict=unescaped"

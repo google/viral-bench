@@ -1,0 +1,513 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for group_scheduling_poll (WhenWorks). Never shown to the founder.
+#
+# A MULTI-PARTICIPANT, server-backed idea whose entire claim is that a second
+# person can answer a poll they were given nothing but a URL for. The grader
+# drives ONE browser and plays both parts in sequence, so these items only
+# compose if they agree on the poll's contents and on the participants' names.
+# They are fixed here and referenced by name:
+#
+#   poll title     "Retro VBPOLL7391" -- the nonce appears nowhere else
+#   description    contains VBDESC7391
+#   options        2027-03-17 09:00, 2027-03-18 13:00, 2027-03-19 15:00
+#   added option   2027-03-20 11:00                      (F1 only)
+#   participant 1  "Bo VB7391"    17 yes, 18 no,    19 maybe
+#   participant 2  "Ana VB7391"   17 yes, 18 maybe, 19 no
+#   participant 3  "Cy VB7391"    A3 only, on a form that may be inert
+#
+# So 2027-03-17 carries two yes votes and the other two carry none: one
+# unambiguous leader, which is what makes S5 ("exactly one winner is marked") and
+# A2 ("more than one is") decidable at all. A tie would collapse both.
+#
+# The three dates are CONSECUTIVE and it is their day numbers -- 17, 18, 19 --
+# that the option checks match, never a formatted date. Forty builds render a
+# date forty ways (`2027-03-17`, `Mar 17`, `17/03/2027`, `Wednesday, March 17`)
+# and every one of them contains the day number, so that is the only extraction
+# which survives the variation. The times are chosen to avoid those numbers.
+#
+# "A fresh session" is the other shared fixture. The grader has one browser
+# context and no incognito tool, so a second visitor is simulated by clearing
+# storage and cookies inside the page:
+#
+#   () => { localStorage.clear(); sessionStorage.clear();
+#           document.cookie.split(';').forEach(c => document.cookie =
+#             c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }
+#
+# It cannot clear an HttpOnly cookie, so a build holding its session there still
+# recognises the same visitor. That is recorded in S2's note rather than papered
+# over. Every setup that needs it inlines the snippet, because the grader starts
+# each item with a fresh conversation and remembers nothing from the last one --
+# which is also why every setup names the poll by title rather than by the URL
+# the previous item was looking at.
+#
+# Every text check reads `document.body.innerText` explicitly instead of the
+# harness's default reader, which also returns every input's value. The default
+# would pass S1 on a build whose "create poll" button does nothing whatsoever:
+# the title would still be sitting in the form field the grader typed it into.
+rubric_version: 1
+idea_id: group_scheduling_poll
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Server-side persistence is the point of this brief and is tested in S4 and F4 (survives a server restart) rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: >-
+      A poll with a title, a description and three date/time options can be
+      created with NO account and no cookie.
+    points: 8
+    method: probe
+    note: >-
+      Any 401, 403 or redirect-to-login here is a direct brief violation: the
+      pitch is "without anyone creating an account".
+
+      What the check decides is that the poll exists and renders its own title,
+      its description and all three options. The "no account" half is NOT decided
+      here: a build that made the grader sign up first still passes this item and
+      loses A1's ten points instead, which is where the brief violation is
+      priced. Splitting it that way is deliberate -- an `absent: sign in` clause
+      would also fire on the many builds that merely offer an optional sign-in
+      link beside a working create form.
+
+      Known cost of matching day numbers: a build whose only date control is a
+      click-through calendar widget, with no typable field and no free-text
+      option label, cannot be driven into this state within the step budget and
+      fails an item it might deserve.
+    setup: >-
+      From the app's entry page, create ONE poll without signing up (if the app
+      forces an account, create one and carry on). Title it exactly
+      `Retro VBPOLL7391`. Put the literal text VBDESC7391 in the description.
+      Give it exactly three date/time options -- 2027-03-17 at 09:00, 2027-03-18
+      at 13:00 and 2027-03-19 at 15:00 -- typing each date in ISO form
+      (2027-03-17) wherever the field accepts typing. If an option also has a
+      free-text label or name field, set those three to VBOPT17, VBOPT18 and
+      VBOPT19. Save the poll and leave the created poll's own page on screen.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "VBPOLL7391"
+        - "VBDESC7391"
+        - "VBOPT17|\\b17\\b"
+        - "VBOPT18|\\b18\\b"
+        - "VBOPT19|\\b19\\b"
+  - id: S2
+    text: >-
+      A second visitor, in a fresh session, opens the poll URL and sees the
+      title and all three options.
+    points: 7
+    method: assert
+    note: >-
+      Deep-open is 0 across 930 crowd agents, so this must be asserted by an
+      HTTP client, never inferred from crowd verdicts.
+
+      A literal HTTP client is nevertheless out of reach: `http_status` is the
+      only cookie-free instrument and it runs in the pre-pass, before any poll
+      exists, against a path fixed in this file -- and a poll's URL is generated
+      at creation time. So the "fresh session" is produced inside the browser
+      instead, by clearing storage and cookies. That cannot clear an HttpOnly
+      session cookie, so a build keeping its visitor identity there is still
+      recognised and this item over-credits it. F5 is the only genuinely
+      session-free probe in the rubric.
+
+      Second known over-fire: a build that renders a whole month's calendar on
+      the poll page supplies 17, 18 and 19 by itself, whether or not those are
+      the poll's options. The title nonce is what keeps that from passing an
+      empty page.
+    setup: >-
+      You should already be on the poll `Retro VBPOLL7391`; if not, reach it from
+      the app's home page. First run evaluate with `() => location.href` and note
+      the poll's URL. Then become a different visitor: run evaluate with
+      `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`
+      and then `goto` that same poll URL. Leave whatever the app renders on
+      screen; do not sign in and do not vote yet.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "VBPOLL7391"
+        - "VBOPT17|\\b17\\b"
+        - "VBOPT18|\\b18\\b"
+        - "VBOPT19|\\b19\\b"
+  - id: S3
+    text: >-
+      That visitor enters a name, marks each option yes/no/maybe, and submits
+      successfully.
+    points: 8
+    method: assert
+    note: >-
+      "Submitted successfully" is read as "the name the visitor typed is now part
+      of the page's rendered text" -- which is why the check reads innerText and
+      not the harness's default reader. The default also returns input values, so
+      a build whose submit button does nothing would pass on the name still
+      sitting in the field the grader typed it into. That is precisely the
+      failure A3 exists for, and reading it as a pass here would cancel it out.
+
+      Not decided: that the three answers were stored as given. A build that
+      records the participant but drops the per-option marks passes this item and
+      is caught, if at all, by S4's grid.
+    setup: >-
+      Work on the poll `Retro VBPOLL7391` as the second visitor. If you are not
+      on that poll's page, reach it, and if the app treats you as someone who has
+      already answered, run evaluate with
+      `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`
+      and reload. Enter the participant name `Bo VB7391`, mark 2027-03-17 YES,
+      2027-03-18 NO and 2027-03-19 MAYBE, and submit the response. Wait for the
+      page to settle and leave the result on screen.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "Bo\\s*VB7391"
+  - id: S4
+    text: "The results grid shows BOTH participants' responses side by side, with their names."
+    points: 9
+    method: assert
+    note: >-
+      Only the names half is decided: both participants' names render together on
+      one surface, which is what fails on a build that stores a response without
+      its author, or shows a visitor only their own answers. "Side by side" is
+      not decided and cannot honestly be -- no primitive reads table geometry, and
+      innerText flattens a grid into lines whether the options are its rows or its
+      columns. A `grid_contains(row_label, column_label)` primitive would close
+      it.
+
+      Nor are the per-option answers decided. A build listing "Bo VB7391, Ana
+      VB7391" with no marks beside them passes here; S5 is what then fails,
+      because nothing can lead.
+    setup: >-
+      The poll `Retro VBPOLL7391` already holds Bo VB7391's response. Add a
+      second: run evaluate with `() => location.href` to note the poll URL, then
+      evaluate `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`,
+      `goto` that URL again, and submit a response under the name `Ana VB7391`
+      marking 2027-03-17 YES, 2027-03-18 MAYBE and 2027-03-19 NO. Then leave the
+      results grid on screen with both participants visible.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "Bo\\s*VB7391"
+        - "Ana\\s*VB7391"
+  - id: S5
+    text: >-
+      The option with the most yes votes is highlighted, and exactly one option
+      is marked as the winner.
+    points: 8
+    method: assert
+    note: >-
+      One build renders `⭐ TOP PICK` on all three options simultaneously. The
+      brief says "the option with the most yes votes"; marking everything
+      satisfies the letter and defeats the point. On a genuine tie, either one
+      marker plus visible tie language or zero markers plus tie language — never
+      N markers.
+
+      The check counts winner-badge language in the rendered text: at least one,
+      at most two. The emoji in the pattern is an OPTIONAL PREFIX rather than an
+      alternative, so `⭐ TOP PICK` counts once rather than twice -- had it been
+      an alternative, a single honest badge would have read as two markers and
+      failed the item on every build that decorates it. The ceiling is two, not
+      one, because a per-option badge plus a page-level summary ("Winner:
+      Wed 17 Mar") or a "pick winner" button is the common honest shape, while
+      marking all three options -- the failure this is written for -- cannot come
+      in under three. A2 is the same count from the other side.
+
+      Two things it does not decide. WHICH option carries the badge: no primitive
+      reads adjacency between a badge and a date, and innerText separates a grid
+      cell from its neighbour with a newline, so the marker cannot be tied to the
+      17th. And a build that highlights the leader with colour alone, carrying no
+      marker word at all, scores zero here -- read as a genuine miss of "marked
+      as the winner", but it is the harshest reading available. A
+      `nearest_text(anchor, marker, max_chars)` primitive would settle both.
+    setup: >-
+      With both responses in -- 2027-03-17 has two yes votes and the other two
+      options have none -- leave the poll's results grid on screen. Do NOT
+      finalize or confirm a time: that is F2's job, and its banner would be
+      counted here.
+    check:
+      name: text_pattern_count
+      js: "() => document.body ? document.body.innerText : ''"
+      pattern: "(?:⭐|★|🏆|👑|✨)?\\s*(?:top\\s*pick|\\bwinner\\b|\\bwinning\\b|best\\s*(?:option|time|slot|choice|fit)|most\\s*popular)"
+      minimum: 1
+      maximum: 2
+
+tier2:
+  - id: F1
+    text: "The organizer can add and remove options after votes exist, without losing existing votes."
+    points: 6
+    method: assert
+    note: >-
+      Both halves are decided: the fourth option's day number appears, the removed
+      option's does not, and both participants' names are still on the grid --
+      which is the "without losing existing votes" clause.
+
+      The setup insists the add-option form be closed first for a concrete
+      reason: a custom date picker left open renders a month of day numbers, 19
+      and 20 among them, and would make a correct removal read as a failure. A
+      native `<input type="date">` picker draws outside the DOM and is harmless.
+
+      Known limitation: organizer identity. S2 through S4 clear cookies to play
+      other visitors, so a build that grants edit rights via a session cookie has
+      already forgotten this grader was the creator by the time F1 runs, and the
+      item fails for a reason the build is not responsible for. Builds that make
+      the poll page editable by anyone with the URL, or that hand out a separate
+      admin link, are unaffected. Recorded rather than fixed: preserving the
+      creator's session across items would cost S2 its fresh visitor, which is
+      the more important claim.
+    setup: >-
+      As the organizer, open the poll `Retro VBPOLL7391` and use its own edit or
+      manage controls to ADD a fourth option, 2027-03-20 at 11:00, and REMOVE the
+      2027-03-19 option. Then close any add-option form, dialog or date picker so
+      that only the results grid is on screen. If the app offers no way to edit
+      options at all, leave the grid on screen and report unknown.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "\\b20\\b"
+        - "Bo\\s*VB7391"
+        - "Ana\\s*VB7391"
+      absent:
+        - "VBOPT19|\\b19\\b"
+  - id: F2
+    text: "The organizer can finalize a chosen time, which is then shown to everyone opening the poll."
+    points: 7
+    method: assert
+    note: >-
+      The pattern requires a STATE word rather than an action word -- `finalized`,
+      `confirmed`, `booked`, `locked in`, `chosen`, a bare `final` -- so that the
+      mere presence of a "Finalize" button on an unfinalized poll cannot satisfy
+      it. `finali[sz]ed` needs the `d`, and `\bfinal\b` cannot match inside
+      "Finalize". The cost is a build that announces the outcome purely by moving
+      the option to the top, or by a checkmark with no words: it fails an item it
+      arguably meets.
+
+      "Shown to everyone" rests on the session reset, which cannot clear an
+      HttpOnly cookie -- see S2. A build that shows the finalized time only to the
+      organizer, and keeps its session in an HttpOnly cookie, passes.
+    setup: >-
+      As the organizer on the poll `Retro VBPOLL7391`, finalize or confirm the
+      2027-03-17 option as the chosen time. Then run evaluate with
+      `() => location.href` to note the poll URL, evaluate
+      `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`,
+      and `goto` that URL again as a plain visitor. Leave whatever that visitor
+      is shown on screen.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "finali[sz]ed|confirmed|\\bbooked\\b|locked\\s*in|\\bdecided\\b|\\bchosen\\b|\\bfinal\\b|it'?s\\s*official"
+        - "VBOPT17|\\b17\\b"
+  - id: F3
+    text: "Yes/no/maybe controls have accessible names or visible labels."
+    points: 5
+    method: assert
+    note: >-
+      The largest single class of interaction failure for this idea — ~110
+      timeouts against guessed selectors like `input[name="opt-0"][value="yes"]`
+      because the controls carry no accessible name.
+
+      Decided with the same primitive as the universal R4, and deliberately so:
+      `aria_names` would only read `aria-label` attributes and would fail every
+      build that labels a radio with a proper `<label>`, which is the correct way
+      to do it. `controls_have_names` accepts a label, a title, a placeholder or
+      the control's own text, and separately fails a `div[role=textbox]` posing
+      as a field. A build with unnamed vote controls therefore loses this item
+      AND R4 -- nine points -- which is the weighting the timeout count above
+      argues for rather than an accident.
+
+      The survey covers every visible control on the page, not only the vote
+      ones, so an unnamed icon button in a header fails this item too. The setup
+      asks for the response form alone on screen to keep that surface small.
+    setup: >-
+      Open the poll `Retro VBPOLL7391` so its response form is on screen with the
+      yes/no/maybe controls for every option visible, and with no dialog, menu or
+      date picker open over it. Do not submit anything.
+    check:
+      name: controls_have_names
+      min_controls: 3
+      max_unnamed: 0
+  - id: F4
+    text: "Votes survive a server restart."
+    points: 4
+    method: probe
+    note: >-
+      INSTRUMENT. The harness cannot restart the app -- no primitive stops and
+      starts the server process -- so this is decided from WHERE the build puts
+      its state, which in this runtime is very nearly the same question. The app
+      directory is a throwaway clone re-made on every restart, and
+      `$VIRALBENCH_DATA_DIR` (`/data`) is documented to the founder as the only
+      writable path that survives one. A build whose database or JSON file lives
+      under `/data` keeps its votes; one writing a relative `./data/poll.db`, or
+      holding votes in a process dictionary, does not. The lookbehind is exactly
+      what separates those two spellings, and it also declines `/database`.
+
+      Two known errors, in opposite directions. It OVER-fires for a build that
+      puts uploads or a cache under `/data` while keeping votes in memory, and
+      for a README that merely mentions `/data`, since the grep reads Markdown
+      too. It UNDER-fires for a build that keeps everything in the browser's
+      localStorage: those votes do outlive a server restart, but only for their
+      own author, and S2 and S4 are what catch that shape. A `restart_app()`
+      primitive -- stop the process, start it again, re-read the page -- would
+      decide the item properly and is the one addition this rubric most wants.
+    setup: >-
+      Nothing to navigate; this is read from the build's source. Leave the app as
+      it is.
+    check:
+      name: source_present
+      pattern: "VIRALBENCH_DATA_DIR|(?<![A-Za-z0-9_.])/data(?![A-Za-z0-9_])"
+  - id: F5
+    text: "A non-existent poll URL returns 404, not 500 and not a blank 200."
+    points: 3
+    method: probe
+    note: >-
+      `/poll/<id>` is the modal shape for this idea, but the path barely matters:
+      a build routing polls at `/p/<id>` or `/<id>` still answers this request
+      from whatever it does with an unmatched path, which is the thing the item is
+      actually about. The id is one that could never have been created, so the
+      check is safe in the pre-pass, where it runs before the grader has made any
+      poll at all -- and it is the only cookie-free request in the whole rubric.
+
+      One known miss: the SPA that serves index.html with a 200 for every path and
+      renders "poll not found" in the browser. That is defensible UX and is
+      recorded here as a failure, because the item names the status code.
+    setup: >-
+      Nothing to navigate: the harness issues its own request for a poll id that
+      was never created. Leave the app as it is.
+    check:
+      name: http_status
+      path: /poll/vbnosuchpoll7391
+      expect: 404
+      anonymous: true
+
+penalties:
+  - id: A1
+    text: "An account is required to create or answer a poll."
+    points: -10
+    method: probe
+    note: >-
+      Directly contradicts the pitch. Observed on three recent builds, one of
+      which showed auth UI to 30/30 agents: "a 'no accounts required' pitch that
+      immediately breaks on signup".
+
+      Fires only when BOTH halves hold on the entry page a stranger sees: auth
+      vocabulary is present, and no poll-creation affordance is. That conjunction
+      is what keeps it off the builds that put an optional "Sign in" link beside a
+      working create form -- the common and perfectly legitimate shape -- and it
+      means a blank or dead page does not fire it either.
+
+      The "or answer" half is NOT decided. Reaching a poll's response form
+      anonymously needs that poll's generated URL, and no primitive here can be
+      handed a URL the grader discovered at run time.
+    setup: >-
+      Become a first-time visitor: run evaluate with
+      `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`
+      and then `goto` `/`. Leave the entry page exactly as it renders for a
+      stranger: do not sign up, do not sign in, and do not dismiss anything.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "\\bsign\\s*up\\b|\\bsign\\s*in\\b|\\blog\\s*in\\b|\\blogin\\b|\\bcreate\\s*(?:an\\s*)?account\\b|\\bregister\\b|\\bpassword\\b"
+      absent:
+        - "create\\s+(?:a\\s+|your\\s+|new\\s+)?poll|new\\s+poll|start\\s+(?:a\\s+)?poll|make\\s+(?:a\\s+)?poll|poll\\s+title|schedule\\s+(?:a\\s+)?(?:meeting|event|poll)"
+  - id: A2
+    text: "More than one option is marked as the winner when there is a clear single leader."
+    points: -6
+    method: assert
+    note: >-
+      The exact complement of S5's ceiling, counting the same badge language. With
+      three options, a build that marks every one of them renders the badge at
+      least three times, while the honest shapes stop at two: one badge, or one
+      badge plus a "Winner: ..." summary or a "pick winner" button.
+
+      The threshold is 3 rather than 2 on purpose. Penalties are graded after
+      Tier 2, so by the time this runs F2 has finalized a time and its banner is
+      on the page; a penalty that fired on a legend plus a banner would take six
+      points off builds that did nothing wrong. The price is that a build marking
+      two options of three escapes -- the safe direction for a penalty. As in S5,
+      the emoji is an optional prefix, so a decorated badge counts once.
+
+      The "clear single leader" precondition is guaranteed by the fixture, not
+      checked: 2027-03-17 holds two yes votes and nothing else holds any. If the
+      grader could not reach the poll, the count is zero and the penalty does not
+      fire.
+    setup: >-
+      Open the results grid of the poll `Retro VBPOLL7391`, where 2027-03-17 leads
+      with two yes votes and no other option has any. If you can no longer reach
+      that poll, create a fresh one with three date options and cast two responses
+      so that one option clearly leads. Leave the grid on screen.
+    check:
+      name: text_pattern_count
+      js: "() => document.body ? document.body.innerText : ''"
+      pattern: "(?:⭐|★|🏆|👑|✨)?\\s*(?:top\\s*pick|\\bwinner\\b|\\bwinning\\b|best\\s*(?:option|time|slot|choice|fit)|most\\s*popular)"
+      minimum: 3
+  - id: A3
+    text: "The submit control is inert — no bound handler and no form action."
+    points: -8
+    method: assert
+    note: >-
+      "A static form whose submit button does nothing." Two recent builds are
+      pure shells that passed the validity gate.
+
+      Read from the outcome rather than from the DOM: after one click of submit,
+      the participant's name is nowhere in the rendered page AND the app says
+      nothing about having received a response. Both absences are required, which
+      is what keeps it off a build that records the vote and then shows a bare
+      "Thanks!" page carrying no names. A required pattern proves the page is
+      still a poll surface, so a navigation failure or a blank page cannot fire an
+      eight-point penalty.
+
+      The name is read from innerText and never from the harness's default
+      reader. The default returns input values, so on an inert form the name the
+      grader typed is still in the field -- meaning the default would suppress
+      this penalty on precisely the builds it exists to catch.
+
+      "No bound handler and no form action" is not read literally. A
+      `has_no_handler(target)` primitive could do that, but a control with no
+      listener that nonetheless submits a real `<form>` is not the failure the
+      item is about, and one that has a listener doing nothing is.
+    setup: >-
+      Reach a poll's response form: the page you are on if it is one, otherwise
+      the poll `Retro VBPOLL7391`, otherwise a poll you create with any title and
+      one date option. Run evaluate with
+      `() => { localStorage.clear(); sessionStorage.clear();
+      document.cookie.split(';').forEach(c => document.cookie =
+      c.split('=')[0].trim() + '=;Max-Age=0;path=/'); return 'cleared'; }`
+      so the app does not treat you as someone who has already answered. Enter the
+      participant name `Cy VB7391`, mark every option, and click the submit
+      control exactly ONCE. Do not reload, do not click anything else, and leave
+      whatever the app does -- or fails to do -- on screen.
+    check:
+      name: text_matches
+      js: "() => document.body ? document.body.innerText : ''"
+      patterns:
+        - "\\bpolls?\\b|\\bvotes?\\b|\\bvoting\\b|\\brespon|\\bavailab|\\boptions?\\b|\\bmaybe\\b"
+      absent:
+        - "Cy\\s*VB7391"
+        - "thank|recorded|submitted|\\bsaved\\b|success|your\\s+response|received"

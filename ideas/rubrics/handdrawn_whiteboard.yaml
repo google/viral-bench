@@ -1,0 +1,507 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for handdrawn_whiteboard (RoughDraw). Never shown to the founder.
+#
+# OBSERVABILITY NOTE. Crowd agents cannot drag: across 840 recent trier-agents
+# there are 0 drag actions. Freehand drawing, shape creation, move/resize and
+# pan/zoom are therefore ALL invisible to the crowd, and the realised crowd trial
+# is "select a tool, load a canned diagram, click export, reload, finish". One
+# build whose entire accessibility tree was a heading plus an `Export PNG` button
+# still drew a delight 7 from one agent — crowd judgement on this idea is
+# unreliable in the optimistic direction and the rubric must not lean on it.
+#
+# THE GRADER COULD NOT DRAG EITHER, UNTIL 2026-08-28. That was the governing
+# constraint on this file: the toolkit was look / click / type_text / press_key /
+# select_option / upload_file / goto / reload_page / evaluate / capture /
+# screenshot, with no way to drag and no way to read pixels, so every gesture-
+# based item fell back to the model. Three additions closed the worst of it:
+#
+#   drag(target, dx, dy, from_x, from_y, steps)  a grader tool. Offsets are
+#       inside the target's own box, and it emits REAL pointer events, so an app
+#       listening for `pointerdown` sees a genuine gesture rather than a
+#       synthetic one its handlers may ignore.
+#   canvas_changed(before, after, should_change)  compares a 32x32 downsample of
+#       each canvas between two `capture` snapshots, so antialiasing and device
+#       pixel ratio are not changes.
+#   canvas_ink(label, minimum)  the share of that grid which is NOT the single
+#       most common colour, separating "drew something" from "repainted the
+#       background".
+#
+# Of the 13 items that are not `method: agent`, EIGHT now carry a check. A1 (the
+# shell penalty) and F2 (text labels) are decided by pixels. Five remain with the
+# model — S2, S3, S4, F1, A3 — because each asks something a pixel diff cannot
+# answer: "exactly one new element", "coordinates changed by the drag delta",
+# "resized by a handle", "scene coordinates unchanged under pan", "opens with a
+# demo scene". Those need a readable scene model, which no build exposes on a
+# fixed path. Their `note:` names the primitive each would take, and their
+# `setup:` now drives the real `drag` tool, so the model reaches the right state
+# far more often even where it must judge the result itself.
+#
+# An honest gap falls back to the model and is visible in `unresolved`; a check
+# that decides an item for the wrong reason misgrades every build of the idea in
+# the same direction and looks like a finding.
+#
+# WHY THE DOM CANNOT STAND IN FOR THE CANVAS. Measured over the r3 slice this
+# sweep grades (39 of 40 builds have client source): 38 render the scene into a
+# `<canvas>`, one uses fabric, five reference Excalidraw, and SVG geometry
+# appears mostly as toolbar icons. An earlier count of "125 of 127" was taken
+# over all of builds/work and mixed in r2 and earlier eras. Scene content is pixels, not nodes. No text-reading
+# or `dom_count` primitive can see a shape, a placed label or a seeded demo
+# scene, and any `svg` selector is dominated by toolbar icons rather than by the
+# drawing. This one measurement is why F2 and A3 have no check.
+#
+# THE NAMES SURVEY. S1 reads `document.body.innerText` PLUS the `aria-label`,
+# `title`, `alt`, `placeholder` and `value` attributes of every element, because
+# a whiteboard toolbar is icon-only in most builds and `innerText` alone reports
+# nothing for it: 112 of 127 builds set `aria-label` and 112 set `title`. The
+# survey is generic — no build's own ids, classes or structure appear in it — and
+# it approximates the accessible name, which is what "named controls" means.
+#
+# DOWNLOADS ARE SCOPED PER ITEM since 2026-08-28. `ctx.downloads` used to hold
+# the whole session, so A2 (`download_absent`) read S5/F3/F4's file and could
+# never fire on any build. S5, F3 and F4 still pin the format they expect (png
+# magic, `.svg`, `.json`), which is belt-and-braces now rather than the only
+# thing standing between F4 and inheriting F3's SVG.
+rubric_version: 1
+idea_id: handdrawn_whiteboard
+
+tier1:
+  - id: S1
+    text: >-
+      The toolbar exposes named controls for rectangle, ellipse, arrow, line,
+      freehand and text.
+    points: 6
+    method: assert
+    setup: >-
+      Open the app at its root and leave the toolbar on screen with every tool
+      visible — expand any collapsed "more tools" group, shape submenu or
+      overflow menu first, and close any modal, welcome dialog or settings panel
+      that covers it. Do not select a tool and do not draw.
+    note: >-
+      Read from the names survey described in the file header (rendered text plus
+      `aria-label`/`title`/`alt`/`placeholder`/`value`), so an icon-only toolbar
+      that labels its buttons properly passes and one that labels nothing fails —
+      which is what "named controls" asks. All six patterns must match, and each
+      accepts the synonyms builds actually ship rather than one canonical word.
+
+      Calibrated against the corpus rather than guessed: over the 127 builds with
+      client source, all six vocabularies appear in user-facing string literals
+      in 122. The five that miss one are missing the TOOL, not the word — four
+      have no arrow tool (one of those is freehand-only, its entire tool set
+      being the single string `'freehand'`), and the fifth names no tool at all,
+      the shell A1's note describes. So the check separates a tool that is absent
+      from a tool that is merely spelled differently.
+
+      Two costs, both in the generous direction. A styling panel offering "Line
+      width" or "Text colour" satisfies those two patterns without a line or text
+      TOOL existing, so a build with four tools and a rich style panel can pass;
+      and the check reads names, never behaviour, so a named button that draws
+      nothing passes here and is S2's problem. Tightening either would need the
+      toolbar to be identifiable across builds, which it is not.
+    check:
+      name: text_matches
+      js: |-
+        () => {const p=[document.body?document.body.innerText:''];for(const e of document.querySelectorAll('*')){for(const a of ['aria-label','title','alt','placeholder','value']){const v=e.getAttribute(a);if(v)p.push(v);}}return p.join('\n');}
+      patterns:
+        - "\\brect(angle|angular)?\\b|\\bsquare\\b|\\bbox\\b"
+        - "\\bellipse\\b|\\bcircle\\b|\\boval\\b"
+        - "\\barrow\\b"
+        - "\\bline\\b|\\bsegment\\b"
+        - "\\bfree[\\s-]?hand\\b|\\bpen(cil)?\\b|\\bdraw\\b|\\bbrush\\b|\\bmarker\\b|\\bscribble\\b|\\bink\\b"
+        - "\\btext\\b|\\blabel\\b"
+  - id: S2
+    text: >-
+      Dragging with each shape tool creates exactly one new element: rectangle,
+      ellipse, arrow, line and a multi-point freehand path.
+    points: 10
+    method: assert
+    expect: "element count N -> N+5, one per tool, each a distinct type in the scene"
+    setup: >-
+      Use the `drag` tool on the drawing surface —
+      `drag(target="canvas", from_x=, from_y=, dx=, dy=, steps=16)`, where
+      `from_x`/`from_y` are offsets inside the canvas's own box. It emits real
+      pointer events on it with `bubbles: true`, `button: 0`, `buttons: 1` and
+      `clientX`/`clientY` inside that rect. If nothing appears, repeat with
+      `mousedown`/`mousemove`/`mouseup` — many builds listen only for those. Do
+      this once per tool: select rectangle and drag, then ellipse, arrow, line,
+      and freehand with several intermediate moves. Judge from the app's own
+      state, not from the screen: try `evaluate` on any scene array, undo stack
+      or `localStorage` key the app keeps, and compare a canvas pixel signature
+      (`document.querySelector('canvas').toDataURL().length`) before and after
+      each drag. Report `unknown`, not `fail`, if the synthetic events never
+      reach the app — that is this harness's limit, not the build's.
+    note: >-
+      NO CHECK — needs a real `drag` tool plus a `scene_element_count(delta)`
+      primitive that can read a build-independent element count.
+
+      Neither half is reachable today. Nothing in the catalogue drags, and the
+      count the item is about lives in a canvas (125 of 127 builds) or in a
+      private JS array, so there is no cross-build way to see that it went from N
+      to N+5, let alone that the five are distinct types. A `dom_count` over
+      `svg path, svg rect` measures the toolbar's icons on the 125 canvas builds
+      and would credit a build that draws nothing; `value_changes` reads text,
+      style and form state, none of which a drawn shape touches. This is the
+      single largest unmeasured claim in the file at 10 points, and it is the
+      exact claim the crowd also cannot reach — so nothing in the pipeline sees
+      it until a drag tool exists.
+  - id: S3
+    text: >-
+      An element can be selected and moved by drag: its coordinates change by
+      the drag delta and other elements are unchanged.
+    points: 6
+    method: assert
+    setup: >-
+      Draw two shapes first with the `drag` tool (see
+      S2: `pointerdown`, `pointermove`s, `pointerup` on the drawing surface with
+      `bubbles: true`, `buttons: 1` and client coordinates inside its bounding
+      rect; fall back to the `mouse*` family). Then select the tool the app uses
+      for selection, use `drag` starting inside the first shape and
+      ends about 120px away, and leave the second shape untouched. Read the app's
+      own scene state with `evaluate` before and after, and quote both. Report
+      `unknown` rather than `fail` if the synthetic drag never reaches the app.
+    note: >-
+      NO CHECK — needs a `drag` tool and a way to read one element's coordinates.
+
+      "Coordinates change by the drag delta and other elements are unchanged" is
+      an assertion about a scene model no build exposes on a fixed path, so even
+      with a drag tool this would need `scene_element_at(index).x` or an export
+      the harness could diff. The closest available shape — export before, export
+      after, compare bytes — proves only that something changed, which a redraw
+      also does.
+  - id: S4
+    text: "An element can be resized by a handle and deleted."
+    points: 4
+    method: assert
+    setup: >-
+      Draw one shape with the `drag` tool (see S2).
+      Select it, then use `drag` for a second gesture starting exactly on one of its
+      corner handles and ends 60px further out; confirm from the app's own state
+      or from a canvas pixel signature that the shape grew rather than moved.
+      Then delete it — press Delete or Backspace with it selected, or use the
+      app's own delete control — and confirm it is gone. Report `unknown` rather
+      than `fail` if the synthetic drag never reaches the app; the delete half
+      alone is not a pass.
+    note: >-
+      NO CHECK — the resize half needs a `drag` tool aimed at a handle whose
+      position no primitive can locate.
+
+      The delete half IS reachable by keyboard, but checking it alone would award
+      most of a 4-point item for the easier half and would report a build that
+      cannot resize as passing. `dom_count` cannot see the deletion either: the
+      element was never a node. Left whole rather than split.
+  - id: S5
+    text: >-
+      Export produces a PNG with valid magic bytes, non-zero dimensions and
+      non-uniform pixels.
+    points: 8
+    method: assert
+    expect: "89 50 4E 47 0D 0A 1A 0A; IHDR w,h > 0; pixel stddev > 0"
+    setup: >-
+      Put something on the canvas first, by whatever means work without a drag
+      tool: use `drag` on the drawing
+      surface with `evaluate` (see S2), or place a text label with the text tool,
+      or click a shape tool and click once on the canvas. Do not load a template
+      or sample. Then use the app's PNG export / download / save-as-image control
+      once and wait for the file to finish writing. Download nothing else
+      afterwards.
+    note: >-
+      A stub export is completely undetectable by the crowd: one build's export
+      button was clicked by 19/30 agents and several praised it as "exports
+      cleanly" without any file ever appearing.
+
+      `image_props` decides two of the three clauses outright — the file exists,
+      starts with the PNG signature, and its IHDR width and height are both > 1.
+      The third, "non-uniform pixels", is NOT decided and no primitive can decide
+      it: reading pixel statistics needs a PNG decoder the grader deliberately
+      does not carry. `image_props` is used rather than `download(magic: png)`
+      because it also reads the IHDR, which is the "non-zero dimensions" clause.
+
+      The blank-export case is therefore only half covered here, and A2 is the
+      other half — deliberately as a penalty, where under-firing is the safe
+      direction. A build whose export is a correctly-formed image of an empty
+      canvas passes this item; that is also the honest outcome, because a grader
+      that cannot drag may well have had nothing to export.
+    check:
+      name: image_props
+  - id: S6
+    text: "Strokes render in a sketchy hand-drawn style rather than clean geometric primitives."
+    points: 6
+    method: agent
+    expect: "a drawn rectangle exports as a path with >=8 d-segments per edge and total length > 1.1x perimeter"
+    note: >-
+      The aesthetic premise of the whole app, and the only Tier 1 item that needs
+      a screenshot judgement. Paired with the structural proxy in `expect` so the
+      judgement is never the sole gate. Not one top-scoring crowd verdict
+      mentions the hand-drawn look at all.
+
+tier2:
+  - id: F1
+    text: >-
+      The canvas pans and zooms: a shape drawn then panned away keeps unchanged
+      scene coordinates and remains reachable.
+    points: 6
+    method: assert
+    setup: >-
+      Draw one shape with the `drag` tool (see S2).
+      Zoom with the app's own zoom controls or keyboard shortcuts if it has them,
+      and otherwise by dispatching a `wheel` event with `ctrlKey: true` on the
+      drawing surface. Pan by using `drag` with the hand/pan tool
+      selected, or with Space held, or by dispatching a `wheel` event with
+      `deltaX`/`deltaY` and no modifier. Then read the app's own view transform
+      and scene state with `evaluate` and show that the shape's scene coordinates
+      are unchanged while the viewport offset or scale moved. Report `unknown`
+      rather than `fail` if neither pan nor zoom can be driven at all.
+    note: >-
+      '"Infinite canvas" is a free claim to the crowd — an agent could not pan before the `drag` tool existed, so an
+      ordinary fixed canvas passes unchallenged.'
+
+      NO CHECK — needs a `drag` tool and a readable view transform.
+
+      A zoom-percentage readout would be checkable with `value_changes`, and was
+      rejected: it decides a different and much weaker claim, and would fail the
+      many builds that zoom without printing a percentage. The item's actual
+      content — scene coordinates unchanged under a pan — lives in the same
+      private scene model S2 and S3 need.
+  - id: F2
+    text: "Text labels can be added and placed on the canvas."
+    points: 4
+    method: assert
+    setup: >-
+      Call `capture(label="text_before")`. Select the text tool, click once on
+      an empty part of the canvas, and type the literal nonce VBLABEL7391. If
+      the text tool needs a dragged box, use the `drag` tool on the canvas
+      rather than synthesizing pointer events by hand. Commit the label the way
+      the app expects — Escape, Enter, or clicking elsewhere — and WAIT for any
+      editing chrome (caret, bounding box, toolbar) to disappear, because the
+      capture must see the committed label and not the editor. Then call
+      `capture(label="text_after")`. Change nothing else between the two.
+    note: >-
+      Decided by pixels since 2026-08-28. 38 of 39 r3 builds render the scene
+      into a `<canvas>`, so a placed label is pixels: `text_matches` with any
+      `js` reads nothing on those 38 and would fail every one of them however
+      well the text tool works, while passing the SVG build. That is a check
+      grading the rendering technology, which is what a DOM-agnostic rubric
+      exists to avoid.
+
+      `canvas_changed` asks the weaker but honest question — did committing a
+      text label change what is drawn? A build whose text tool does nothing
+      changes no pixels and fails. Recorded limitation: it cannot read the
+      nonce back, so a build that renders *something* on commit without
+      accepting the typed characters would pass. The setup mitigates the near
+      miss by requiring the caret and editing chrome to be gone before the
+      second capture, so a blinking cursor is not what registers.
+    check:
+      name: canvas_changed
+      before: text_before
+      after: text_after
+  - id: F3
+    text: "Export to SVG produces a valid SVG containing at least one path per drawn shape."
+    points: 5
+    method: assert
+    setup: >-
+      With whatever you managed to put on the canvas still present — draw with
+      the `drag` tool (see S2) or place a text label if the canvas is
+      empty — use the app's SVG export control once and wait for the file to
+      finish writing. Do not use the PNG export for this item and download
+      nothing else afterwards.
+    note: >-
+      Only the "a real .svg file was produced" half is decided. The bytes are not
+      inspected, and that is a catalogue gap rather than a choice: `MAGIC` has no
+      `svg` entry, so `download(magic: svg)` would return `unknown` and the five
+      points could never be earned on any build. `extension` is what is left, and
+      it is load-bearing for a second reason — `ctx.downloads[-1]` is the last
+      file of the whole session, so without it this item would pass on S5's PNG.
+
+      `min_size` is deliberately low. An honest rough.js SVG of one shape runs to
+      several hundred bytes, but the grader cannot drag, so its export may legit-
+      imately hold an empty scene; a threshold tuned for real content would fail
+      the build for the harness's limitation. "At least one path per drawn shape"
+      is therefore unasserted and needs `download_matches(pattern)` — grep the
+      downloaded bytes for `<path` and count — which would also settle F2.
+    check:
+      name: download
+      extension: ".svg"
+      min_size: 50
+  - id: F4
+    text: >-
+      A scene can be saved to a local file and reloaded, restoring the same
+      element count and coordinates.
+    points: 6
+    method: assert
+    setup: >-
+      With something on the canvas, use the app's save / export-scene / download-
+      file control — the one that writes the editable scene, not the PNG or SVG
+      image — and wait for the file to finish writing. Download nothing else
+      afterwards. Then, separately, try the app's open/import control and report
+      in your note whether it exists and what it accepts; you cannot re-upload
+      the file you just saved, because `upload_file` only offers the named
+      fixtures.
+    note: >-
+      Only the save half is decided, and only as far as "a real scene file was
+      written". The reload half is structurally out of reach: the grader's
+      `upload_file` takes a named fixture, so a file the harness itself
+      downloaded can never be fed back in. Closing it needs
+      `reupload_download(index)` — hand the last download back to a file input —
+      after which `survives_reload`-style nonce logic would decide the round trip
+      properly.
+
+      The `.json` extension is a compromise, taken with the numbers in view: 65
+      of 127 builds name their scene file `.json` (including template literals)
+      against one `.excalidraw` and none of the other candidates, so a build
+      saving as `.rd` or `.whiteboard` is failed for its file naming. It is kept
+      because the alternative is worse — with no extension pinned, this item
+      reads F3's `.svg` off the session-wide download list and passes on every
+      build whose save control does nothing at all. `min_size` is 10 so that an
+      empty-but-valid scene (`{"elements":[]}`) still counts, since the grader
+      may have had nothing to put in it.
+    check:
+      name: download
+      extension: ".json"
+      min_size: 10
+  - id: F5
+    text: "No account is required and no session cookie is set."
+    points: 4
+    method: probe
+    setup: >-
+      Open the app at its root with no prior state. Nothing else is needed: the
+      check reads the build's source tree, not the page. If you see a sign-in
+      wall, a password field or a "continue with Google" button, say so in your
+      note and cite the `look` that shows it.
+    note: >-
+      Decided from source rather than from the page, because the claim is about
+      machinery that may never render: an app can set an HttpOnly session cookie
+      that `document.cookie` cannot see, and `http_status` discards response
+      headers, so no runtime read can decide the cookie half. The pattern names
+      concrete auth and session machinery (`express-session`, `passport`,
+      `next-auth`, `req.session`, `jwt.sign`, `bcrypt`, `firebase/auth`,
+      `Set-Cookie`, a `document.cookie` write, a password input) rather than
+      words like "login", which appear in ordinary UI copy.
+
+      IT DISCRIMINATES NOTHING TODAY, and that is recorded rather than hidden: it
+      fires on 0 of 129 corpus builds, because a local whiteboard has no reason
+      to have an account. It is here to catch the bolt-on, and it is the item's
+      honest reading — the claim is true of every build measured.
+
+      LIMITATION: the grader's `grep` truncates every file at 20 KB (the raised
+      cap its docstring describes is not passed by `rubric/run.py`), so auth code
+      buried deep in a large bundle is invisible. That direction over-credits,
+      which for a positive item is the same direction the rest of this file errs
+      in.
+    check:
+      name: source_absent
+      pattern: "express-session|cookie-session|next-auth|passport|req\\.session|jwt\\.sign|jsonwebtoken|bcrypt|firebase/auth|Set-Cookie|document\\.cookie\\s*=|signInWith|createUserWith|type=[\"']password"
+
+penalties:
+  - id: A1
+    text: "The canvas offers no working drawing tools at all — a shell with only chrome."
+    points: -10
+    method: assert
+    setup: >-
+      Capture the drawing surface, draw on it, capture again. Call
+      `capture(label="before")`. Then use the `drag` tool on the canvas —
+      `drag(target="canvas", from_x=60, from_y=60, dx=140, dy=90, steps=16)` —
+      which emits real pointer events, so an app listening for `pointerdown`
+      sees a genuine gesture. If the app requires a tool to be selected first,
+      select the freehand or pen tool and drag again. Then call
+      `capture(label="after")`. Do not screenshot or reload between the two
+      captures. A build whose only tool is an unnamed freehand still has a
+      working drawing tool and must NOT fire this — that is S1's and universal
+      R4's business.
+    note: >-
+      Decided by pixels since 2026-08-28, when the `drag` tool and
+      `canvas_changed` were added. 38 of 39 r3 builds render the scene into a
+      `<canvas>`, so "nothing was drawn" is invisible to text, form state and
+      computed style alike — which is why this was left to the model before.
+
+      Two earlier candidates were rejected on measurement and are recorded so
+      they are not retried. `text_matches` with the six tool vocabularies in
+      `absent:` fires on 1 of 127 builds, and that build draws freehand
+      perfectly well — it simply names nothing, so -10 would charge a naming
+      fault. `source_absent` on `mousedown|pointerdown|touchstart` fired on 18
+      of 128, but that figure was an artefact of the 20 KB source cap (raised to
+      2 MB on the same day); it is no longer the reason to avoid it — the reason
+      is that registering a handler is not evidence the handler draws.
+
+      `canvas_changed` with `should_change: false` has the polarity a penalty
+      needs: it passes, and so fires, exactly when the gesture changed no
+      pixels. It returns `unknown` rather than firing when the canvas is
+      origin-tainted or was never captured, so an unreadable canvas is not
+      charged as a dead one.
+    check:
+      name: canvas_changed
+      before: before
+      after: after
+      should_change: false
+  - id: A2
+    text: "The export control produces no file, or a blank or uniform image."
+    points: -8
+    method: assert
+    setup: >-
+      Use the app's PNG export / download-image control once more and wait. Do
+      not download anything else during this item, and do not clear anything
+      first.
+    note: >-
+      Fires when the entire grading session produced no file at all — S5's PNG,
+      F3's SVG, F4's scene file and this item's export all missed. That is the
+      `window.print()` shape and the decorative-export shape, and it is
+      unambiguous: no correct build can fire it.
+
+      Two under-fires, both accepted as the safe direction for a penalty. A build
+      whose PNG export is a stub but whose SVG export works does not fire this;
+      S5 fails instead, which is the right place for it. And `of_kind: png` would
+      catch that case by testing the last file's magic bytes — it was rejected
+      because the last file at penalty time is F4's `.json` on any build that
+      saves scenes, so it would fire on builds whose PNG export is perfect.
+
+      The "blank or uniform image" half is not decided here or in S5: it needs a
+      PNG decoder, `image_props(min_stddev=...)` or equivalent, which the grader
+      deliberately does not carry.
+    check:
+      name: download_absent
+  - id: A3
+    text: "The app opens with a prepopulated demo scene on a clean profile."
+    points: -4
+    method: assert
+    setup: >-
+      Manufacture a clean profile first, because by now the session holds your
+      own work: `evaluate`
+      `() => { localStorage.clear(); sessionStorage.clear(); return 'cleared'; }`,
+      then `goto` `/` so the app reloads at its bare root with no URL hash. Draw
+      nothing, import nothing and load no template. Then establish whether the
+      canvas is already occupied, with `evaluate` only: read the app's scene
+      array or its `localStorage` keys if it exposes any, and sample the canvas
+      with `getImageData` to measure what fraction of pixels differ from the
+      corner pixel. Fire this only for real scene content. A dot or line GRID, a
+      watermark and a placeholder "draw something here" hint are not a demo
+      scene, and a "Load sample" BUTTON is not one either — the item is about
+      what loads without the user asking.
+    note: >-
+      25% of trials loaded a sample or template. One top build's highest-rated
+      trial was: open, watch the demo replay, click a tool without drawing,
+      reload, finish — work_survived=true for work the user never authored.
+
+      NO CHECK — needs `canvas_content_ratio(selector)` plus a way to discount a
+      background grid.
+
+      db_schema_designer's A3 decides the same claim from the app's SQL export,
+      which is text; this app's equivalent artifact is pixels. 125 of 127 builds
+      render to a canvas, so there is nothing for `text_matches` or `dom_count`
+      to read, and `dom_count` over `svg path, svg rect` counts toolbar icons on
+      every build. The pixel probe the setup describes is the right instrument
+      and is not expressible: `value_matches` could carry it as bespoke `js`, but
+      the grid problem is real — a dotted background is drawn into the same
+      canvas by a large minority of builds and is indistinguishable from content
+      by pixel count alone, so a -4 would land on builds that ship a grid and
+      nothing else.

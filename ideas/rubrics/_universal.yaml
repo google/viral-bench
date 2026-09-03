@@ -1,0 +1,230 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Universal rubric sections — applied to EVERY idea.
+# See README.md. Never shown to the founder model or the crowd.
+rubric_version: 1
+
+# ---------------------------------------------------------------------------
+# Tier 0 — deliverability GATE. Any failure => RubricScore 0.
+# Results are still recorded per item, for diagnostics.
+#
+# These are the top failure modes in the corpus by a wide margin: `undeliverable:
+# no valid viralbench.json` alone accounts for 9 of 31 recent group_scheduling_poll
+# runs, and setup/toolchain deaths for 6 of 30 form_builder runs.
+# ---------------------------------------------------------------------------
+gate:
+  - id: G1
+    text: "`viralbench.json` exists and parses as strict JSON."
+    method: probe
+    note: >-
+      No comment lines, no trailing commas. A leading `#` comment is a
+      documented, recurring cause of an otherwise-complete build scoring zero.
+  - id: G2
+    text: "Every declared `setup` command exits 0 on the container's actual toolchain."
+    method: probe
+    note: >-
+      Observed deaths: `tsc: not found`, `uvicorn: not found`,
+      `node: bad option: --experimental-sqlite`, `No pyproject.toml found`,
+      `better-sqlite3` native ABI mismatch, `Segmentation fault (core dumped)`.
+  - id: G3
+    text: "The app starts via `run.command` and binds the declared port."
+    method: probe
+  - id: G4
+    text: "The declared entry URL returns a non-5xx status within the readiness window."
+    method: probe
+    note: >-
+      A 4xx landing page is legitimate for an auth-first app. A 5xx never is.
+  - id: G5
+    text: >-
+      The entry page renders a non-empty UI with at least one operable control,
+      and no uncaught error prevents render.
+    method: assert
+    note: >-
+      Catches the dead-on-arrival class: a Vue template compile error left six
+      independent triers rating delight 0, and `pageerror: Invalid or unexpected
+      token` fired 60 times in a run the validity gate marked `smoke=ok`.
+
+# ---------------------------------------------------------------------------
+# Tier 3 — robustness and craft. 35 points, identical for every idea.
+#
+# An idea may mark an item not-applicable via `universal_overrides` in its own
+# file; scoring normalises over applicable points so the total stays comparable.
+# ---------------------------------------------------------------------------
+tier3:
+  - id: R1
+    text: >-
+      State survives a hard reload: perform the app's primary create action,
+      hard-reload, and the USER'S OWN content is still present.
+    points: 8
+    method: assert
+    note: >-
+      The single heaviest item in the scheme, and it is earned: work_survived is
+      False on 19.5% of trials, and it moves delight 6.89 -> 3.89 and would_use
+      78% -> 29%. It is also a gate blind spot — 17.2% of builds that pass
+      does_what_it_claims lose a majority of triers' work on reload.
+      Restoring a default or demo state does NOT count; see P3.
+
+      APPLICABILITY. R1 is the general-case safety net, and it is marked
+      not-applicable in two situations:
+        (a) the brief never asks for persistence and the app is a single-shot
+            transform (load -> convert -> download -> leave). Punishing a reload
+            wipe there would import a crowd preference the brief does not state;
+        (b) the brief DOES demand persistence, in which case a Tier 1 or Tier 2
+            item already tests it at the weight the brief implies, and scoring it
+            here too would double-count the corpus's biggest discriminator.
+      So R1 applies to the middle case: apps where the user accumulates work
+      that the brief does not explicitly promise to save.
+    setup: >-
+      Perform the app's primary create action, entering the literal nonce
+      VBNONCE7391 as the user's content. Then stop; the harness reloads.
+    check:
+      name: survives_reload
+      nonce: VBNONCE7391
+  - id: R2
+    text: >-
+      No third-party runtime dependency: zero non-localhost requests during load
+      and the primary flow.
+    points: 4
+    method: assert
+    note: >-
+      The container's network is restricted, so a CDN dependency is not a style
+      question — it breaks the app. Observed: 43x ERR_BLOCKED_BY_ORB on
+      highlight.js/dracula.css, producing both an unstyled preview and a dead
+      export. Ignore the `cdn.tailwindcss.com should not be used in production`
+      console warning: 687 occurrences corpus-wide, it does not discriminate.
+    check:
+      name: network_origins
+  - id: R3
+    text: "No uncaught JS errors during the primary flow."
+    points: 4
+    method: assert
+    check:
+      name: no_console_errors
+  - id: R4
+    text: >-
+      Every control in the primary flow is a real element with an accessible
+      name, operable by that name.
+    points: 4
+    method: assert
+    note: >-
+      Directly encodes the most common interaction failure in the corpus:
+      `Element is not an <input>, <textarea>, <select> or [contenteditable]`
+      against labelled divs, and radio groups with no accessible name.
+    check:
+      name: controls_have_names
+      min_controls: 1
+      max_unnamed: 0
+  - id: R5
+    text: >-
+      Errors are surfaced: an invalid input or failed operation produces a
+      visible message, not an infinite spinner and not a silent no-op.
+    points: 4
+    method: agent
+  - id: R6
+    text: >-
+      Non-ASCII text and emoji round-trip through the primary text path without
+      mojibake.
+    points: 3
+    method: assert
+    expect: "héllo 🎉 안녕하세요"
+    setup: >-
+      Enter the literal text "héllo 🎉 안녕하세요" into the app's primary text
+      field and commit it the way a user would (save, add, submit). Leave the
+      result on screen.
+    check:
+      name: no_mojibake
+      text: "héllo 🎉 안녕하세요"
+  - id: R7
+    text: >-
+      The app loads and all non-AI features work with no model API key set; any
+      AI feature degrades with a clear message.
+    points: 3
+    method: probe
+    note: >-
+      LIMITATION, recorded rather than hidden: this is decided from source, not
+      by restarting the app with the key stripped. A second app start per build
+      would double the sweep's container cost for three points. An app with no
+      model dependency passes by construction; one with a dependency fails only
+      if it dies at startup when the key is unset.
+    check:
+      name: key_optional
+  - id: R8
+    text: "The primary flow is completable by keyboard, with visible focus and no focus trap."
+    points: 3
+    method: agent
+  - id: R9
+    text: "No 4xx or 5xx on any request during the primary flow."
+    points: 2
+    method: assert
+    check:
+      name: no_failed_requests
+
+# ---------------------------------------------------------------------------
+# Universal penalties. Total penalties (universal + app-specific) cap at -25.
+# ---------------------------------------------------------------------------
+penalties:
+  - id: P1
+    text: "An advertised control does nothing (dead button or stub action)."
+    points: -5
+    max_total: -10
+    method: agent
+  - id: P2
+    text: "A silent mock or fallback is presented as the real feature."
+    points: -8
+    method: agent
+    note: >-
+      Observed verbatim: `Redesign API call failed, generating client fallback`,
+      where the app substituted a local template and presented it as the model's
+      output. Triers caught it: "a fake Gemini integration".
+  - id: P3
+    text: >-
+      "Persistence" restores a default or demo state rather than the user's own
+      work.
+    points: -5
+    method: assert
+    note: >-
+      Fires whenever the app implements persistence at all, including where R1
+      is not applicable. A build that restored its own default 3-step demo
+      recipe was still marked work_survived=true by a trier; a grader must not.
+    setup: >-
+      Same state as R1 — the nonce VBNONCE7391 entered as the user's content.
+      The harness reloads and decides.
+    check:
+      name: default_restored
+      nonce: VBNONCE7391
+  - id: P4
+    text: "A secret or API key is reachable in client-served assets."
+    points: -10
+    method: source
+    note: >-
+      Scoped to browser-served files. The same key in a server module is
+      configuration; in a `.js` bundle it is handed to every visitor, and a grep
+      over the whole tree could not tell the two apart.
+    check:
+      name: client_secret_present
+  - id: P5
+    text: "The app requires a model API key for a feature the brief never asked for."
+    points: -3
+    method: source
+    note: >-
+      Every one of 25 builds once bolted on a generative-AI feature, including a
+      typing test. It makes part of what is being judged a third model rather
+      than the one under test.
+
+      An idea whose brief DOES ask for a model feature marks this
+      not-applicable via `universal_overrides`, the same mechanism Tier 3 uses.
+      Without that, this would fire on every AI idea by design.
+    check:
+      name: model_dependency

@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Monkeytype — https://github.com/monkeytypegame/monkeytype
+# Verified 20,496 GitHub stars on 2026-08-06.
+
+idea_id: typing_speed_test
+title: "Keyrace"
+pitch: "A clean, minimal typing test that tells you your real words-per-minute."
+problem: "Most typing sites are cluttered with ads and gimmicks, and report a score without showing you which keys are actually slowing you down."
+target_user: "Developers and writers who want to measure and improve their typing speed."
+core_features:
+  - "A timed test over a stream of common words, with a selectable duration (15/30/60 seconds)"
+  - "Live per-character feedback as you type, marking correct and incorrect letters"
+  - "A results screen with words per minute, accuracy percentage, and the raw character counts"
+  - "A list of the specific words or characters that were mistyped"
+  - "Persist a personal best per duration locally, and a restart control"
+success_criteria: "A user completes a timed test and receives a results screen whose WPM and accuracy are arithmetically correct for what was typed, with mistyped characters marked during the test and the personal best persisting across a reload."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Reddit / Twitter/X"
+  metric: github_stars
+  value: 20496

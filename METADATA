@@ -1,0 +1,14 @@
+name: "viral-bench"
+description:
+    "A multi-agent simulation benchmark that predicts how viral an "
+    "AI-generated app would be. A founder agent builds an app from a brief, a "
+    "simulated crowd of agents then uses it and talks about it on a mock "
+    "social platform, and the adoption and advocacy they produce become the "
+    "score."
+
+third_party {
+  identifier {
+    type: "Git"
+    value: "https://github.com/google/viral-bench"
+  }
+}

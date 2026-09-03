@@ -1,0 +1,369 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for sliding_tile_game (TileMerge). Never shown to the founder.
+#
+# TWO NOTES THAT SHAPE THIS RUBRIC.
+#
+# 1. The brief carries an unusual explicit machine-readability clause: every cell
+#    must expose its row, column and value. 2 of 10 recent builds flatten the
+#    board to bare text — and the crowd DID NOT NOTICE. One of those two scored
+#    delight 4.10, second highest of ten, above five compliant builds, and not
+#    one of its 30 verdicts mentions the board being unreadable. A deterministic
+#    grader is the only thing that can score this clause at all.
+#
+# 2. Agents average ~1.2 arrow presses each, so no agent ever reaches a win
+#    state, a game-over, or a merge chain. would_use is <=0.10 and would_share is
+#    0.000 on 8 of 10 builds REGARDLESS of quality — those fields carry no signal
+#    for this idea and the rubric must supply all of the discrimination.
+#
+# A THIRD NOTE, ON THE CHECKS. The DOM-agnostic rule is relaxed here and only
+# here: the brief itself mandates an aria-label contract ("row 2, column 3,
+# tile 4"), so reading the board through that contract is reading the interface
+# the brief specifies, not one build's markup. Where a check parses cell labels
+# it says so, and the consequence is deliberate — a build that ships an
+# unreadable board loses those items as well as S1 and A1, which is exactly what
+# the brief's observability clause asks for.
+rubric_version: 1
+idea_id: sliding_tile_game
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      The brief requires only that the BEST SCORE survive a reload, which is
+      tested in F2. It does not ask for an in-progress board to be restored, so
+      a build that deals a fresh game on reload is compliant. The crowd punishes
+      that heavily (one build scored 0.033 work_survived for exactly it) — this
+      is a deliberate case of the rubric being MORE generous than the crowd,
+      because the brief is what the rubric grades.
+
+tier1:
+  - id: S1
+    text: >-
+      The board exposes exactly 16 cells whose accessible names give row, column
+      and value.
+    points: 10
+    method: assert
+    expect: >-
+      exactly 16 elements matching /^row (\d+), column (\d+), (empty|tile
+      (\d+))$/, whose (row,col) pairs are exactly {1..4}x{1..4} with no
+      duplicates
+    setup: >-
+      Open the app and leave the board it deals on screen. Do not press any key,
+      do not click a cell, and do not start a new game — the harness reads the
+      cells' accessible names exactly as the app renders them.
+    note: >-
+      One build emits 18 cells — 16 backgrounds plus duplicate tile cells with
+      identical labels. `count: 16` catches that build and `unique: true` the
+      duplicate-label half of the `expect` above. The (row,col) set is checked
+      by proxy: 16 distinct labels of this shape on a 4x4 board can only be
+      {1..4}x{1..4} unless a build both omits a position and doubles another
+      with different values, which has not been observed.
+      Tolerant of case and of extra whitespace, and of nothing else: the wording
+      is the contract the brief states.
+    check:
+      name: aria_names
+      pattern: "(?i)^row\\s+\\d+,\\s*column\\s+\\d+,\\s*(empty|tile\\s+\\d+)\\s*$"
+      count: 16
+      unique: true
+  - id: S2
+    text: "An arrow key slides every tile to the far edge in that direction."
+    points: 6
+    method: assert
+    setup: >-
+      Press ArrowDown twice, then ArrowLeft three times, waiting after each
+      press for the tiles to finish moving. Leave the board on screen.
+    note: >-
+      Read through the aria-label contract (see the header note): after an
+      ArrowLeft every row must be packed against column 1. Exactly one stray
+      tile is allowed, because the spawn that follows the move lands in an empty
+      cell and can legitimately sit past the packed prefix — it can produce at
+      most one gap, since the pre-spawn row has nothing to the right of it.
+      Three ArrowLefts rather than one so that a build which ignores arrow keys
+      cannot pass by dealing an already-packed board.
+    check:
+      name: value_matches
+      js: >-
+        () => { const g = {};
+        for (const e of document.querySelectorAll('[aria-label]')) {
+        const m = /^\s*row\s+(\d+),\s*column\s+(\d+),\s*(?:empty|tile\s+(\d+))/i.exec(e.getAttribute('aria-label') || '');
+        if (m) g[m[1] + ',' + m[2]] = m[3] ? +m[3] : 0; }
+        let tiles = 0, stray = 0;
+        for (let r = 1; r <= 4; r++) { let gap = false;
+        for (let c = 1; c <= 4; c++) { const v = g[r + ',' + c] || 0;
+        if (v) { tiles++; if (gap) stray++; } else { gap = true; } } }
+        return 'tiles=' + tiles + ' stray=' + stray + ' verdict=' + (tiles >= 3 && stray <= 1 ? 'packed-left' : 'not-packed'); }
+      pattern: "verdict=packed-left"
+  - id: S3
+    text: "Equal adjacent tiles merge exactly once per move."
+    points: 10
+    method: assert
+    expect: "row [2,2,4,empty] + ArrowLeft -> [4,4,empty,empty], NOT [8,empty,empty,empty]"
+    setup: >-
+      Press ArrowLeft and ArrowUp alternately, calling look after each press,
+      until two equal tiles sit next to each other along one of those two
+      directions. Then call capture(label="merge_before"), press that arrow key
+      once, let the animation finish, and call capture(label="merge_after").
+    note: >-
+      LIMITATION, recorded rather than hidden. The `expect` above is a
+      counterfactual — it needs the board seeded to [2,2,4,empty] — and no tool
+      the grader has can seed a board: tiles spawn at random and the keyboard
+      cannot place them. Chaining is also invisible to every whole-board
+      invariant, because it conserves both the tile sum and the score (building
+      8 from four 2s costs 16 points whether it happens in one move or two), and
+      differs from correct play only in how many tiles remain, which requires
+      the counterfactual to evaluate. So the deterministic half here witnesses
+      only that a move with two equal adjacent tiles transforms the board; the
+      "exactly once" clause is what A2 is for, and A2 is deliberately left to
+      the model for the same reason. A `board_transition` primitive — parse the
+      aria board before and after one harness-driven press and verify every
+      merge consumed two tiles that had not already merged this move — would
+      settle both items outright.
+    check:
+      name: value_changes
+      before: merge_before
+      after: merge_after
+      should_change: true
+  - id: S4
+    text: >-
+      The score increases by exactly the merged value, and a move that changes
+      nothing changes neither the board nor the score.
+    points: 8
+    method: assert
+    expect: "the [2,2,4] case scores +4, not +12"
+    setup: >-
+      Press ArrowLeft and use look after each press until you find a press that
+      leaves the board and the score completely unchanged. That state is packed
+      against the left edge with nothing left to merge, so one more ArrowLeft is
+      guaranteed to be a no-op: call capture(label="noop_before"), press
+      ArrowLeft once more, and call capture(label="noop_after"). If four presses
+      have all changed something, stop without capturing anything.
+    note: >-
+      The second clause is the deterministic one, and it is the reachable half:
+      confirming a no-op press FIRST puts the board in a left-fixed state, which
+      makes the bracketed press a no-op by construction rather than by luck. The
+      first clause shares S3's problem — +4 versus +12 is only visible on a
+      seeded [2,2,4] row — so it is not asserted here. Capturing nothing leaves
+      this `unknown` rather than failed, which is correct: the grader could not
+      reach the state, not the app.
+    check:
+      name: value_changes
+      before: noop_before
+      after: noop_after
+      should_change: false
+  - id: S5
+    text: "Exactly one new tile spawns per move that changes the board, and none on a no-op move."
+    points: 6
+    method: assert
+    setup: >-
+      Start a fresh game with the restart / new game control, then press six
+      arrow keys in the order ArrowLeft, ArrowUp, ArrowRight, ArrowDown,
+      ArrowLeft, ArrowUp, waiting after each for the tiles to settle. Leave the
+      board on screen.
+    note: >-
+      Counted by position through the aria-label contract, so the duplicate-tile
+      build cannot inflate the figure. The band is arithmetic, not a guess: a
+      fresh board holds 2 tiles and six moves add at most six spawns, so an
+      honest build ends on 8 minus however many merges it made — 3 to 8 in
+      anything but a freak run of six consecutive merges. Below 3 means the app
+      is not spawning; above 8 means it spawns more than one tile per move,
+      which is the failure the item names. Cycling all four directions is what
+      keeps the six presses from being no-ops on a sparse board.
+    check:
+      name: number_in_range
+      js: >-
+        () => { const s = new Set();
+        for (const e of document.querySelectorAll('[aria-label]')) {
+        const m = /^\s*row\s+(\d+),\s*column\s+(\d+),\s*tile\s+(\d+)/i.exec(e.getAttribute('aria-label') || '');
+        if (m) s.add(m[1] + ',' + m[2]); }
+        return s.size; }
+      low: 3
+      high: 8
+
+tier2:
+  - id: F1
+    text: >-
+      The key handler is bound at document or window level, so arrows work
+      without first clicking the board.
+    points: 5
+    method: assert
+    setup: >-
+      Reload the page so that nothing on it is focused, and then do not click
+      anywhere at all — least of all on the board. Call
+      capture(label="no_click_before"), press ArrowLeft, ArrowDown, ArrowRight
+      and ArrowUp in turn with press_key and no target, waiting briefly after
+      each, then call capture(label="no_click_after").
+    note: >-
+      The crowd never clicks the board first, so a board-focused listener is
+      unreachable in practice.
+
+      Tested behaviourally rather than by grepping for addEventListener: keys
+      are sent to the document with nothing focused, which is exactly the
+      crowd's situation. The reload matters — it drops focus left behind by an
+      earlier item, so a listener bound to the board cannot pass on borrowed
+      focus. All four directions are pressed because a two-tile board is
+      immovable in at most three of them, never in all four.
+    check:
+      name: value_changes
+      before: no_click_before
+      after: no_click_after
+      should_change: true
+  - id: F2
+    text: "The best score survives a reload and is always >= the current score."
+    points: 6
+    method: assert
+    setup: >-
+      Press ArrowLeft and ArrowUp alternately about four times, then use look to
+      confirm the score is above zero, pressing more if it is still 0. Then call
+      capture(label="played"), reload the page, let it settle, and call
+      capture(label="reloaded").
+    note: >-
+      The failure this item exists for is the best score resetting to 0 on
+      reload, which is a decrease — so a non-decreasing read across the two
+      harness snapshots is the whole test, and the model never states either
+      number. Getting the score above zero first is load-bearing: 0 -> 0 would
+      pass trivially.
+
+      LIMITATION: the best score is found by reading the rendered text for a
+      "best"/"high score"/"record" label. A build that renders that label as a
+      CSS pseudo-element, as the original 2048 does, puts nothing in innerText
+      and is recorded as unreadable rather than wrong. The ">= the current
+      score" clause is only covered incidentally, by the reload leaving the
+      current score at 0.
+    check:
+      name: captures_monotonic
+      labels: ["played", "reloaded"]
+      pattern: "(?i)(?:best|high[\\s-]?score|record)[^\\d]{0,24}(\\d+)"
+      direction: non_decreasing
+  - id: F3
+    text: "A win state on reaching the target tile, and a game-over state when no moves remain."
+    points: 6
+    method: assert
+    note: >-
+      No crowd agent has ever reached either, at ~1.2 presses per agent.
+
+      Neither can the grader: the step budget is 14 tool calls per item and a
+      game-over needs tens of presses, a 2048 tile hundreds. So this is decided
+      from source instead, and the limitation is recorded rather than hidden.
+      The tree grep is line-based, so it cannot require both strings at once;
+      what it catches is the build that implements neither end state, which is
+      the failure mode the item is about. A build shipping only one of the two
+      passes here and is not caught anywhere else.
+    check:
+      name: source_present
+      pattern: "game[\\s_-]*over|you\\s*(win|won)|congratulation"
+  - id: F4
+    text: "A restart control resets the score to 0 and deals a fresh board."
+    points: 4
+    method: assert
+    setup: >-
+      Press a few arrow keys until the score is above zero, then activate the
+      restart / new game control. Leave the fresh board and the reset score on
+      screen.
+    note: >-
+      Only the score half is asserted, and deliberately: "deals a fresh board"
+      has no build-independent signature — a legitimate fresh board is two tiles
+      in random cells, which is also what a board mid-game can look like. The
+      score reading is unambiguous, since the setup guarantees it was above zero
+      a moment earlier. Same rendered-text caveat as F2: a build whose "Score"
+      label is a CSS pseudo-element is unreadable here.
+    check:
+      name: text_number_equals
+      pattern: "(?i)\\bscore\\b[^\\d]{0,24}(\\d+)"
+      expect: 0
+      tolerance: 0
+  - id: F5
+    text: >-
+      No duplicated position or value text on ancestor row elements, and no
+      duplicate gridcells.
+    points: 4
+    method: assert
+    expect: "no element with role=row has an accessible name matching /row \\d+, column \\d+/"
+    setup: >-
+      Leave the board on screen in whatever state it is in; the harness inspects
+      the row elements' own labels.
+    note: >-
+      A direct read of the `expect` above: a row wrapper that repeats its cells'
+      position text makes every cell's name ambiguous to a screen reader, which
+      is the whole point of the brief's clause. A build using no role=row at all
+      counts as zero and passes, correctly. The duplicate-gridcell half is
+      carried by S1's `count: 16` plus `unique: true` rather than counted twice
+      here.
+    check:
+      name: dom_count
+      selector: '[role="row"][aria-label*="column" i]'
+      op: "=="
+      n: 0
+
+penalties:
+  - id: A1
+    text: >-
+      The board renders as bare text with no per-cell position and value
+      labels.
+    points: -10
+    method: assert
+    setup: >-
+      Same state as S1 — the board on screen, freshly dealt or mid-game, either
+      is fine. The harness reads the cells' accessible names.
+    note: >-
+      Exactly the failure the idea spec's observability note predicts: the board
+      flattens to "Score: 0 Best: 0 2 2" with no way to tell where the tiles
+      are. Two of ten builds; the crowd scored one of them second-highest.
+
+      Fires on the ABSENCE of the labels, which is why it reads the aria-label
+      set rather than the rendered text — the labels are invisible to innerText
+      by construction, so a text read would fire on every build.
+    check:
+      name: text_matches
+      js: >-
+        () => Array.from(document.querySelectorAll('[aria-label]')).map(e => e.getAttribute('aria-label') || '').join(' | ')
+      absent:
+        - "row\\s+\\d+,\\s*column\\s+\\d+"
+  - id: A2
+    text: "A merge chains more than once within a single move."
+    points: -8
+    method: assert
+    note: >-
+      LEFT TO THE MODEL ON PURPOSE — there is no primitive that can decide this
+      and a penalty that fires wrongly costs 8 points for nothing. Chaining
+      conserves the tile sum and the score, so no whole-board invariant sees it;
+      it is visible only as a difference in how many tiles a specific board
+      should have left, and the grader cannot seed a board to produce one. What
+      would settle it is a `board_transition` primitive that parses the aria
+      board before and after one harness-driven press and verifies each merge
+      consumed two tiles neither of which had already merged that move — the
+      same primitive S3 wants. Until then the model watches the board and
+      reports, and a fail it cannot evidence is recorded as a fail anyway.
+  - id: A3
+    text: "A no-op move spawns a tile or increments the score."
+    points: -5
+    method: assert
+    setup: >-
+      Same state as S4. Press ArrowLeft and use look after each press until you
+      find a press that changes nothing; the board is then left-fixed, so call
+      capture(label="noop_before"), press ArrowLeft once more, and call
+      capture(label="noop_after"). If four presses have all changed something,
+      stop without capturing — do not bracket a press you have not already
+      confirmed to be a no-op.
+    note: >-
+      The exact inverse of S4, so the two are decided from the same bracket
+      rather than re-observed. Capturing nothing leaves this `unknown` and the
+      penalty does not fire, which is the safe direction: a false -5 for a move
+      that turned out not to be a no-op would be worse than a miss.
+    check:
+      name: value_changes
+      before: noop_before
+      after: noop_after
+      should_change: true

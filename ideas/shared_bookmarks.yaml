@@ -1,0 +1,38 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Linkwarden — https://github.com/linkwarden/linkwarden
+# Verified 19,361 GitHub stars on 2026-08-06.
+# Show HN reached 301 points: https://news.ycombinator.com/item?id=36942251
+
+idea_id: shared_bookmarks
+title: "Linkloft"
+pitch: "A self-hosted place to save links, sort them into collections, and share a collection with other people."
+problem: "Browser bookmarks are private, unsearchable in practice, and impossible to hand to a teammate; the hosted read-later services keep going out of business and taking your library with them."
+target_user: "Researchers and small teams who collect a lot of links and want to curate and share them."
+core_features:
+  - "Save a link with a title, notes, and tags"
+  - "Organize links into named collections, and mark a collection public or private"
+  - "Full-text search and tag filtering across everything you have saved"
+  - "A public collection is browsable by anyone with the URL, without an account"
+  - "Accounts, so each user has their own library and only sees others' public collections"
+success_criteria: "A signed-in user saves several tagged links into a collection and marks it public; a second, separate user opens that collection's URL, sees the saved links with their tags, and can find one of them via search — while the first user's private collection remains invisible to them."
+allowed_scope: full-stack-app
+difficulty: medium
+
+ground_truth:
+  source: "Hacker News / Reddit (r/selfhosted)"
+  metric: github_stars
+  value: 19361

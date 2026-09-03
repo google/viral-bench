@@ -1,0 +1,353 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Grading rubric for form_builder (FormForge). Never shown to the founder.
+#
+# The whole rubric runs against ONE form, built once in S2 and carried forward:
+# title "Zephyr Feedback", a multiple-choice question "Which Zephyr color do you
+# prefer?" (Red/Green/Blue) and a rating question "Rate the Zephyr launch".
+# "Zephyr" is deliberately unusual — "favourite colour" is a stock template
+# question in real form builders and would have made the isolation check (F3)
+# fire on a build's own demo content.
+#
+# Two harness facts shape almost every check here. `text_matches` reads
+# `USER_VISIBLE_JS`, which is body.innerText PLUS every input/select value, so
+# text the grader just typed into the editor matches whether or not the app
+# saved it — every content assertion is therefore made on the *published* page,
+# never in the editor. And `http_status` runs in the anonymous pre-pass, before
+# the grader has created anything, so it cannot probe a published form URL; the
+# share-link items are decided by navigating to the URL logged out instead.
+rubric_version: 1
+idea_id: form_builder
+
+universal_overrides:
+  R1:
+    applicable: false
+    reason: >-
+      Server-side persistence is the point of this brief and is tested in S5 and F5 rather than again as a general item.
+
+tier1:
+  - id: S1
+    text: "Two distinct creators can sign up and sign in, each getting a session."
+    points: 5
+    method: probe
+    setup: >-
+      Sign up a first creator with the email alice@formforge.test and the
+      password Zephyr-Pass-1, then sign out. Sign up a second, separate creator
+      with the email bob@formforge.test and the password Zephyr-Pass-2, sign
+      out again, and sign back in as bob@formforge.test with that password.
+      Leave the app on the signed-in view, and if the account controls live
+      behind an avatar or profile menu, open that menu so they are on screen.
+      Do not leave a sign-in or sign-up form showing.
+    note: >-
+      Asserted via the sign-out affordance, which only exists once a session has
+      been established. Matching the email address instead would false-pass:
+      `text_matches` reads input values as well as rendered text, so the
+      credentials the grader typed are still "visible" on a build where sign-in
+      silently failed and left the form up. That the two accounts are *distinct*
+      is asserted separately, by F3.
+    check:
+      name: text_matches
+      patterns:
+        - "sign\\s*out|log\\s*out|logout|signout|end session"
+  - id: S2
+    text: >-
+      A signed-in creator builds a form with a multiple-choice and a rating
+      question and publishes it to a shareable URL.
+    points: 8
+    method: assert
+    setup: >-
+      Signed in as alice@formforge.test (password Zephyr-Pass-1), create a form
+      titled "Zephyr Feedback" with exactly two questions: a multiple-choice
+      question worded "Which Zephyr color do you prefer?" with the three answer
+      options Red, Green and Blue, and a rating question worded "Rate the
+      Zephyr launch". Publish the form, then use `goto` to open the
+      public/shareable URL it hands you and let the form render.
+    note: >-
+      Decided on the published page, not in the editor: the editor's copy of the
+      wording is an input value, which `text_matches` can see, so an editor-side
+      assertion would pass on a build that never saved or published anything.
+      Reaching the public URL at all is what makes this test "publishes it to a
+      shareable URL".
+    check:
+      name: text_matches
+      patterns:
+        - "Which Zephyr color"
+        - "Rate the Zephyr launch"
+        - "\\bRed\\b"
+        - "\\bBlue\\b"
+  - id: S3
+    text: >-
+      A visitor with no account and no cookie can open the public URL and see
+      both questions.
+    points: 8
+    method: assert
+    setup: >-
+      Sign out of the creator account using the app's own sign-out control; if
+      it has none, clear the session with `evaluate` (expire every
+      document.cookie entry, then localStorage.clear() and
+      sessionStorage.clear()) and reload. Then `goto` the published public URL
+      for "Zephyr Feedback" and let it render. Do not sign in again.
+    note: >-
+      Crowd agents cannot navigate to an arbitrary URL — deep-open is 0 across
+      900 agents — so the entire share-link half of this brief is structurally
+      invisible to the crowd and must be asserted by an HTTP client.
+
+      The grader has `goto`, so the URL is opened for real rather than probed:
+      `http_status` runs in the anonymous pre-pass, before any form exists.
+      "No cookie" is therefore as good as the app's own sign-out makes it.
+    check:
+      name: text_matches
+      patterns:
+        - "Which Zephyr color"
+        - "Rate the Zephyr launch"
+  - id: S4
+    text: "That visitor submits answers successfully, with no 401 or 403."
+    points: 8
+    method: assert
+    setup: >-
+      Still logged out and on the public "Zephyr Feedback" URL, answer both
+      questions — choose Red, and give the rating 2 — then submit the form and
+      wait for the app to respond. Leave whatever it shows after submitting on
+      screen.
+    note: >-
+      A confirmation match rather than a network assertion: `no_failed_requests`
+      also fires on an incidental favicon or source-map 404 and would fail
+      honest builds for it. A submit that silently does nothing is caught by S5,
+      which requires the stored count to be exactly 1, so this check can afford
+      to be permissive about the wording of the confirmation.
+    check:
+      name: text_matches
+      patterns:
+        - "thank|submitted|success|recorded|received|saved|your response"
+      absent:
+        - "unauthori[sz]ed|forbidden"
+  - id: S5
+    text: "The creator's results view lists the submission and shows a response count of exactly 1."
+    points: 7
+    method: assert
+    setup: >-
+      Sign back in as alice@formforge.test (password Zephyr-Pass-1) and open the
+      results/responses view for "Zephyr Feedback". Wait for it to load; if the
+      view splits into separate tabs for individual responses and for a summary,
+      leave the one showing the response total on screen.
+    note: >-
+      The alternation carries both orderings ("1 response" and "Responses: 1",
+      including the stat-card layout where innerText renders as "1\nResponses").
+      It is written as `text_matches` rather than `text_number_equals` because
+      that primitive reads capture group 1, and a two-branch pattern would send
+      it a None group on whichever branch did not match.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b1\\s*(responses?|submissions?|replies|answers)\\b|(responses?|submissions?|replies)\\W{0,12}\\b1\\b"
+  - id: S6
+    text: >-
+      The per-question summary is arithmetically correct: choice counts, and a
+      rating average to the displayed precision.
+    points: 4
+    method: assert
+    expect: "choices Red,Red,Blue -> Red:2 Green:0 Blue:1; ratings 2,4,5 -> 3.7"
+    setup: >-
+      The form needs exactly three responses: Red with rating 2 (submitted in
+      S4), Red with rating 4, and Blue with rating 5. Sign out, `goto` the
+      public URL and submit the two missing ones — Red/4 first, then Blue/5. If
+      the app refuses a second submission from the same visitor, clear cookies
+      and localStorage between them. Then sign back in as alice@formforge.test
+      and open the per-question summary for "Zephyr Feedback", leaving the
+      choice breakdown and the rating average on screen.
+    note: >-
+      Only the rating average is asserted. 3.7 is genuinely derived — it appears
+      nowhere in the raw data — whereas the choice counts are the same digits as
+      the ratings sitting beside those colors in the response list (Red was
+      rated 2), so a "Red ... 2" proximity match would be satisfied by the raw
+      list alone on any build that shows responses and summary on one page.
+      Green:0 is not asserted either: omitting a zero-count option is a
+      presentation choice, not an arithmetic error.
+    check:
+      name: text_number_equals
+      pattern: "(\\d+\\.\\d+)"
+      expect: 3.7
+      tolerance: 0.15
+
+tier2:
+  - id: F1
+    text: "All four question types are creatable: short text, long text, multiple choice, rating."
+    points: 6
+    method: assert
+    setup: >-
+      Signed in as alice@formforge.test, open "Zephyr Feedback" in the editor
+      and open the add-question control so the list of question types the app
+      offers is visible on screen. Add a short-text question worded "Your Zephyr
+      nickname" and a long-text question worded "Any other Zephyr comments",
+      keeping the two existing questions, and save. Leave the editor with the
+      question-type list still showing.
+    note: >-
+      Matched against the app's own type vocabulary, which is the only
+      DOM-agnostic evidence that all four are offered. A control-kind survey of
+      the rendered form cannot separate multiple choice from rating (both are
+      radio groups), and F4's finding is that a large share of builds render
+      fields as divs, so a tag-based check would fail those builds twice for one
+      defect. Cost of the vocabulary approach: a build whose picker is icon-only
+      fails despite offering all four.
+    check:
+      name: text_matches
+      patterns:
+        - "short[\\s-]*(text|answer)|single[\\s-]*line|\\btext\\b"
+        - "long[\\s-]*(text|answer)|paragraph|multi[\\s-]*line|textarea"
+        - "multiple[\\s-]*choice|choices?\\b|radio"
+        - "rating|scale|stars?"
+  - id: F2
+    text: "Questions can be reordered, edited and deleted, and the public form reflects the change."
+    points: 6
+    method: assert
+    setup: >-
+      In the editor for "Zephyr Feedback", rename the rating question from "Rate
+      the Zephyr launch" to exactly "Rate the Zephyr rollout", delete the
+      short-text question "Your Zephyr nickname", and move the multiple-choice
+      question to the top of the form. Save or republish, then `goto` the public
+      form URL and let it re-render.
+    note: >-
+      Reordering is not asserted: question order is not recoverable from
+      rendered text without a build-specific selector. This decides the edit and
+      delete halves, both observed on the public form so that a change which
+      only lives in the editor's local state does not count.
+    check:
+      name: text_matches
+      patterns:
+        - "Rate the Zephyr rollout"
+      absent:
+        - "Zephyr nickname"
+  - id: F3
+    text: "Creator isolation: creator B cannot see or edit creator A's form."
+    points: 7
+    method: assert
+    setup: >-
+      Sign out of Alice's account, sign in as bob@formforge.test with the
+      password Zephyr-Pass-2, and open Bob's own dashboard or form list. Then,
+      still signed in as Bob, use `goto` to open the creator-side editor URL for
+      Alice's "Zephyr Feedback" form directly (the editor URL, not the public
+      form URL) and leave whatever the app shows on screen.
+    note: >-
+      Absent-only, so it passes when Alice's content is not reachable. It tests
+      the question wording rather than the form title on purpose: a build that
+      refuses access with "you cannot view 'Zephyr Feedback'" is behaving
+      correctly, and matching the title would fail it for saying so.
+    check:
+      name: text_matches
+      absent:
+        - "Which Zephyr color"
+  - id: F4
+    text: "Credential and answer-option fields are real form controls with accessible names."
+    points: 3
+    method: assert
+    setup: >-
+      Sign out and leave the app on its sign-in / sign-up screen with the email
+      and password fields visible and nothing typed into them. If the build has
+      no accounts at all, leave it on whichever screen it opens with.
+    note: >-
+      26x + 16x + 30x `Element is not an <input>` against labelled divs standing
+      in for fields.
+
+      Surveyed on the credential screen only — one check gets one page state,
+      and credentials are where the crowd's failures were logged. `min_controls:
+      3` is doing real work: a build whose fields are plain styled divs carrying
+      neither a role nor an onclick is invisible to the survey, so the page
+      comes back with only a button and reads as too few controls rather than
+      falsely clean. `max_unnamed: 1` forgives a single icon-only control.
+    check:
+      name: controls_have_names
+      min_controls: 3
+      max_unnamed: 1
+  - id: F5
+    text: "Data survives a server restart — state under VIRALBENCH_DATA_DIR."
+    points: 3
+    method: source
+    note: >-
+      Decided from source: the harness cannot restart the build's server
+      mid-item. `source_present` greps the whole source tree, not just
+      browser-served files, so a server-side read of the variable is in scope. A
+      build that persists to a hard-coded path fails here even though its data
+      would in fact survive a restart in place — that is the intended reading,
+      since the brief's contract is the data directory.
+    check:
+      name: source_present
+      pattern: "VIRALBENCH_DATA_DIR"
+
+penalties:
+  - id: A1
+    text: >-
+      Response or submission counts are displayed that do not correspond to real
+      stored submissions.
+    points: -10
+    method: assert
+    setup: >-
+      Sign out, then `goto` the published public "Zephyr Feedback" URL as a
+      logged-out visitor and let the page render fully, including any banner,
+      badge or counter above or below the questions.
+    note: >-
+      One build shows `LIVE · 147 responses` to every logged-out visitor on a
+      database with none. All 30 agents saw it; it is manufactured evidence for
+      the brief's own pitch ("watch the answers arrive"). Predicted
+      crowd/rubric divergence.
+
+      The true count at this point in the run is 3, so the threshold is two
+      digits: any count of 10 or more on the public page is fabricated, and a
+      two-digit number cannot come from this form's own data (ratings are 1-5,
+      three responses). Fires only on the public page — a count fabricated on
+      the creator's results view is not caught.
+    check:
+      name: text_matches
+      patterns:
+        - "\\b\\d{2,}\\s*(responses?|submissions?|replies|answers|entries)\\b|(responses?|submissions?|replies|entries)\\W{0,8}\\b\\d{2,}\\b(?!\\s*%)"
+  - id: A2
+    text: "The published public URL returns 404 or 5xx, or requires an account."
+    points: -8
+    method: probe
+    setup: >-
+      Sign out completely — the app's own sign-out control, or `evaluate` to
+      expire document.cookie and clear localStorage and sessionStorage, then
+      reload. Now `goto` the published public "Zephyr Feedback" URL. Let
+      whatever comes back render; an error page, a 404 or a sign-in wall are all
+      valid outcomes to record. Do not sign in.
+    note: >-
+      The inverse of S3: the penalty is recorded when the multiple-choice
+      question is not on the page a logged-out visitor gets, which is what a
+      404, a 5xx and a sign-in wall all look like from the visitor's side.
+      `http_status` cannot decide this — it runs in the anonymous pre-pass,
+      before the grader has created any form, so there is no published URL yet
+      for it to probe.
+    check:
+      name: text_matches
+      absent:
+        - "Which Zephyr color"
+  - id: A3
+    text: "Signing in before signing up produces an unhandled error rather than a clear message."
+    points: -3
+    method: assert
+    setup: >-
+      Sign out. On the sign-in screen enter the email ghost@formforge.test with
+      the password Zephyr-Pass-9 — an account that was never signed up — and
+      submit. Wait for the app to respond and leave whatever it shows on screen.
+    note: >-
+      Fires only on a raw error surfacing in the UI, which is the literal claim
+      ("an unhandled error rather than a clear message"). A build that shows
+      nothing at all is a different defect and is not penalised here, and a
+      crash confined to the console is invisible to this check —
+      `console_errors_present` would see it, but it also fires on unrelated
+      console noise anywhere in the same phase.
+    check:
+      name: text_matches
+      patterns:
+        - "traceback|stack trace|internal server error|error 500|http 500|unhandled|uncaught|TypeError|ReferenceError|cannot read propert|is not a function|undefined is not|NoneType|\\[object Object\\]|sqlite3\\.|psycopg|sqlalchemy"

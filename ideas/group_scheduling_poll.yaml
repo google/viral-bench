@@ -1,0 +1,42 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Rallly — https://github.com/lukevella/rallly
+# Verified 5,205 GitHub stars on 2026-08-06.
+#
+# Multi-user note: this is the cleanest A-acts/B-sees flow in the corpus, which
+# is why it carries the `easy` full-stack slot. One visitor creates a poll and
+# another votes in it with no invite, share-link handshake, or permission grant
+# in between — so the shared instance the crowd runs is exercised by default.
+
+idea_id: group_scheduling_poll
+title: "WhenWorks"
+pitch: "Find a time that works for a group, without anyone creating an account."
+problem: "Settling on a meeting time by group chat is a mess of overlapping replies, and the polished scheduling tools want everyone to sign up before they can answer a single question."
+target_user: "Anyone organizing a group meetup, study session, or team call across busy calendars."
+core_features:
+  - "Create a poll: a title, a description, and several proposed date/time options"
+  - "Share the poll by its URL; participants respond by entering a name, with no account required"
+  - "Each participant marks every option as yes, no, or maybe"
+  - "A results grid shows every participant's answers side by side and highlights the option with the most yes votes"
+  - "The organizer can add or remove options and finalize a chosen time, which is then shown to everyone who opens the poll"
+success_criteria: "One visitor creates a poll with three time options; a second, separate visitor opens the poll's URL, submits a different name with a different set of answers, and the results grid then shows BOTH participants' responses with the correct winning option."
+allowed_scope: full-stack-app
+difficulty: easy
+
+ground_truth:
+  source: "Reddit (r/selfhosted) / GitHub"
+  metric: github_stars
+  value: 5205

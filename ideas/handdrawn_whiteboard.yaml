@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Excalidraw — https://github.com/excalidraw/excalidraw
+# Verified 129,074 GitHub stars on 2026-08-06.
+
+idea_id: handdrawn_whiteboard
+title: "RoughDraw"
+pitch: "An infinite whiteboard for sketching diagrams that look hand-drawn, right in the browser."
+problem: "Polished diagramming tools make early ideas feel too formal, slow down quick iteration, and usually demand an account before you can draw anything."
+target_user: "Engineers, designers, and teachers who want to quickly sketch and share diagrams without fuss."
+core_features:
+  - "Infinite canvas you can pan and zoom"
+  - "Draw rectangles, ellipses, arrows, and lines plus freehand, all in a sketchy hand-drawn style"
+  - "Add text labels and select, move, resize, and delete elements"
+  - "Export the canvas to PNG/SVG and save/load a scene as a local file"
+  - "Runs entirely client-side with no account required"
+success_criteria: "A user can sketch a multi-shape diagram with a hand-drawn look, rearrange it, and export an image — all without signing in."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Twitter/X / Hacker News"
+  metric: github_stars
+  value: 129074

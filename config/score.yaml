@@ -1,0 +1,424 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ViralScore configuration: the knobs that decide how a built app is rated.
+#
+# This file is the tuning surface for the benchmark. Everything the score
+# weighs -- the deterministic crowd metrics AND the agentic autorater's
+# judgements -- is adjustable here, without touching code.
+#
+# WHY THIS MATTERS: the benchmark exists to show a real difference between
+# founder models. Which factors you weigh decides how much of that difference is
+# visible, and different factors separate models by different amounts. Being
+# able to re-weight and re-score is how you find the factors that discriminate.
+#
+# Re-scoring is FREE: scoring is a pure function of stored run artifacts, so
+# changing weights here and re-running `viral-bench score` costs nothing. Never
+# re-run a crowd simulation only to try a different weighting.
+#
+# HOW TO SEARCH THIS SURFACE: `scripts/discriminate.py --sweep-profiles`
+# re-scores the whole stored corpus under every profile below and ranks them by
+# the effect size they produce between founder models. Add a profile here, sweep,
+# keep what separates.
+
+# Which profile `viral-bench score` uses by default.
+active_profile: v7_equal
+
+profiles:
+  # ---------------------------------------------------------------------------
+  # v7_equal -- the default from score_version 1.8.
+  #
+  # Same components and same validity gate as v6_witnessed. The only change is
+  # that every component now carries the SAME weight, and the reason is
+  # interpretability rather than measurement.
+  #
+  # The score has six parts once the three autorater dimensions are counted as
+  # the single judgement they are. Each part gets 1/6. The autorater's sixth is
+  # split three ways, so each of its dimensions carries 1/18.
+  #
+  #   adoption, advocacy, craft, advocacy_spread, persistence : 1/6 each
+  #   substance, severity, word_of_mouth                      : 1/18 each
+  #
+  # WHY. The tuned weights were defensible but every one of them invited the
+  # same question -- "why is craft 0.22 and persistence 0.12?" -- and answering
+  # it costs more credibility than the tuning ever bought. A flat weighting has
+  # no such question to answer: the score is the mean of what the crowd did,
+  # with the rater held to a minority share.
+  #
+  # WHAT IT COSTS, measured by re-scoring a stored corpus twice, once under each
+  # weighting, across every founder arm: every arm moves down by the same
+  # fraction of a point, so no arm is differentially advantaged and every
+  # arm-to-arm gap survives. Discrimination is unchanged to two decimal places.
+  # All but one of the pairwise model orderings are preserved, and that one flip
+  # is between two models already tied to one decimal under BOTH weightings and
+  # separated by far less than the run-to-run noise floor. It is not a
+  # reordering. Reproduce it on your own corpus with
+  # `scripts/discriminate.py --sweep-profiles`.
+  #
+  # THE HONEST TRADE. Equal weighting takes the most from `craft`, which is the
+  # best-measured component (discrimination ratio 6.01), and gives to
+  # `advocacy_spread`, the worst (0.75 -- its app-to-app spread is smaller than
+  # its own run-to-run noise). On measurement grounds that is the wrong
+  # direction. It does not matter in practice only because the components
+  # correlate 0.8-0.99, so moving weight among them barely moves the composite.
+  # The claim to make is "equal weights cost nothing measurable", NOT "equal
+  # weights measure better".
+  #
+  # The deterministic share lands at 0.833 against v6's 0.85, so the property
+  # that the counts dominate and the rater is a capped minority is preserved
+  # almost exactly -- it is now a consequence of the arithmetic rather than a
+  # separately chosen constant.
+  # ---------------------------------------------------------------------------
+  v7_equal:
+    description: >-
+      As v6_witnessed, but every component carries the same weight: six parts,
+      one sixth each, with the autorater counted as one part.
+    deterministic:
+      # 1/6 each. Written to ten places so the sum clears the 1e-9 check.
+      adoption: 0.1666666667
+      advocacy: 0.1666666667
+      craft: 0.1666666667
+      advocacy_spread: 0.1666666667
+      persistence: 0.1666666667
+      amplification: 0.00     # retired in v5: 68% founder reposts, r=+0.95 with score
+      reception: 0.00         # retired in v4: ratio 1.42, wrong sign
+      cascade: 0.00           # degenerate: 0.005 mean, zero in 91% of runs
+    autorater:
+      # The autorater is ONE of the six parts, so its sixth splits three ways.
+      substance: 0.0555555555
+      severity: 0.0555555555
+      word_of_mouth: 0.0555555555
+    gates:
+      # Unchanged from v6_witnessed -- this profile changes weighting only.
+      policy: evidence_graded
+      broken_app: 0.1
+      failed_self_check: 0.55
+
+  # ---------------------------------------------------------------------------
+  # v6_witnessed -- the default from score_version 1.7.
+  #
+  # Same weights as v5_advocacy. The change is the VALIDITY GATE, the only part
+  # of the score that was never the crowd's opinion: a container probe said "this
+  # app does not run" and a hardcoded constant cut the finished score fivefold.
+  # Both constants (0.2, 0.6) date from the first ViralScore commit and were
+  # never fitted to anything, and the gate could overrule direct first-hand
+  # evidence. It measurably did: on a stored corpus, the one cell where the gate
+  # flapped across seeds was a run that posted the HIGHEST adoption and craft of
+  # its three seeds and was still cut to a fifth of its score. That is a flaky
+  # start being scored as a dead app.
+  #
+  # `policy: evidence_graded` keeps the probe but demotes it from override to
+  # tie-breaker: the floor is scaled up towards 1.0 by the fraction of the crowd
+  # that got the app working. Nobody could open it -> the full floor.
+  # Everybody used it -> no penalty, whatever the probe thinks. With broken_app
+  # at 0.0 the multiplier IS the witness rate, so no constant survives in the
+  # gate at all.
+  #
+  # Chosen by sweep (scripts/gate_sweep.py): 64 policy x multiplier combinations
+  # priced on v4_earned and v5_advocacy, then re-checked on both halves of a
+  # brief-level split. Every cell agrees.
+  #
+  #   | policy (v5, full fleet) | null | ratio | ratio* | floored |
+  #   |---|---|---|---|---|
+  #   | hard m=0.2 (v5 default) | 0.51 | 4.69  | 4.69   | 0       |
+  #   | no gate at all          | 1.00 | 4.41  | 4.41   | 0       |
+  #   | evidence_graded m=0.1   | 0.33 | 4.91  | 4.91   | 0       |
+  #   | evidence_graded m=0.0   | 0.25 | 4.95  | 3.66   | 36      |
+  #
+  # WHY THE FLOOR IS 0.1 AND NOT 0.0. A floor of exactly zero looked like the
+  # best candidate in the whole grid and it was an artifact. It sends 108 runs
+  # to a hard 0.0 and flattens 36 cells to zero variance, and zero-variance
+  # cells drag the pooled within-cell SD down and shrink the seed-parity null
+  # towards nothing. Re-priced on only the cells it has NOT flattened (`ratio*`)
+  # its discrimination collapses to 3.66, WORSE than the hard gate it was
+  # supposed to beat. 0.1 keeps the floor off zero, floors no cell at all, and
+  # its ratio* equals its ratio -- the gain is real. `scripts/gate_sweep.py`
+  # now reports ratio* alongside ratio so this cannot be missed again.
+  # ---------------------------------------------------------------------------
+  v6_witnessed:
+    description: >-
+      As v5_advocacy, but the validity gate is scaled by how much of the crowd
+      got the app working instead of applying a fixed multiplier.
+    deterministic:
+      adoption: 0.18          # fraction of the crowd who would use it
+      advocacy: 0.18          # sqrt(influence)-weighted fraction who would share it
+      craft: 0.22             # multi-item facet mean from hands-on trials
+      advocacy_spread: 0.15   # peer reposts/quotes BY ENDORSERS -- the spread mechanic
+      persistence: 0.12       # work survived a reload, per agent who checked
+      amplification: 0.00     # retired in v5: 68% founder reposts, r=+0.95 with score
+      reception: 0.00         # retired in v4: ratio 1.42, wrong sign
+      cascade: 0.00           # degenerate: 0.005 mean, zero in 91% of runs
+    autorater:
+      substance: 0.05
+      severity: 0.05
+      word_of_mouth: 0.05
+    gates:
+      # gate = floor + (1 - floor) * witness_rate, where the witness rate is
+      # valid hands-on trials over agents exposed. `hard` (the pre-1.7
+      # behaviour) applies the floor outright and is what every older profile
+      # below still uses, so their historical numbers are unchanged.
+      policy: evidence_graded
+      # Swept over 0.0..1.0 on both live profiles. 0.1 is the best floor that
+      # does not flatten any cell onto itself -- see the note above on why 0.0
+      # wins the naive ranking and should not be trusted.
+      broken_app: 0.1
+      # Softer floor for "it ran, but its own smoke command was wrong", halfway
+      # from the broken-app floor to no penalty, which is the parameterisation
+      # the sweep used. Fires on 0 of 729 runs in the current corpus, so this
+      # number is a prior rather than a measurement -- flagged, not dressed up.
+      failed_self_check: 0.55
+
+  # ---------------------------------------------------------------------------
+  # v5_advocacy -- the default from score_version 1.6.
+  #
+  # One change from v4: `amplification` (anyone who reposted anything) becomes
+  # `advocacy_spread` (reposts and quotes OF ANOTHER AGENT, by agents who
+  # themselves answered would_share=yes).
+  #
+  # Why the old term had to go. Of 5,574 reposting actors sampled across 300
+  # runs, 67.8% only ever reposted the founder's own launch post -- an act that
+  # requires no contact with another agent at all. Measured directly, that
+  # founder-repost rate correlates **+0.95** with the finished score. So the one
+  # component named after spread was a laundered second copy of "the app is
+  # good", which is also why it looked like such a strong discriminator.
+  #
+  # Why the peer version needs the advocacy filter. Raw peer interaction runs
+  # HIGHER on broken apps than working ones (0.442 vs 0.121, r=-0.483 with the
+  # score): thirty agents pile on to confirm the same HTTP 500. Scoring raw peer
+  # volume would rank a corpse above a product. Requiring the amplifier's own
+  # verdict to be would_share=yes flips the sign to +0.28.
+  #
+  # Measured over the same 738 arch-v12 runs, ranked null -> ratio -> margin:
+  #
+  #   | variant                 | null | ratio | margin | control |
+  #   |---|---|---|---|---|
+  #   | v4_earned (shipped)     | 1.16 | 4.64  | 69.7   | 7.4     |
+  #   | v5_advocacy             | 0.51 | 4.69  | 62.7   | 3.9     |
+  #   | drop amplification      | 1.33 | 4.70  | 67.6   | 11.1    |
+  #
+  # That third row is the control that matters: deleting the term makes the null
+  # WORSE, so v5 is carrying signal rather than quietly removing a noisy one.
+  #
+  # Known cost, stated plainly: advocacy_spread is sparse (mean 0.039, zero in
+  # 56% of runs), so at 0.15 it behaves partly as a flat penalty on runs where
+  # no endorser passed the app on. That narrows the control margin 69.7 -> 62.7.
+  # If preserving dynamic range matters more, 0.08 measured null 0.81 with the
+  # best ratio of any variant tested (4.80) and margin 66.8.
+  # ---------------------------------------------------------------------------
+  v5_advocacy:
+    description: >-
+      As v4_earned, but the behavioural term counts only peer amplification by
+      agents who would put their own name behind the app.
+    deterministic:
+      adoption: 0.18          # fraction of the crowd who would use it
+      advocacy: 0.18          # sqrt(influence)-weighted fraction who would share it
+      craft: 0.22             # multi-item facet mean from hands-on trials
+      advocacy_spread: 0.15   # peer reposts/quotes BY ENDORSERS -- the spread mechanic
+      persistence: 0.12       # work survived a reload, per agent who checked
+      amplification: 0.00     # retired: 68% founder reposts, r=+0.95 with the score
+      reception: 0.00         # retired in v4: ratio 1.42, wrong sign
+      cascade: 0.00           # degenerate: 0.005 mean, zero in 91% of runs
+    autorater:
+      substance: 0.05
+      severity: 0.05
+      word_of_mouth: 0.05
+    gates:
+      broken_app: 0.2
+      failed_self_check: 0.6
+
+  # ---------------------------------------------------------------------------
+  # v4_earned -- the default from score_version 1.5.
+  #
+  # One change from v3: `reception` (likes minus dislikes per exposed agent) is
+  # retired, and the weight it frees goes to `amplification` and to a new
+  # `persistence` term. Chosen from 29 scoring ablations run against the same
+  # 150 runs, ranked on whether the instrument separates a model FROM ITSELF
+  # before anything else, then on discrimination, then on control margin -- with
+  # the model gap read off afterwards rather than optimised.
+  #
+  #   | profile | null | ratio | control margin |
+  #   |---|---|---|---|
+  #   | v3_valence | 1.42 | 3.24 | 70.4 |
+  #   | v4_earned  | 1.16 | 3.27 | 80.1 |
+  #
+  # Why reception had to go: measured over 150 runs its between-cell spread over
+  # within-cell noise is 1.42, against 9.09 for craft and 6.42 for adoption, and
+  # its sign points at the weaker model (+0.017). Dislikes are ~0 on any app
+  # that works, so the term is a near-constant that compresses the scale rather
+  # than ranking anything. Every ablation that removed or replaced it improved
+  # the null, the ratio and the margin together.
+  #
+  # Why persistence earns a place: it is the only component that is neither an
+  # opinion nor a count of social actions. An agent makes something, reloads,
+  # and looks -- so an app that forgets your work cannot be rated around it. It
+  # was not measurable before crowd arch v10 because there was no reload verb.
+  # ---------------------------------------------------------------------------
+  v4_earned:
+    description: >-
+      Stated judgement (adoption, advocacy), hands-on craft, observed
+      amplification, and whether the app kept the user's work.
+    deterministic:
+      adoption: 0.18       # fraction of the crowd who would use it
+      advocacy: 0.18       # sqrt(influence)-weighted fraction who would share it
+      craft: 0.22          # multi-item facet mean from hands-on trials
+      amplification: 0.15  # reposts per exposed agent -- the spread mechanic
+      persistence: 0.12    # work survived a reload, per agent who checked
+      reception: 0.00      # retired: ratio 1.42, wrong sign (see above)
+      cascade: 0.00        # degenerate: no variance in any run
+    autorater:
+      substance: 0.05
+      severity: 0.05
+      word_of_mouth: 0.05
+    gates:
+      broken_app: 0.2
+      failed_self_check: 0.6
+
+  # ---------------------------------------------------------------------------
+  # v3_valence -- the default from score_version 1.3.
+  #
+  # v2's `amplification` was 0.65*repost + 0.35*comment - negative and carried
+  # the largest weight in the score. Measured over 27 calibration runs, comment
+  # participation is INVERTED with respect to app quality (broken control 0.868,
+  # mid 0.839, good 0.750: people comment to complain), so a term that rises as
+  # the app gets worse sat inside a positively-weighted component -- and the
+  # reason the composite still separated the corpse was the `- negative` term
+  # doing that component's work under an amplification label, with a floor clip
+  # at zero hiding how much.
+  #
+  # 1.3 splits it. `amplification` is reposts per exposed agent and nothing else
+  # (honest, but rare and bursty -> small weight). `reception` is net valence,
+  # likes minus dislikes per exposed agent, mapped from [-1,1] to [0,1] with no
+  # clipping -- dislike participation is 0.859 / 0.225 / 0.012 across broken /
+  # mid / good, the cleanest behavioural discriminator in the corpus.
+  #
+  # These weights were set BEFORE any crowd run over the frozen fleet existed,
+  # deliberately, so the fix cannot have been tuned on the model gap it produces.
+  # ---------------------------------------------------------------------------
+  v3_valence:
+    description: >-
+      Stated judgement (adoption, advocacy) plus hands-on craft plus observed
+      behaviour split honestly into reposting and valence. Autorater unchanged.
+    deterministic:
+      adoption: 0.18       # fraction of the crowd who would use it
+      advocacy: 0.18       # sqrt(influence)-weighted fraction who would share it
+      craft: 0.22          # multi-item facet mean from hands-on trials
+      amplification: 0.09  # reposts per exposed agent -- real, but noisy
+      reception: 0.18      # net valence per exposed agent (likes - dislikes)
+      cascade: 0.00        # measured but degenerate: zero variance in every run
+    autorater:
+      substance: 0.05
+      severity: 0.05
+      word_of_mouth: 0.05
+    gates:
+      broken_app: 0.2
+      failed_self_check: 0.6
+
+  # ---------------------------------------------------------------------------
+  # v2_hybrid -- the default. Deterministic crowd metrics plus the autorater's
+  # qualitative dimensions. Weights must sum to 1.0 across BOTH groups.
+  # ---------------------------------------------------------------------------
+  v2_hybrid:
+    description: >-
+      Deterministic metrics carry the score, and the autorater adds judgements a
+      formula cannot make. Deterministic weights are calibrated from measured
+      per-component signal-to-noise (craft 15.4, adoption 3.5, amplification
+      2.4, advocacy 2.2, cascade 0.4).
+    deterministic:
+      adoption: 0.18       # fraction of the crowd who would use it
+      advocacy: 0.18       # sqrt(influence)-weighted fraction who would share it
+      craft: 0.22          # multi-item facet mean from hands-on trials
+      amplification: 0.27  # reposts/comments per exposed agent
+      cascade: 0.00        # measured but degenerate: zero variance in every run
+    autorater:
+      substance: 0.05      # is praise specific and earned, or reflexive?
+      severity: 0.05       # how damaging is the strongest criticism?
+      word_of_mouth: 0.05  # did agents persuade each other?
+    # Multiplied into the final score. Live per profile, and the strongest
+    # single lever here: 0.6 is a 40% haircut, ~22 points on a 55-point build,
+    # larger than any weight change below. Sweep it.
+    gates:
+      broken_app: 0.2          # does not build or start
+      failed_self_check: 0.6   # runs, but fails its own smoke test
+
+  # ---------------------------------------------------------------------------
+  # v1_deterministic -- the pre-autorater formula. Kept so historical runs can
+  # be re-scored under the definition they were originally reported with.
+  # ---------------------------------------------------------------------------
+  v1_deterministic:
+    description: Deterministic only, with no LLM involvement. Reproduces score_version 1.2.
+    deterministic:
+      adoption: 0.20
+      advocacy: 0.20
+      craft: 0.25
+      amplification: 0.35
+      cascade: 0.00
+    autorater: {}
+    gates:
+      broken_app: 0.2
+      failed_self_check: 0.6
+
+  # ---------------------------------------------------------------------------
+  # qualitative_heavy -- an exploration profile that leans on the autorater.
+  # Use it to test whether qualitative judgement separates founder models better
+  # than the counts do. Validate reliability before trusting it for a ranking.
+  # ---------------------------------------------------------------------------
+  qualitative_heavy:
+    description: Leans on the autorater. For discrimination experiments, not ranking.
+    deterministic:
+      adoption: 0.15
+      advocacy: 0.15
+      craft: 0.15
+      amplification: 0.15
+      cascade: 0.00
+    autorater:
+      substance: 0.14
+      severity: 0.13
+      word_of_mouth: 0.13
+    gates:
+      broken_app: 0.2
+      failed_self_check: 0.6
+
+# The agentic autorater itself.
+autorater:
+  enabled: true
+  # '<provider>/<model>'. Empty disables the autorater rather than falling back
+  # to some default provider: an unasked-for API call is worse than a missing
+  # optional score. Needs JSON mode. Hold it FIXED across a comparison.
+  model: ''
+  temperature: 0.0     # a measurement instrument, not a creative one
+  # The rater is run this many times and the MEDIAN per dimension is used. LLM
+  # judgements are noisier than counts, so a single sample is not a measurement.
+  repeats: 3
+  # Never reveal which founder model built the app: a rater that can infer it
+  # may rate the model's reputation instead of the artifact, which would defeat
+  # the entire purpose of a model-comparison benchmark.
+  blind_to_founder_model: true
+
+# Minimum evidence for a run to produce a number at all. Below these the run is
+# reported UNSCORABLE rather than scored on whatever survived -- a partial run
+# quietly scored on its steadiest component looks more trustworthy than a
+# healthy one, which is the worst failure mode a benchmark can have.
+#
+# Both are loaded by viral_bench.config and applied in score/viralscore.py
+# (MIN_INTERVIEWS, CALIBRATED_CROWD_SIZE). This block used to be marked "NOT YET
+# WIRED", so editing it did nothing.
+#
+# calibrated_crowd_size read 50 here against 30 in the code. 30 is correct and is
+# what the code has always used: the 50 came from a reliability table whose n=50
+# bucket held no runs of the strong build at all (every one destroyed by the
+# recommender crash). Re-measured on the fixed instrument,
+# n=50 is worse on every axis at twice the cost -- separation/noise 4.8 vs 17.0.
+minimums:
+  interviews: 1              # below this => unscorable (0 = no crowd verdicts)
+  calibrated_crowd_size: 30  # below this, the score carries a noise warning

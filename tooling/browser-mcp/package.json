@@ -1,0 +1,8 @@
+{
+  "name": "viral-bench-browser-mcp",
+  "private": true,
+  "description": "Vendored Playwright MCP so the founder QA/Designer get a real browser using only system node (no npx/npm at run time).",
+  "dependencies": {
+    "@playwright/mcp": "0.0.41"
+  }
+}

@@ -1,0 +1,70 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Node / JS tooling dependencies (e.g. tooling/browser-mcp) — never commit
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Virtual environments
+.venv
+.venv-crowd/
+venv/
+
+# OASIS crowd-simulation scratch (writes to ./log relative to cwd)
+log/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Environment variables / secrets (never commit API keys!)
+.env
+*.local
+# Per-user model choices written by `viral-bench init`. `*.local` does not match
+# it, so a fresh clone was dirty immediately after the documented setup step.
+config/local.yaml
+# OAuth / service-account client secrets — never commit these
+client_secret*.json
+
+# Local design docs (kept local; not pushed to the remote)
+docs/
+
+# Founder builds: throwaway app artifacts + the local build store (Stage 2).
+# One git repo lives under builds/store (orphan branch per build); never commit
+# these into the main repo.
+builds/
+
+# Vendored Playwright MCP: populated by tooling/browser-mcp/bootstrap.sh from the
+# committed package.json + lockfile. Not committed (large); the browser tooling
+# degrades gracefully when absent (see opencode_agents.browser_prereqs_ok).
+tooling/browser-mcp/node_modules/
+tooling/browser-mcp/.node/
+
+# Upload fixtures for crowd trials: generated deterministically on first use
+# (see crowd/interaction/fixtures.py), so they are build output, not source.
+data/fixtures/
+
+# Per-cell opencode state (see scripts/build_fleet.py): throwaway session
+# databases kept out of the shared 41GB one to stop concurrent builds
+# contending on a single SQLite file.
+builds/opencode_state/
+
+# Trajectory viewer runtime state: parsed-transcript caches, crowd screenshots
+# rescued out of /tmp, and throwaway dirs for apps launched from the UI. All
+# regenerable from builds/.
+viz/cache/

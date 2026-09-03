@@ -1,0 +1,97 @@
+ViralBench
+Copyright 2026 Google LLC
+
+This product includes software developed at Google LLC.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+ViralBench ships no third-party source of its own: everything below is resolved
+and installed by the user's package manager (uv/pip, npm) or downloaded as a
+released binary at setup time. Nothing here is vendored into this repository.
+The authoritative dependency lists are `pyproject.toml` (Python),
+`config/crowd-requirements.txt` (the optional crowd simulation environment) and
+`tooling/browser-mcp/package.json` (the founder's browser tooling).
+
+Run-time tools invoked as subprocesses (not linked, not redistributed)
+----------------------------------------------------------------------
+
+OpenCode CLI
+  https://github.com/anomalyco/opencode
+  MIT License.
+  The founder stage drives OpenCode as a coding agent. It is executed as a
+  separate process (`opencode run`, see `viral_bench.founder.harness`), never
+  imported or bundled. `scripts/setup_founder_env.sh` downloads the official
+  release binary to `~/.opencode/bin` on request, and this project distributes
+  no copy of it.
+
+Playwright MCP (@playwright/mcp)
+  https://github.com/microsoft/playwright-mcp
+  Apache License 2.0.
+  Gives the founder's QA and Designer agents a real browser. Only the pinned
+  version in `tooling/browser-mcp/package.json` plus its lock file are committed.
+  `tooling/browser-mcp/bootstrap.sh` installs it into a gitignored
+  `node_modules/`, and the tooling silently disables itself if it is absent.
+
+Google Chrome / Chromium
+  Not distributed here. Both the crowd's browser trials and the rubric checks
+  drive whatever system Chrome or Chromium the user already has, via
+  Playwright's `chrome` channel. No browser binary is downloaded or shipped by
+  this project.
+
+Python dependencies
+-------------------
+
+The direct dependencies in `pyproject.toml` are permissively licensed:
+Apache-2.0 (openai, google-genai, playwright, python-multipart, bcrypt),
+BSD-3-Clause (python-dotenv, uvicorn, starlette, httpx, jinja2, flask, markdown,
+reportlab, passlib), MIT (pyyaml, fastapi, pydantic, python-jose, pyjwt,
+alembic, sqlalchemy, gunicorn), HPND (pillow) and Unlicense (email-validator).
+
+Two transitive dependencies are weak-copyleft, and are noted here because that
+is worth knowing before redistributing an environment built from this project:
+
+  certifi (MPL-2.0). Pulled in by httpx and requests, unavoidable, and present
+    in nearly every Python HTTP stack. Used unmodified.
+  tqdm (MPL-2.0 AND MIT). Pulled in by the openai SDK, so it is part of the
+    base install. Used unmodified.
+
+Optional crowd simulation extra
+-------------------------------
+
+The social simulation is optional and is not installed by default.
+
+CAMEL (camel-ai) and OASIS (camel-oasis)
+  https://github.com/camel-ai/camel and https://github.com/camel-ai/oasis
+  Apache License 2.0.
+  CAMEL provides the agent framework the crowd's `SocialAgent`s are built on,
+  and OASIS provides the mock social platform they act in. Neither is in this
+  project's own dependency set: both `camel-ai` and the `camel-oasis` engine are
+  pinned in `config/crowd-requirements.txt` and installed by
+  `scripts/setup_crowd_env.sh` into a separate Python 3.11 virtualenv
+  (`.venv-crowd`), because they cannot coexist with this project's Python 3.12
+  dependency set.
+
+  IMPORTANT (GPL): installing `camel-oasis` also pulls in **igraph**
+  (python-igraph), which is licensed **GPL-2.0-or-later**. ViralBench does not
+  distribute, vendor, link against or import igraph. It reaches a machine only
+  when the user chooses to run `scripts/setup_crowd_env.sh`, and it lands in the
+  isolated `.venv-crowd` environment rather than in this project's own
+  environment. If GPL code in your environment is a problem for you, the crowd
+  simulation is the part to leave uninstalled. The rest of the benchmark, the
+  founder stage and the scoring included, does not need it.
+
+Container image
+---------------
+
+`docker/Containerfile` builds a local sandbox image for running generated apps.
+It derives from the official `python` Debian image and installs Node.js from
+NodeSource and a small set of Debian packages at build time. Those components
+keep their own licenses, and no image is published from this repository.

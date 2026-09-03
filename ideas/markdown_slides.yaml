@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): Slidev — https://github.com/slidevjs/slidev
+# Verified 47,989 GitHub stars on 2026-08-06.
+
+idea_id: markdown_slides
+title: "DeckMD"
+pitch: "Write presentation slides in Markdown and present them in the browser, code-first."
+problem: "Building code-heavy talks in GUI tools like PowerPoint is tedious, and pasting screenshots of code loses formatting and is painful to update."
+target_user: "Developers and technical speakers who would rather write slides as text than fight a slide editor."
+core_features:
+  - "Author an entire deck in a single Markdown file, one slide per section"
+  - "Render slides in the browser with syntax-highlighted code blocks"
+  - "Navigate with keyboard/clicks and show a presenter view with notes"
+  - "Switch themes and support speaker notes and basic layouts"
+  - "Export the finished deck to PDF"
+success_criteria: "A user can write a Markdown file, present the rendered slides in the browser with highlighted code, and export the deck to PDF."
+allowed_scope: client-app
+difficulty: medium
+
+ground_truth:
+  source: "Twitter/X"
+  metric: github_stars
+  value: 47989

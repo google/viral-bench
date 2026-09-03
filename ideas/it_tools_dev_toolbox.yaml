@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): it-tools — https://github.com/CorentinTh/it-tools
+# Verified 40,106 GitHub stars on 2026-08-06.
+
+idea_id: it_tools_dev_toolbox
+title: "DevToolbox"
+pitch: "One fast, ad-free page with all the little converters and generators developers reach for daily."
+problem: "Developers constantly need small utilities (JSON formatting, base64, JWT decode, UUIDs) and end up on slow, ad-cluttered sites that may ship pasted data to a server."
+target_user: "Developers and technical users who want quick, private, client-side dev utilities."
+core_features:
+  - "Searchable catalog of small tools grouped by category"
+  - "Core converters: JSON formatter/validator, base64 encode/decode, URL encode/decode"
+  - "Generators: UUID/ULID, random password/token, hashes (MD5/SHA-256)"
+  - "JWT decoder that shows header, payload, and claims"
+  - "Everything runs fully client-side; no input leaves the browser"
+success_criteria: "A user can search for a tool, run it entirely in the browser, and get correct output with no network calls."
+allowed_scope: client-app
+difficulty: easy
+
+ground_truth:
+  source: "Hacker News / Reddit"
+  metric: github_stars
+  value: 40106

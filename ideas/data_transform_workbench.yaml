@@ -1,0 +1,37 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Idea Bench spec. See ideas/README.md for the field reference.
+# Reference app (ground truth): CyberChef — https://github.com/gchq/CyberChef
+# Verified 35,526 GitHub stars on 2026-08-06.
+
+idea_id: data_transform_workbench
+title: "ByteKitchen"
+pitch: "Chain encoding, decoding, and hashing steps into a recipe that transforms your data in one pass."
+problem: "Untangling a piece of encoded data means running it through half a dozen one-off web tools in sequence, re-pasting the output each time and losing the thread of what you already tried."
+target_user: "Security analysts and developers who regularly decode, convert, and inspect unfamiliar data."
+core_features:
+  - "An input pane, an output pane, and a recipe of operations applied in order"
+  - "A searchable catalogue of operations: base64 encode/decode, URL encode/decode, hex, ROT13, case conversion, JSON pretty-print, and MD5/SHA-256 hashing"
+  - "Add, remove, and reorder operations in the recipe; the output updates automatically"
+  - "Per-operation arguments where relevant (e.g. the rotation amount for ROT13)"
+  - "Everything runs in the browser, so pasted data never leaves the machine"
+success_criteria: "A user builds a two-step recipe (for example base64-decode then ROT13), and the output pane shows the exactly correct transformed string; removing or reordering a step immediately updates the output to the correspondingly correct value."
+allowed_scope: client-app
+difficulty: hard
+
+ground_truth:
+  source: "Hacker News"
+  metric: github_stars
+  value: 35526
