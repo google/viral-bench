@@ -124,6 +124,7 @@ one idea and a cheap model.
 
 | What | Why |
 |---|---|
+| Linux or macOS | on Windows, run it under WSL2 — see [Platform support](#platform-support) |
 | Python 3.12+ and [uv](https://docs.astral.sh/uv/) | the benchmark itself |
 | An API key for any supported provider | there is no bundled model |
 | Node 20+ and [opencode](https://opencode.ai) | the founder drives the opencode CLI, a Node program |
@@ -135,6 +136,29 @@ one idea and a cheap model.
 before you spend anything. `scripts/setup_crowd_env.sh` builds the isolated crowd env
 and prefetches the TWHIN-BERT recommender (~1 GB, one time). Pass `--recsys twitter` to
 skip that download.
+
+### Platform support
+
+**Linux** is what the published results were produced on and what CI runs. **macOS**
+runs the full pipeline; podman needs a VM, so give it room — the harness caps a *build*
+container at 4 GB, and a smaller VM turns ordinary `npm run build` steps into OOM kills:
+
+```bash
+podman machine init --cpus 4 --memory 8192 --disk-size 100 && podman machine start
+```
+
+Keep the repo under `$HOME`, which is the directory `podman machine` shares by default.
+
+**Windows** is not supported natively, and `viral-bench doctor` says so on the first
+line rather than letting you discover it mid-build. Built apps are started through a
+POSIX shell from a model-authored manifest (`python3 server.py`, `npm run dev`), and the
+setup scripts are bash. Run ViralBench under WSL2, where it behaves as a Linux host.
+Scoring and the viewers do work natively on Windows, since they only read stored
+artifacts.
+
+podman is the default and preferred runtime. Docker works, with one difference worth
+knowing: it has no overlay (`:O`) mount, so a build's dependency cache is mounted
+read-write rather than write-discard, and an app can dirty its own build's cache.
 
 ## Quickstart
 

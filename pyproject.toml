@@ -24,7 +24,13 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "Operating System :: OS Independent",
+    # Not "OS Independent", which this claimed while every browser lookup, the
+    # crowd's venv path and the setup scripts assumed Linux. Linux and macOS are
+    # both supported; native Windows is not, because built apps are started
+    # through a POSIX shell from a model-authored manifest -- WSL2 is the
+    # Windows answer and presents as Linux. See viral_bench.hostplatform.
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

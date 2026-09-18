@@ -23,10 +23,17 @@ from pathlib import Path
 import pytest
 
 from viral_bench.crowd import launch
+from viral_bench.hostplatform import IS_WINDOWS
 
 
 def test_crowd_python_path() -> None:
-    assert launch.crowd_python().as_posix().endswith(".venv-crowd/bin/python")
+    # Asserted per-platform rather than as the POSIX literal. Hardcoding
+    # `bin/python` was the bug; a test that hardcodes it too keeps passing on
+    # Linux while the Windows path stays permanently unresolvable.
+    expected = "Scripts/python.exe" if IS_WINDOWS else "bin/python"
+    path = launch.crowd_python().as_posix()
+    assert path.endswith(expected)
+    assert ".venv-crowd" in path
 
 
 def test_run_crowd_sim_errors_without_env(monkeypatch) -> None:

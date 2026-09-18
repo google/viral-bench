@@ -49,6 +49,7 @@ from viral_bench.crowd.sim_defaults import (
 )
 from viral_bench.founder.build import load_build_record
 from viral_bench.founder.workspace import builds_root
+from viral_bench.hostplatform import venv_python
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 CROWD_VENV = _REPO_ROOT / ".venv-crowd"
@@ -97,8 +98,14 @@ class CrowdRunResult:
 
 
 def crowd_python() -> Path:
-    """Path to the crowd env's Python interpreter."""
-    return CROWD_VENV / "bin" / "python"
+    """Path to the crowd env's Python interpreter, per this platform's layout.
+
+    ``bin/python`` on POSIX, ``Scripts/python.exe`` on Windows. Hardcoding the
+    POSIX shape meant :func:`crowd_env_ready` could never return True on
+    Windows, so the crowd reported its environment as missing however many times
+    it was built.
+    """
+    return venv_python(CROWD_VENV)
 
 
 def crowd_env_ready() -> bool:

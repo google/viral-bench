@@ -43,17 +43,18 @@ import json
 import os
 import re
 import shutil
-import signal
 import socket
 import subprocess
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from viral_bench.founder.manifest import Manifest
+from viral_bench.hostplatform import IS_LINUX, kill_process_tree
 
 
 def record_app_start_failure(app_dir: Path, reason: str, logs: str) -> None:
@@ -475,9 +476,10 @@ class LocalRuntime:
                 f"cause) and retry, or run builds under scripts/netns_run.sh so "
                 f"each one gets its own loopback."
             )
-        # start_new_session so the whole process group can be killed on stop. The
-        # child keeps its own dup of the log fd, so this one is closed right away
-        # to avoid leaking a handle in the parent.
+        # start_new_session so the whole process group can be killed on stop
+        # (POSIX only -- Windows ignores it, and `stop` degrades to terminating
+        # the launcher). The child keeps its own dup of the log fd, so this one
+        # is closed right away to avoid leaking a handle in the parent.
         with log_path.open("w", encoding="utf-8") as log_file:
             process = subprocess.Popen(
                 manifest.run.command,
@@ -532,14 +534,12 @@ class LocalRuntime:
     def stop(self, app: RunningApp) -> None:
         if app.process is None or not self.is_running(app):
             return
-        try:
-            os.killpg(os.getpgid(app.process.pid), signal.SIGTERM)
-        except ProcessLookupError:
-            return
-        try:
-            app.process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            os.killpg(os.getpgid(app.process.pid), signal.SIGKILL)
+        # Signalling the whole process GROUP is what makes this work: the run
+        # command is a shell string, so killing the launcher alone leaves the
+        # real server holding its port and the next build fails to bind.
+        # ``os.killpg`` does not exist off POSIX, so the helper degrades to
+        # terminating the launcher there rather than raising AttributeError.
+        kill_process_tree(app.process)
 
     def logs(self, app: RunningApp) -> str:
         if app.log_path.is_file():
@@ -685,19 +685,68 @@ class ContainerRuntime:
         """True if the container runtime binary is on PATH."""
         return shutil.which(runtime) is not None
 
+    @property
+    def _is_podman(self) -> bool:
+        """True when the configured runtime is podman rather than docker.
+
+        Matched on the binary NAME, so an absolute path or a wrapper still
+        resolves correctly.
+        """
+        return "podman" in Path(self.runtime).name.lower()
+
     def image_exists(self) -> bool:
-        """True if the configured image is present locally (no pull attempted)."""
-        proc = subprocess.run(
-            [self.runtime, "image", "exists", self.image],
-            capture_output=True,
-            text=True,
+        """True if the configured image is present locally (no pull attempted).
+
+        ``image exists`` is a podman subcommand and docker has no equivalent, so
+        asking docker produced a non-zero exit for an image that was sitting
+        right there -- and ``viral-bench doctor`` told every docker user to
+        rebuild an image they already had, every time. ``image inspect`` is the
+        portable question.
+        """
+        argv = (
+            [self.runtime, "image", "exists", self.image]
+            if self._is_podman
+            else [self.runtime, "image", "inspect", self.image]
         )
+        proc = subprocess.run(argv, capture_output=True, text=True)
         return proc.returncode == 0
 
     # -- argv construction ---------------------------------------------------
 
     def _container_workdir(self, cwd: str) -> str:
         return "/work" if cwd in ("", ".") else f"/work/{cwd.lstrip('/')}"
+
+    def _bind(self, host: object, where: str) -> str:
+        """A bind mount, SELinux-relabelled only where SELinux exists.
+
+        ``:Z`` asks the runtime to relabel the host directory for the container.
+        That is a Linux/SELinux concept: on macOS and Windows the daemon runs in
+        a Linux VM reached over a shared filesystem, where relabelling is at best
+        meaningless and at worst an error on the share. Gating on Linux leaves
+        the measured Linux path byte-identical.
+        """
+        suffix = ":Z" if IS_LINUX else ""
+        return f"{host}:{where}{suffix}"
+
+    def _cache_bind(self, host: object, where: str, writable: bool) -> str:
+        """A dependency-cache mount: write-through, or writes discarded.
+
+        ``:O`` is podman's overlay mount -- the container may write inside its
+        own dependency tree and the write is thrown away on exit. Docker has no
+        equivalent and rejects the flag outright (``invalid mode: O``), which
+        took out every docker run of a build that had a populated cache, i.e.
+        the normal case after provisioning.
+
+        Read-only is not the docker fallback: vite writes ``node_modules/.vite``
+        on startup, so ``ro`` turns a working app into a crash. Docker therefore
+        gets a plain read-write mount. The cache is per-build, so the cost is
+        that an app can dirty its own build's cache rather than have the write
+        discarded -- strictly weaker than podman, and the reason podman stays
+        the default.
+        """
+        if writable:
+            return f"{host}:{where}"
+        return f"{host}:{where}:O" if self._is_podman else f"{host}:{where}"
 
     def _common_args(self, *, memory: str | None = None) -> list[str]:
         args = [
@@ -712,12 +761,12 @@ class ContainerRuntime:
             "--pids-limit",
             str(self.pids_limit),
             "-v",
-            f"{self.app_dir}:/work:Z",
+            self._bind(self.app_dir, "/work"),
         ]
         if self.data_dir is not None:
             # Same mount for setup, smoke and start, so a migration and the
             # server it prepares see one and the same database.
-            args += ["-v", f"{self.data_dir}:{CONTAINER_DATA_DIR}:Z"]
+            args += ["-v", self._bind(self.data_dir, CONTAINER_DATA_DIR)]
             args += ["-e", f"VIRALBENCH_DATA_DIR={CONTAINER_DATA_DIR}"]
         if self.dep_mounts:
             # The cache's environment is runtime plumbing, kept OUT of ``self.env``
@@ -729,13 +778,9 @@ class ContainerRuntime:
             for key, value in container_env().items():
                 args += ["-e", f"{key}={value}"]
         for host, where, writable in self.dep_mounts:
-            # `:O` is podman's overlay mount: the container may write inside its
-            # own dependency tree and the write is discarded on exit. Read-only
-            # would be cheaper to reason about and would break real apps -- vite
-            # writes `node_modules/.vite` on startup, so `ro` turns a working app
-            # into a crash. Writable is used only while provisioning, where the
-            # point is to populate the cache.
-            args += ["-v", f"{host}:{where}" + ("" if writable else ":O")]
+            # Writable is used only while provisioning, where the point is to
+            # populate the cache. See _cache_bind for the podman/docker split.
+            args += ["-v", self._cache_bind(host, where, writable)]
         if self.network not in (None, "", "default"):
             args.append(f"--network={self.network}")
         for key in self.env_allowlist:
@@ -997,10 +1042,26 @@ class ContainerRuntime:
             return
         # Persist logs before removal so a caller can still read them.
         self.logs(app)
+        if self._is_podman:
+            # podman's `rm -t` is the grace period before SIGKILL, so a single
+            # call both stops the app gracefully and removes the container.
+            subprocess.run(
+                [self.runtime, "rm", "-f", "-t", "10", app.container],
+                capture_output=True,
+                text=True,
+            )
+            return
+        # docker's `rm` accepts no `-t` (only -f/-l/-v), so the command was
+        # rejected outright and the container was never removed -- a leak on
+        # every single teardown, each one holding its port and its memory.
+        # Two calls give the app the same 10s to flush that podman's one does.
         subprocess.run(
-            [self.runtime, "rm", "-f", "-t", "10", app.container],
+            [self.runtime, "stop", "-t", "10", app.container],
             capture_output=True,
             text=True,
+        )
+        subprocess.run(
+            [self.runtime, "rm", "-f", app.container], capture_output=True, text=True
         )
 
     def logs(self, app: RunningApp) -> str:
@@ -1018,6 +1079,61 @@ class ContainerRuntime:
 
     def describe(self) -> str:
         return f"{self.runtime} container '{self.name}' ({self.image})"
+
+
+def _parse_ps_json(stdout: str) -> list[dict]:
+    """Parse ``ps --format json`` from either runtime.
+
+    podman emits one JSON **array**. docker emits one JSON **object per line**,
+    which ``json.loads`` rejects with "Extra data" -- so the whole reaper caught
+    the decode error and returned 0, and orphan cleanup silently did nothing
+    under docker while reporting success.
+    """
+    text = (stdout or "").strip()
+    if not text:
+        return []
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    else:
+        if isinstance(parsed, list):
+            return [e for e in parsed if isinstance(e, dict)]
+        return [parsed] if isinstance(parsed, dict) else []
+    entries: list[dict] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            entries.append(obj)
+    return entries
+
+
+def _container_age_seconds(entry: dict, now: float) -> float | None:
+    """Age of a container in seconds, or ``None`` if it cannot be determined.
+
+    podman reports ``Created`` as a unix timestamp; docker reports ``CreatedAt``
+    as ``"2026-09-18 12:00:00 +0000 UTC"``. The trailing zone NAME is dropped
+    before parsing because ``%Z`` only accepts UTC/GMT and the local zone, so
+    a container created under, say, CET would otherwise fail to parse.
+    """
+    created = entry.get("Created")
+    if isinstance(created, (int, float)):
+        return now - float(created)
+    raw = entry.get("CreatedAt") or (created if isinstance(created, str) else "")
+    parts = str(raw).split()
+    if len(parts) < 3:
+        return None
+    try:
+        stamp = datetime.strptime(" ".join(parts[:3]), "%Y-%m-%d %H:%M:%S %z")
+    except ValueError:
+        return None
+    return now - stamp.timestamp()
 
 
 def reap_orphans(
@@ -1054,10 +1170,7 @@ def reap_orphans(
     )
     if listed.returncode != 0:
         return 0
-    try:
-        entries = json.loads(listed.stdout or "[]")
-    except json.JSONDecodeError:
-        return 0
+    entries = _parse_ps_json(listed.stdout)
 
     now = time.time()
     ids: list[str] = []
@@ -1069,10 +1182,7 @@ def reap_orphans(
         if state != "running":
             ids.append(cid)  # already dead: definitely an orphan
             continue
-        created = entry.get("Created")
-        age = None
-        if isinstance(created, (int, float)):
-            age = now - float(created)
+        age = _container_age_seconds(entry, now)
         if age is not None and age > running_grace_seconds:
             ids.append(cid)  # running far longer than any trial: leaked
 

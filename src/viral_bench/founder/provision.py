@@ -73,7 +73,6 @@ would turn a working app into a crash.
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import hashlib
 import json
 import os
@@ -87,6 +86,7 @@ from pathlib import Path
 
 from viral_bench.founder.manifest import MANIFEST_FILENAME, Manifest, load_manifest
 from viral_bench.founder.workspace import builds_root
+from viral_bench.hostplatform import exclusive_file_lock
 
 __all__ = [
     "CONTAINER_VENV",
@@ -676,15 +676,16 @@ def _population_lock(cache_dir: Path):
     inside would be one more file whose presence a future existence-check could
     mistake for a populated cache -- which is exactly the bug class this area
     already had.
+
+    The primitive itself comes from :mod:`viral_bench.hostplatform`, which picks
+    ``fcntl`` or ``msvcrt``. This module used to import ``fcntl`` at the top,
+    which made the whole container path unimportable on Windows -- a
+    ``ModuleNotFoundError`` from inside the provisioner partway through a build,
+    rather than anything a user could act on.
     """
-    cache_dir.parent.mkdir(parents=True, exist_ok=True)
     lock_path = cache_dir.parent / f".{cache_dir.name}.lock"
-    with open(lock_path, "w", encoding="utf-8") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    with exclusive_file_lock(lock_path):
+        yield
 
 
 def provision_build(

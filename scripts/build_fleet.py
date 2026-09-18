@@ -44,7 +44,6 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import fcntl
 import json
 import os
 import re
@@ -62,6 +61,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from viral_bench.founder.prompts import brief_fingerprint  # noqa: E402
+from viral_bench.hostplatform import exclusive_file_lock  # noqa: E402
 from viral_bench.ideas import load_ideas  # noqa: E402
 
 FLEET_PATH = REPO / "builds" / "fleet.json"
@@ -741,8 +741,7 @@ def reclassify_infra(dry_run: bool = False) -> list[tuple[str, str]]:
     genuine model failure into a free retry.
     """
     changed: list[tuple[str, str]] = []
-    with open(FLEET_LOCK_PATH, "w", encoding="utf-8") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    with exclusive_file_lock(FLEET_LOCK_PATH):
         fleet = load_fleet()
         # harness_infra is included as a SOURCE state, not only a target: a
         # refusal was briefly classified that way before it got its own status,
@@ -805,24 +804,20 @@ def merge_fleet_entries(
     here to write that the caller does not own.
     """
     FLEET_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(FLEET_LOCK_PATH, "w", encoding="utf-8") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            merged = load_fleet()
-            merged.setdefault("entries", {}).update(entries)
-            for key, value in (meta or {}).items():
-                merged[key] = value
-            if structures:
-                merged["structures"] = {
-                    **(merged.get("structures") or {}),
-                    **structures,
-                }
-            merged["updated_at"] = datetime.now(UTC).isoformat()
-            tmp = FLEET_PATH.with_suffix(".json.tmp")
-            tmp.write_text(json.dumps(merged, indent=2), encoding="utf-8")
-            os.replace(tmp, FLEET_PATH)
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    with exclusive_file_lock(FLEET_LOCK_PATH):
+        merged = load_fleet()
+        merged.setdefault("entries", {}).update(entries)
+        for key, value in (meta or {}).items():
+            merged[key] = value
+        if structures:
+            merged["structures"] = {
+                **(merged.get("structures") or {}),
+                **structures,
+            }
+        merged["updated_at"] = datetime.now(UTC).isoformat()
+        tmp = FLEET_PATH.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+        os.replace(tmp, FLEET_PATH)
 
 
 def main(argv: list[str] | None = None) -> int:

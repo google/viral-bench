@@ -41,6 +41,7 @@ import shutil
 from pathlib import Path
 
 from viral_bench.founder.roles import Role
+from viral_bench.hostplatform import find_chrome
 
 __all__ = [
     "BROWSER_MCP_NAME",
@@ -68,18 +69,6 @@ VENDORED_MCP_ENTRY = (
     / "cli.js"
 )
 
-#: System Chrome/Chromium binaries the MCP's ``chrome`` channel can drive. The
-#: system browser channel is used rather than Playwright's bundled Chromium, so
-#: Playwright's exact browser revision need not be matched at run time.
-_CHROME_BINARIES: tuple[str, ...] = (
-    "google-chrome",
-    "google-chrome-stable",
-    "chromium",
-    "chromium-browser",
-    "chrome",
-    "microsoft-edge",
-)
-
 #: Default command for the browser MCP: launch the vendored Playwright MCP with the
 #: system ``node`` against a headless system Chrome. No ``npx`` needed at run time.
 DEFAULT_BROWSER_COMMAND: tuple[str, ...] = (
@@ -93,8 +82,13 @@ DEFAULT_BROWSER_COMMAND: tuple[str, ...] = (
 
 
 def _browser_available() -> bool:
-    """True if a Chrome/Chromium the MCP's ``chrome`` channel can drive is on PATH."""
-    return any(shutil.which(exe) for exe in _CHROME_BINARIES)
+    """True if a Chrome/Chromium/Edge the MCP's ``chrome`` channel can drive exists.
+
+    Shares :func:`viral_bench.hostplatform.find_chrome` with the crowd's own
+    browser layer, so the founder and the crowd cannot reach opposite
+    conclusions about the same machine.
+    """
+    return find_chrome() is not None
 
 
 def browser_prereqs_ok(command: tuple[str, ...] = DEFAULT_BROWSER_COMMAND) -> bool:

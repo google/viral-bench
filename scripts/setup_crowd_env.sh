@@ -47,12 +47,30 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CROWD_VENV="$REPO_ROOT/.venv-crowd"
 CROWD_PY="$CROWD_VENV/bin/python"
 
+case "$(uname -s)" in
+  Darwin) HOST_OS=darwin ;;
+  Linux)  HOST_OS=linux ;;
+  *)      HOST_OS=other ;;
+esac
+
 ok()   { printf '  \033[0;32mOK\033[0m   %s\n' "$1"; }
 warn() { printf '  \033[0;33mWARN\033[0m %s\n' "$1"; }
 info() { printf '  ..   %s\n' "$1"; }
 
+# Package-manager advice that matches the machine. Getting this wrong is not
+# cosmetic: `sudo apt install chromium` on a Mac reads as "this tool was not
+# meant for me", and the browser is what separates a real trial from a
+# static-HTTP one that cannot run JavaScript.
+pkg_hint() {
+  case "$HOST_OS" in
+    darwin) echo "brew install --cask $2" ;;
+    *)      echo "sudo apt install -y $1" ;;
+  esac
+}
+
 cd "$REPO_ROOT"
 echo "== crowd environment setup =="
+info "host: $(uname -s) $(uname -m)"
 
 # 1. Base toolchain.
 for tool in python3 uv git; do
@@ -64,15 +82,22 @@ for tool in python3 uv git; do
 done
 
 # 2. A system browser for the ``chrome`` channel (no bundled-browser download).
-browser=""
-for b in google-chrome google-chrome-stable chromium chromium-browser chrome microsoft-edge; do
-  if command -v "$b" >/dev/null 2>&1; then browser="$b"; break; fi
-done
+#
+# Asks the same code the crowd asks, rather than re-implementing a PATH scan
+# here. A PATH scan is the whole story only on Linux: macOS installs Chrome as
+# an app bundle and puts nothing on PATH, so this reported "no browser" on every
+# stock Mac and the crowd silently fell back to a JavaScript-less fetch.
+browser="$(python3 -c "
+import sys
+sys.path.insert(0, 'src')
+from viral_bench.hostplatform import find_chrome
+print(find_chrome() or '')
+" 2>/dev/null || true)"
 if [[ -n "$browser" ]]; then
   ok "system browser present ($browser)"
 else
   warn "no system Chrome/Chromium found (web-app trials need it). Install one, e.g.:"
-  warn "  sudo apt install -y chromium"
+  warn "  $(pkg_hint chromium chromium)"
 fi
 
 # 3. Main env dependencies (the app-interaction layer + Playwright).
@@ -94,8 +119,19 @@ fi
 # 5. podman (the crowd runs untrusted apps in a rootless container by default).
 if command -v podman >/dev/null 2>&1; then
   ok "podman present ($(podman --version 2>&1))"
+  if [[ "$HOST_OS" == "darwin" ]] \
+     && ! podman machine list --format '{{.Running}}' 2>/dev/null | grep -qi true; then
+    warn "podman machine is not running. Start one with room for builds:"
+    warn "  podman machine init --cpus 4 --memory 8192 && podman machine start"
+  fi
+elif command -v docker >/dev/null 2>&1; then
+  ok "docker present ($(docker --version 2>&1)); usable, though podman is preferred"
 else
-  warn "podman NOT installed (needed for the container run mode). sudo apt install -y podman"
+  warn "no container runtime (needed for the container run mode). Install one:"
+  case "$HOST_OS" in
+    darwin) warn "  brew install podman && podman machine init --memory 8192 && podman machine start" ;;
+    *)      warn "  sudo apt install -y podman" ;;
+  esac
 fi
 
 # 6. The isolated crowd simulation env (.venv-crowd, Python 3.11 + OASIS).

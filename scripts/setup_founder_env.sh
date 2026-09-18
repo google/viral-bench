@@ -42,7 +42,27 @@ ok()   { printf '  \033[0;32mOK\033[0m   %s\n' "$1"; }
 warn() { printf '  \033[0;33mWARN\033[0m %s\n' "$1"; }
 info() { printf '  ..   %s\n' "$1"; }
 
+# Host OS/arch, used to pick release assets and to give install advice that
+# matches the machine rather than assuming Debian. Bare `linux`/`darwin` are the
+# only two supported here: native Windows cannot run the founder stage (built
+# apps start through a POSIX shell), so WSL2 is the Windows answer and reports
+# itself as linux.
+case "$(uname -s)" in
+  Linux)  HOST_OS=linux ;;
+  Darwin) HOST_OS=darwin ;;
+  *)      HOST_OS=unsupported ;;
+esac
+case "$(uname -m)" in
+  x86_64 | amd64)  HOST_ARCH=x64 ;;
+  aarch64 | arm64) HOST_ARCH=arm64 ;;
+  *)               HOST_ARCH=unsupported ;;
+esac
+
 echo "== founder harness environment setup =="
+info "host: $(uname -s) $(uname -m) -> ${HOST_OS}-${HOST_ARCH}"
+if [[ "$HOST_OS" == "unsupported" ]]; then
+  warn "$(uname -s) is not supported. On Windows, run ViralBench under WSL2."
+fi
 
 # 1. Base toolchain.
 #
@@ -77,39 +97,98 @@ elif $CHECK_ONLY; then
 else
   info "installing opencode -> $OPENCODE_DIR ..."
   mkdir -p "$OPENCODE_DIR"
-  if grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then variant="linux-x64"; else variant="linux-x64-baseline"; fi
-  url="https://github.com/anomalyco/opencode/releases/latest/download/opencode-${variant}.tar.gz"
-  tmp="$(mktemp -d)"
-  if curl -fsSL -o "$tmp/opencode.tar.gz" "$url"; then
-    tar -xzf "$tmp/opencode.tar.gz" -C "$tmp"
-    mv -f "$tmp/opencode" "$OPENCODE_DIR/opencode"
-    chmod 755 "$OPENCODE_DIR/opencode"
-    rm -rf "$tmp"
-    ok "opencode installed ($("$OPENCODE_DIR/opencode" --version 2>&1 | head -1))"
-    case ":$PATH:" in
-      *":$OPENCODE_DIR:"*) ;;
-      *) warn "add to PATH: export PATH=\"$OPENCODE_DIR:\$PATH\"" ;;
+  # Release assets are named opencode-<os>-<arch>[-baseline].<ext>, and the
+  # extension differs by OS: .tar.gz for linux, .zip for darwin. This used to
+  # hardcode linux-x64, which fetched a Linux ELF onto a Mac -- and, less
+  # obviously, onto an arm64 Linux box too.
+  #
+  # `baseline` is the build for CPUs without AVX2, and only exists for x64.
+  if [[ "$HOST_ARCH" == "x64" ]]; then
+    case "$HOST_OS" in
+      linux)  have_avx2=$(grep -qwi avx2 /proc/cpuinfo 2>/dev/null && echo yes || echo no) ;;
+      darwin) have_avx2=$(sysctl -n machdep.cpu.leaf7_features 2>/dev/null | grep -qwi avx2 && echo yes || echo no) ;;
+      *)      have_avx2=no ;;
     esac
+    [[ "$have_avx2" == "yes" ]] && suffix="" || suffix="-baseline"
   else
-    rm -rf "$tmp"
-    warn "opencode download failed (network/egress?). Install manually from"
+    suffix=""
+  fi
+  [[ "$HOST_OS" == "darwin" ]] && ext="zip" || ext="tar.gz"
+  variant="${HOST_OS}-${HOST_ARCH}${suffix}"
+
+  if [[ "$HOST_OS" == "unsupported" || "$HOST_ARCH" == "unsupported" ]]; then
+    warn "no opencode release for $(uname -s)/$(uname -m). Install manually from"
     warn "  https://github.com/anomalyco/opencode/releases"
+  else
+    url="https://github.com/anomalyco/opencode/releases/latest/download/opencode-${variant}.${ext}"
+    tmp="$(mktemp -d)"
+    if curl -fsSL -o "$tmp/opencode.${ext}" "$url"; then
+      if [[ "$ext" == "zip" ]]; then
+        # unzip ships with macOS, but python3 is already a prerequisite above,
+        # so fall back to it rather than fail on a missing archiver.
+        unzip -q -o "$tmp/opencode.zip" -d "$tmp" 2>/dev/null \
+          || python3 -m zipfile -e "$tmp/opencode.zip" "$tmp"
+      else
+        tar -xzf "$tmp/opencode.tar.gz" -C "$tmp"
+      fi
+      # Some assets unpack to ./opencode, others into a directory; find it.
+      binary="$(find "$tmp" -type f -name opencode -perm -u+r 2>/dev/null | head -1)"
+      if [[ -n "$binary" ]]; then
+        mv -f "$binary" "$OPENCODE_DIR/opencode"
+        chmod 755 "$OPENCODE_DIR/opencode"
+        rm -rf "$tmp"
+        ok "opencode installed ($("$OPENCODE_DIR/opencode" --version 2>&1 | head -1))"
+        case ":$PATH:" in
+          *":$OPENCODE_DIR:"*) ;;
+          *) warn "add to PATH: export PATH=\"$OPENCODE_DIR:\$PATH\"" ;;
+        esac
+      else
+        rm -rf "$tmp"
+        warn "downloaded opencode-${variant}.${ext} but found no 'opencode' binary in it"
+      fi
+    else
+      rm -rf "$tmp"
+      warn "opencode download failed (network/egress?). Tried:"
+      warn "  $url"
+      warn "Install manually from https://github.com/anomalyco/opencode/releases"
+    fi
   fi
 fi
 
 # 3. podman (rootless OCI sandbox for running untrusted generated apps).
 if command -v podman >/dev/null 2>&1; then
   ok "podman present ($(podman --version 2>&1))"
-  if grep -q "^$(id -un):" /etc/subuid 2>/dev/null; then
+  if [[ "$HOST_OS" == "darwin" ]]; then
+    # There is no rootless-on-the-host story on macOS: podman runs a Linux VM,
+    # and every container limit is carved out of the VM's RAM, not the Mac's.
+    # The harness caps a BUILD container at 4g (setup_memory), so a VM smaller
+    # than that turns ordinary `npm run build` steps into OOM kills -- which the
+    # scorer would otherwise read as a model that cannot ship.
+    if podman machine list --format '{{.Running}}' 2>/dev/null | grep -qi true; then
+      ok "podman machine is running"
+    else
+      warn "podman machine is not running. Start one with enough RAM for builds:"
+      warn "  podman machine init --cpus 4 --memory 8192 --disk-size 100"
+      warn "  podman machine start"
+    fi
+    info "keep the repo under \$HOME: podman machine only shares your home dir"
+  elif grep -q "^$(id -un):" /etc/subuid 2>/dev/null; then
     ok "rootless subuid/subgid range configured"
   else
     warn "podman rootless needs a subuid/subgid range. Fix with:"
     warn "  sudo usermod --add-subuids 600000-665535 --add-subgids 600000-665535 $(id -un)"
     warn "  podman system migrate"
   fi
+elif command -v docker >/dev/null 2>&1; then
+  ok "docker present ($(docker --version 2>&1)); podman is preferred but docker works"
+  info "docker has no overlay (:O) mount, so a build's dependency cache is"
+  info "mounted read-write instead of write-discard. See founder/runtime.py."
 else
-  warn "podman NOT installed. Install it (on its own, not with npm):"
-  warn "  sudo apt install -y podman"
+  warn "no container runtime. Generated apps are untrusted and must be sandboxed."
+  case "$HOST_OS" in
+    darwin) warn "  brew install podman && podman machine init --memory 8192 && podman machine start" ;;
+    *)      warn "  sudo apt install -y podman     # or your distro's equivalent" ;;
+  esac
 fi
 
 # 4. Model provider credentials.

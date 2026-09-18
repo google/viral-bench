@@ -32,6 +32,13 @@ fi
 NPM="$(command -v npm || true)"
 if [ -z "$NPM" ]; then
   NODE_VERSION="${NODE_VERSION:-v22.22.2}"
+  # nodejs.org publishes node-<version>-<os>-<arch>.tar.xz. The os token was
+  # hardcoded to `linux`, so a Mac without npm downloaded a Linux build.
+  case "$(uname -s)" in
+    Linux) NODE_OS=linux ;;
+    Darwin) NODE_OS=darwin ;;
+    *) echo "browser-mcp: unsupported OS $(uname -s); install Node/npm manually." >&2; exit 1 ;;
+  esac
   case "$(uname -m)" in
     x86_64 | amd64) ARCH=x64 ;;
     aarch64 | arm64) ARCH=arm64 ;;
@@ -41,10 +48,10 @@ if [ -z "$NPM" ]; then
   if [ ! -x "${NODE_DIR}/bin/npm" ]; then
     echo "browser-mcp: no system npm; fetching Node ${NODE_VERSION} (bundles npm) ..."
     mkdir -p .node
-    tarball="node-${NODE_VERSION}-linux-${ARCH}.tar.xz"
+    tarball="node-${NODE_VERSION}-${NODE_OS}-${ARCH}.tar.xz"
     curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/${tarball}" -o ".node/${tarball}"
     tar -xf ".node/${tarball}" -C .node
-    mv ".node/node-${NODE_VERSION}-linux-${ARCH}" "${NODE_DIR}"
+    mv ".node/node-${NODE_VERSION}-${NODE_OS}-${ARCH}" "${NODE_DIR}"
     rm -f ".node/${tarball}"
   fi
   export PATH="${PWD}/${NODE_DIR}/bin:${PATH}"

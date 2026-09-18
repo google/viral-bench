@@ -44,24 +44,12 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import re
-import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from viral_bench.founder.workspace import builds_root
-
-# System Chrome/Chromium binaries the ``chrome`` channel can drive. Mirrors the
-# list the founder browser MCP uses (viral_bench.founder.opencode_agents) so both
-# sides agree on "is there a browser here".
-_CHROME_BINARIES: tuple[str, ...] = (
-    "google-chrome",
-    "google-chrome-stable",
-    "chromium",
-    "chromium-browser",
-    "chrome",
-    "microsoft-edge",
-)
+from viral_bench.hostplatform import find_chrome
 
 # Interactive elements surfaced in the structured digest so an agent can refer
 # to controls the way a person would ("the Roll button", "the name field").
@@ -101,11 +89,14 @@ def playwright_installed() -> bool:
 
 
 def system_chrome() -> str | None:
-    """Return the first system Chrome/Chromium binary on PATH, if any."""
-    for exe in _CHROME_BINARIES:
-        if shutil.which(exe):
-            return exe
-    return None
+    """Return a system Chrome/Chromium/Edge this host can drive, if any.
+
+    Delegates to :func:`viral_bench.hostplatform.find_chrome` so this and the
+    founder's browser MCP cannot disagree about whether a browser exists. A
+    ``PATH`` search alone answered "no" on every stock macOS and Windows box,
+    where the browser is installed as an app bundle or under Program Files.
+    """
+    return find_chrome()
 
 
 def browser_available() -> bool:

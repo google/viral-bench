@@ -544,20 +544,36 @@ def _shutdown(instance: AppInstance) -> None:
     shutil.rmtree(instance.run_dir, ignore_errors=True)
 
 
+#: Whether this platform has POSIX process groups. Windows has neither
+#: ``os.killpg`` nor ``os.getpgid``, and reaching for them there raises
+#: AttributeError -- which the handlers below do NOT catch, so the shutdown path
+#: died instead of falling back. ``viz/core`` deliberately does not import
+#: ``viral_bench``, so this mirrors ``viral_bench.hostplatform`` rather than
+#: importing it.
+_HAS_PROCESS_GROUPS = hasattr(os, "killpg") and hasattr(os, "getpgid")
+
+
 def _kill_process(process: subprocess.Popen | None) -> None:
     if process and process.poll() is None:
         try:
             # The app was started in its own session so a shell wrapper's children
             # die with it. Killing only the shell would leave the server holding
-            # the port.
-            os.killpg(os.getpgid(process.pid), 15)
+            # the port. Off POSIX there is no group to signal, so terminating the
+            # launcher is the most the platform offers.
+            if _HAS_PROCESS_GROUPS:
+                os.killpg(os.getpgid(process.pid), 15)
+            else:
+                process.terminate()
         except (ProcessLookupError, PermissionError, OSError):
             process.terminate()
         try:
             process.wait(timeout=8)
         except subprocess.TimeoutExpired:
             try:
-                os.killpg(os.getpgid(process.pid), 9)
+                if _HAS_PROCESS_GROUPS:
+                    os.killpg(os.getpgid(process.pid), 9)
+                else:
+                    process.kill()
             except (ProcessLookupError, PermissionError, OSError):
                 process.kill()
 

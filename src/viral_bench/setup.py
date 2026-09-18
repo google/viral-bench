@@ -28,6 +28,7 @@ and how to fix it, before you spend anything.
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -35,6 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from viral_bench.founder.appenv import env_file
+from viral_bench.hostplatform import find_chrome, unsupported_reason
 from viral_bench.providers import PROVIDERS, ProviderSpec, has_credential
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -249,6 +251,22 @@ def _version(cmd: list[str]) -> str:
 def _tool_checks() -> list[Check]:
     checks: list[Check] = []
 
+    # The platform comes FIRST, because when it is the problem it explains every
+    # failure under it. A Windows user previously got through `uv sync` and a
+    # model setup before hitting `ModuleNotFoundError: fcntl` from inside the
+    # container provisioner, which reads as a broken install rather than an
+    # unsupported OS.
+    blocked = unsupported_reason()
+    checks.append(
+        Check(
+            "platform",
+            not blocked,
+            f"{platform.system()} {platform.machine()}",
+            blocked,
+            required=False,
+        )
+    )
+
     checks.append(
         Check(
             "python",
@@ -325,12 +343,13 @@ def _tool_checks() -> list[Check]:
         )
     )
 
-    chrome = (
-        _which("google-chrome")
-        or _which("chromium")
-        or _which("chromium-browser")
-        or _which("google-chrome-stable")
-    )
+    # Via the shared finder, so doctor agrees with the crowd and the founder
+    # about whether this machine has a browser. A bare PATH lookup for Linux
+    # binary names answered "not found" on every stock macOS and Windows box,
+    # where Chrome is an app bundle or lives under Program Files -- and because
+    # this check is only a warning, nothing stopped the run. Trials then
+    # degraded to a JavaScript-less fetch and scored blank single-page apps.
+    chrome = find_chrome()
     checks.append(
         Check(
             "chrome",

@@ -37,8 +37,12 @@ from pathlib import Path
 
 import pytest
 
+from viral_bench.hostplatform import venv_python
+
 REPO = Path(__file__).resolve().parents[2]
-CROWD_PY = REPO / ".venv-crowd" / "bin" / "python"
+# Via the shared helper, so this skips for the right reason on Windows (no crowd
+# env) rather than because it was looking in the POSIX place for the interpreter.
+CROWD_PY = venv_python(REPO / ".venv-crowd")
 
 pytestmark = pytest.mark.skipif(
     not CROWD_PY.is_file(), reason="needs the crowd env (.venv-crowd)"
